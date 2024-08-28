@@ -4,15 +4,13 @@ from threading import Thread
 import os
 
 outputPath = "./youtubeDownloader/"
-print(os.path.curdir)
-
 
 def Download(link):
     youtubeObject = YouTube(link)
     youtubeObject = youtubeObject.streams.get_highest_resolution()
     try:
-        name = youtubeObject.default_filename
-        youtubeObject.download(outputPath)
+        name = youtubeObject.default_filename.replace(' ', '_')
+        youtubeObject.download(outputPath, filename=name)
         print(f"Download of {name} has completed successfully")
     except:
         print(f"\n\nAn error occurred with file {name}!\n\n")
@@ -27,14 +25,14 @@ def getPlaylist(link):
 def _Wrapper(link):
     list = getPlaylist(link)
     global outputPath
-    outputPath += list.title + "/"
+    outputPath += list.title.replace(' ', '_') + "/"
     for uri in list:
         Thread(target=Download, daemon=True, args=[uri]).start()
-        sleep(0.2)
+        sleep(0.1)
     print("\n\n\n*********\nFinished\n*********\n")
 
 
-firstchoice = input("download or convert? (D/C)   ")
+firstchoice = input("\n\nWelcome to the Downloader Utility!\ndownload or convert? (D/C)   ")
 print("\n")
 if firstchoice == "d" or firstchoice == "D":
     url = input(f"\nyt Playlist Url:")
@@ -46,9 +44,17 @@ if firstchoice == "c" or firstchoice == "C":
     mpQuery = input("\nConvert all to mp3?: (Y/N)  ")
     if mpQuery == "y" or mpQuery == "Y":
         for i in os.listdir(outputPath):
-            print(i)
-            try:
-                for name in os.listdir(os.path.join(outputPath,i)):
-                    print(name)
-                    os.system(f"Py/utils/ffmpeg -i {os.path.abspath(os.path.join(outputPath,i, name))} {os.path.abspath(os.path.join(outputPath,i,'mp3',name.replace('.mp4', '.mp3')))}")
-            except: print('file conversion error')
+            if i!='.DS_Store':
+                try:
+                    os.mkdir(os.path.join(outputPath, i, "converted"))
+                    for name in os.listdir(os.path.join(outputPath, i)):
+                        print(name)
+                        dirInput = os.path.abspath(os.path.join(outputPath, i, name))
+                        dirOutput = os.path.abspath(
+                            os.path.join(
+                                outputPath, i, "converted", name.replace(".mp4", ".mp3")
+                            )
+                        )
+                        os.system(f"Py/utils/ffmpeg -i {dirInput} {dirOutput}")
+                except:
+                    print("file conversion error")
