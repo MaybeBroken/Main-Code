@@ -1,9 +1,9 @@
 from time import sleep
 from pytubefix import YouTube, Playlist
 from threading import Thread
-import ffmpeg
+import os
 outputPath = "./youtubeDownloader/"
-
+print(os.path.curdir)
 def Download(link):
     youtubeObject = YouTube(link)
     youtubeObject = youtubeObject.streams.get_highest_resolution()
@@ -13,7 +13,6 @@ def Download(link):
         print(f"Download of {name} has completed successfully")
     except:
         print(f"\n\nAn error occurred with file {name}!\n\n")
-    print(ffmpeg.input(outputPath+'/'+name).output(outputPath+'/'+name.replace('.mp4', '.mp3')).run())
 
 
 def getPlaylist(link):
@@ -37,3 +36,6 @@ print('\n')
 if url == '' or url == None or len(url)<20:
     url = 'https://music.youtube.com/playlist?list=PLt-QnSFN9Gjp2sD8DmeY1B0awsd7tmpP7&si=yqYOMDGHaWBLElwP'
 _Wrapper(url)
+
+for x,y,name in os.walk(outputPath):
+    os.execv('Py/utils/ffmpeg',['-i',os.path.abspath(os.path.join(outputPath, name)), os.path.abspath(os.path.join(name.replace('.mp4', '.mp3')))])
