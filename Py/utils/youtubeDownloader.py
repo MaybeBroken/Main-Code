@@ -11,9 +11,9 @@ def Download(link):
         name = youtubeObject.default_filename
         youtubeObject.download(outputPath)
         print(f"Download of {name} has completed successfully")
-        #ffmpeg.input(outputPath+'/'+name)
     except:
         print(f"\n\nAn error occurred with file {name}!\n\n")
+    print(ffmpeg.input(outputPath+'/'+name).output(outputPath+'/'+name.replace('.mp4', '.mp3')).run())
 
 
 def getPlaylist(link):
