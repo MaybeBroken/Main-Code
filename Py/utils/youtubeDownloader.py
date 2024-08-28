@@ -1,9 +1,7 @@
 from time import sleep
 from pytubefix import YouTube, Playlist
-from eyed3.id3.frames import ImageFrame
 from threading import Thread
 outputPath = "./youtubeDownloader/"
-
 
 def Download(link):
     youtubeObject = YouTube(link)
