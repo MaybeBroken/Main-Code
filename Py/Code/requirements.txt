@@ -1,0 +1,8 @@
+pyyaml
+python-rtmidi
+setuptools
+panda3d
+numpy
+opensimplex
+screeninfo
+scipy

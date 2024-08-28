@@ -1,0 +1,10 @@
+speed = 100
+swingSpeed = 100
+camX = None|float
+camY = None|float
+camZ = None|float
+camH = None|float
+camP = None|float
+camR = None|float
+winMode = 'full-win'
+resolution = [1920, 1080]
