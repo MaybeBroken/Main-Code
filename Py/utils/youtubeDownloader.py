@@ -2,8 +2,11 @@ from time import sleep
 from pytubefix import YouTube, Playlist
 from threading import Thread
 import os
+
 outputPath = "./youtubeDownloader/"
 print(os.path.curdir)
+
+
 def Download(link):
     youtubeObject = YouTube(link)
     youtubeObject = youtubeObject.streams.get_highest_resolution()
@@ -24,18 +27,28 @@ def getPlaylist(link):
 def _Wrapper(link):
     list = getPlaylist(link)
     global outputPath
-    outputPath += list.title+'/'
+    outputPath += list.title + "/"
     for uri in list:
         Thread(target=Download, daemon=True, args=[uri]).start()
         sleep(0.2)
-    print('\n\n\n*********\nFinished\n*********\n')
+    print("\n\n\n*********\nFinished\n*********\n")
 
-url = input(f"\nyt Playlist Url: \n")
-mpQuery = input('\nConvert all to mp3?: (Y/N)  ')
-print('\n')
-if url == '' or url == None or len(url)<20:
-    url = 'https://music.youtube.com/playlist?list=PLt-QnSFN9Gjp2sD8DmeY1B0awsd7tmpP7&si=yqYOMDGHaWBLElwP'
-_Wrapper(url)
 
-for x,y,name in os.walk(outputPath):
-    os.execv('Py/utils/ffmpeg',['-i',os.path.abspath(os.path.join(outputPath, name)), os.path.abspath(os.path.join(name.replace('.mp4', '.mp3')))])
+firstchoice = input("download or convert? (D/C)   ")
+print("\n")
+if firstchoice == "d" or firstchoice == "D":
+    url = input(f"\nyt Playlist Url:")
+    if url == "" or url == None or len(url) < 20:
+        url = "https://music.youtube.com/playlist?list=PLt-QnSFN9Gjp2sD8DmeY1B0awsd7tmpP7&si=yqYOMDGHaWBLElwP"
+    print("\n")
+    _Wrapper(url)
+if firstchoice == "c" or firstchoice == "C":
+    mpQuery = input("\nConvert all to mp3?: (Y/N)  ")
+    if mpQuery == "y" or mpQuery == "Y":
+        for i in os.listdir(outputPath):
+            print(i)
+            try:
+                for name in os.listdir(os.path.join(outputPath,i)):
+                    print(name)
+                    os.system(f"Py/utils/ffmpeg -i {os.path.abspath(os.path.join(outputPath,i, name))} {os.path.abspath(os.path.join(outputPath,i,'mp3',name.replace('.mp4', '.mp3')))}")
+            except: print('file conversion error')
