@@ -10,8 +10,8 @@ def Download(link):
     try:
         name = youtubeObject.default_filename
         youtubeObject.download(outputPath)
-        ffmpeg.input(outputPath+'/'+name)
         print(f"Download of {name} has completed successfully")
+        #ffmpeg.input(outputPath+'/'+name)
     except:
         print(f"\n\nAn error occurred with file {name}!\n\n")
 
@@ -28,7 +28,7 @@ def _Wrapper(link):
     outputPath += list.title+'/'
     for uri in list:
         Thread(target=Download, daemon=True, args=[uri]).start()
-        sleep(0)
+        sleep(0.2)
     print('\n\n\n*********\nFinished\n*********\n')
 
 url = input(f"\nyt Playlist Url: \n")
