@@ -86,14 +86,6 @@ if firstchoice == "c" or firstchoice == "C":
                         )
                         dirInput = f"'{dirInput}'"
                         dirOutput = f"'{dirOutput}'"
-                        thread = Thread(
-                            target=os.system,
-                            args=[f"Py/utils/ffmpeg -v 1 -i {dirInput} {dirOutput}"],
-                            daemon=True,
-                        )
-                        thread.start()
-                        threadQueue.append(thread)
+                        os.system(f"Py/utils/ffmpeg -v 1 -i {dirInput} {dirOutput}")
                 except:
                     print("file conversion error")
-        while len(threadQueue) > 0:
-            None
