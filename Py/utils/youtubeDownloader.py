@@ -52,7 +52,6 @@ def _Song(link):
 firstchoice = input(
     "\n\nWelcome to the Downloader Utility!\ndownload or convert? (D/C)   "
 )
-
 print("\n")
 if firstchoice == "d" or firstchoice == "D":
     secondChoice = input("\nIs this a song or a playlist? (S/P)   ")
@@ -79,16 +78,17 @@ if firstchoice == "c" or firstchoice == "C":
                     except:
                         None
                     for name in os.listdir(os.path.join(outputPath, i)):
-                        print(name)
                         dirInput = os.path.abspath(os.path.join(outputPath, i, name))
                         dirOutput = os.path.abspath(
                             os.path.join(
                                 outputPath, i, "converted", name.replace(".mp4", ".mp3")
                             )
                         )
+                        dirInput = f"'{dirInput}'"
+                        dirOutput = f"'{dirOutput}'"
                         thread = Thread(
                             target=os.system,
-                            args=[f"Py/utils/ffmpeg -v 0 -i {dirInput} {dirOutput}"],
+                            args=[f"Py/utils/ffmpeg -v 1 -i {dirInput} {dirOutput}"],
                             daemon=True,
                         )
                         thread.start()
