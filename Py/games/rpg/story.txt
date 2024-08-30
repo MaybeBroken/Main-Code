@@ -1,0 +1,13 @@
+TextFile:
+  choices: null
+  titles: null
+player:
+  active: &id001 !!python/name:builtins.int
+  age: *id001
+  alive: *id001
+  casting: *id001
+  fighting: *id001
+  hp: *id001
+  name: !!python/name:builtins.str
+  talking: *id001
+  walking: *id001
