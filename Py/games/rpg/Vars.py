@@ -12,3 +12,5 @@ gameVars = {
     },
     "TextFile": {"titles": None, "choices": None},
 }
+winMode = "full-win"
+resolution = [800, 600]
