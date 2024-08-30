@@ -67,17 +67,33 @@ class Main(ShowBase):
         ShowBase.__init__(self)
 
         self.selectedBlockType = 'grass'
-        self.loadModels()
-        self.setupLights()
-        
-        self.backfaceCullingOn()
         #what to load on startup
-        self.font = self.loader.loadFont("PyCraft/src/" +Worldvars.font +".ttf") 
-        self.menu()
-        self.disableMouse()
-        Fmgr.mgr.start()
-        self.startAudio()
-        self.taskMgr.add(self.update, 'update')
+        self.font = self.loader.loadFont("PyCraft/src/" +Worldvars.font +".ttf")
+        self.intro()
+    
+    def intro(self):
+        self.setBackgroundColor(0, 0, 0, 1)
+        movie = self.loader.loadTexture("PyCraft/src/movies/A Game by MaybeBroken Intro.avi")
+        image = OnscreenImage(movie, scale=1, parent=self.aspect2d)
+        movie.play()
+        movie.setLoopCount(1)
+        startTime = t.monotonic()
+        def finishLaunch(task):
+            if t.monotonic()-startTime>3.1:
+                image.destroy()
+                self.loadModels()
+                self.setupLights()
+                self.backfaceCullingOn()
+                self.disableMouse()
+                self.menu()
+                Fmgr.mgr.start()
+                self.startAudio()
+                self.taskMgr.add(self.update, 'update')
+            else:
+                return task.cont
+        self.taskMgr.add(finishLaunch)
+        
+        
 
 
     def selectorUp(self):
