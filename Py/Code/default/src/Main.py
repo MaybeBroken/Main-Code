@@ -1,6 +1,5 @@
 from math import pi, sin, cos
 from random import randint
-import numpy as np
 import time as t
 import sys
 import os
@@ -81,17 +80,31 @@ def degToRad(degrees):
 class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
-        self.backfaceCullingOn()
-        self.disableMouse()
+        self.intro()
+    
+    def intro(self):
+        self.setBackgroundColor(0, 0, 0, 1)
+        movie = self.loader.loadTexture("src/movies/A Game by MaybeBroken Intro.avi")
+        image = OnscreenImage(movie, scale=1, parent=self.aspect2d)
+        movie.play()
+        movie.setLoopCount(1)
+        startTime = t.monotonic()
+        def finishLaunch(task):
+            if t.monotonic()-startTime>3.1:
+                image.destroy()
+                self.backfaceCullingOn()
+                self.disableMouse()
 
-        # do setup tasks
-        # ...
+                # do setup tasks
+                # ...
 
-        self.setupControls()
+                self.setupControls()
 
-        # end of setup tasks
-
-        self.taskMgr.add(self.update, "update")
+                # end of setup tasks
+                self.taskMgr.add(self.update, 'update')
+            else:
+                return task.cont
+        self.taskMgr.add(finishLaunch)
 
     def update(self, task):
         result = task.cont
