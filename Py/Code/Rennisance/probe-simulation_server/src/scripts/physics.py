@@ -4,11 +4,11 @@ import direct.stdpy.threading as thread
 class physicsMgr:
     def enable(
         self,
-        minimum_motion_check: float | None = 0.001,
-        drag: float | None = 0.001,
-        gravity: tuple | None = (0, 0, -0.098),
+        minimum_motion_check: float = 0.001,
+        drag: float = 0.001,
+        gravity: tuple = (0, 0, -0.098),
     ):
-        self.minimum_motion_check: float | None = minimum_motion_check
+        self.minimum_motion_check: float = minimum_motion_check
         self.drag = drag
         self.gravity = gravity
         self.registeredObjects = []
@@ -25,8 +25,8 @@ class physicsMgr:
         object,
         pos: int,
         name: str,
-        orientation: str | None = "+x",
-        collisionAction: str | None = "rebound",
+        orientation: str = "+x",
+        collisionAction: str = "rebound",
     ):
         self.colliders.append([object, name, pos, orientation, collisionAction])
     
