@@ -27,8 +27,6 @@ from panda3d.core import (
     loadPrcFile,
     ConfigVariableString,
     AudioSound,
-)
-from panda3d.core import (
     WindowProperties,
     NodePath,
     TextNode,
@@ -39,8 +37,6 @@ from panda3d.core import (
     PointLight,
     Point3,
     OccluderNode,
-)
-from panda3d.core import (
     CollisionTraverser,
     CollisionNode,
     CollisionBox,
@@ -105,11 +101,29 @@ class mainGame(ShowBase):
         # absolute startup values here!
         # end of startup config
         ShowBase.__init__(self)
-        self.setBackgroundColor(0, 0, 0, 1, self.win)
-        self.startup()
+        self.intro()
+        # self.startup()
+
+    def intro(self):
+        self.setBackgroundColor(0, 0, 0, 1)
+        movie = self.loader.loadTexture("src/movies/intro.mp4")
+        image = OnscreenImage(movie, scale=1, parent=self.aspect2d)
+        movie.play()
+        movie.setLoopCount(1)
+        startTime = t.monotonic()
+
+        def finishLaunch(task):
+            if t.monotonic() - startTime > 3.76:
+                image.destroy()
+                self.startup()
+            else:
+                return task.cont
+        self.taskMgr.add(finishLaunch)
 
     def startup(self):
-        self.loadPrefsFile()
+        self.backfaceCullingOn()
+        self.disableMouse()
+        self.savePrefsFile()
         self.buildGui()
         self.setupInput()
 
@@ -121,19 +135,61 @@ class mainGame(ShowBase):
         with open("story.txt", "rt") as storyTextStream:
             Vars.gameVars = decodeFile(storyTextStream)
 
+    def convertAspectRatio(self, value, x_or_y):
+        if x_or_y == "x":
+            return (monitor[0].width / monitor[0].height) * value
+        if x_or_y == "y":
+            return (monitor[0].height / monitor[0].width) * value
+
     def buildGui(self):
+        self.GUIFRAME = DirectFrame(parent=self.aspect2d)
         self.frameBackdrop = DirectFrame(
             frameColor=(0, 0, 0, 1),
             frameSize=(-1, 1, -1, 1),
             parent=self.render2d,
         )
         self.maybebrokenText = OnscreenText(
-            "Developed by Maybebroken", pos=(-0.9, -0.95), scale=0.05, fg=(1, 1, 1, 1)
+            "Chapter 1",
+            pos=(self.convertAspectRatio(-0.85, "x"), 0.75),
+            scale=0.08,
+            fg=(1, 1, 1, 1),
+            parent=self.GUIFRAME,
+        )
+        self.startButton = DirectButton(
+            parent=self.GUIFRAME,
+            pos=(self.convertAspectRatio(-0.875, "x"), 1, 0.45),
+            scale=0.1,
+            text="Start",
+            command=ThreadC(
+                target=self.fadeOutGuiElement_ThreadedOnly,
+                args=[
+                    self,
+                    self.GUIFRAME,
+                    25,
+                    "After",
+                    self.launch,
+                    [self],
+                ],
+                daemon=True,
+            ).start,
+            relief=DGG.FLAT,
+            text_fg=(1, 1, 1, 1),
+            color=(0, 0, 0, 1),
+        )
+        self.quitButton = DirectButton(
+            parent=self.GUIFRAME,
+            pos=(self.convertAspectRatio(-0.875, "x"), 1, 0.25),
+            scale=0.1,
+            text="Quit",
+            command=self.exit,
+            relief=DGG.FLAT,
+            text_fg=(1, 1, 1, 1),
+            color=(0, 0, 0, 1),
         )
         ThreadC(
             target=self.fadeInGuiElement_ThreadedOnly,
             args=[
-                self.maybebrokenText,
+                self.GUIFRAME,
                 80,
                 None,
                 None,
@@ -179,6 +235,11 @@ class mainGame(ShowBase):
             sleep(0.01)
         if execBeforeOrAfter == "After":
             target(*args)
+    
+
+
+    def launch(self):
+        None
 
 
 game = mainGame()

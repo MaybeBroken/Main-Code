@@ -1,6 +1,24 @@
 TextFile:
-  choices: null
-  titles: null
+  choices:
+    0:
+      opts:
+        0:
+          command:
+            extraArgs: []
+            name: editPlayerConfig
+          text: None
+      text: !!set
+        line0s: null
+  titles:
+    Story 1: !!python/tuple
+    - 0
+    - 200
+    Story 2: !!python/tuple
+    - 200
+    - 400
+    Story 3: !!python/tuple
+    - 400
+    - 600
 player:
   active: &id001 !!python/name:builtins.int
   age: *id001
