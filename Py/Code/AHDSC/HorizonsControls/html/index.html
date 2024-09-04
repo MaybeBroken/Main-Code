@@ -1,16 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Event Listener Example</title>
-</head>
-<body>
-    <button id="myButton">Click Me</button>
-
+  <head>
+    <meta charset="UTF-8" />
+    <title>Event Listener</title>
+  </head>
+  <body>
+    <button id="Button1" onclick="toggleData()">Click Me</button>
+    <textarea id="text1">intial</textarea>
     <script>
-        document.getElementById("myButton").addEventListener("click", function() {
-           alert("Button Pressed");
-        });
+      var current = 'first'
+      var input
+      function idCall(name) {
+        return document.getElementById(name)
+      }
+      function toggleData() {
+        if (current == 'first') {
+          idCall('text1').value = 'second'
+          current = 'second'
+        } else if (current == 'second') {
+          idCall('text1').value = 'first'
+          current = 'first'
+        }
+      }
     </script>
-</body>
+  </body>
 </html>
