@@ -5,7 +5,6 @@ import sys
 from yaml import load, dump
 from yaml import CLoader as fLoader, CDumper as fDumper
 import websockets as ws
-
 import src.scripts.vars as Wvars
 import src.scripts.physics as physics
 import src.scripts.display as disp
@@ -14,6 +13,12 @@ import src.scripts.client as cli
 
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
+
+from panda3d.ai import *
+from panda3d.ai import (
+    AIWorld,
+    AICharacter
+)
 
 from panda3d.core import *
 from panda3d.core import (
@@ -173,8 +178,6 @@ class Main(ShowBase):
         self.skybox2.setPos(self.camNodePath.getPos())
 
         self.SceneLightNode_sm.lookAt(self.ship)
-
-        # self.trail.geom_node_path.setPos(self.ship.getPos())
 
         # calculate thrust
         if Wvars.movementEnabled == True:
@@ -359,11 +362,11 @@ class Main(ShowBase):
         self.skybox = self.loader.loadModel("src/models/skybox/stars.egg")
         self.ship = self.loader.loadModel("src/models/simple_ship/model.egg")
         self.skybox2 = self.loader.loadModel("src/models/skybox/stars.egg")
-        self.voyager = self.loader.loadModel("src/models/voyager/voyager.bam")
+        self.voyager = self.loader.loadModel("src/models/cube/cube.egg")
         self.laser_base_geom = self.loader.loadModel(
             "src/models/simple_ship/redRect.bam"
         )
-        self.drone = self.loader.loadModel("src/models/drone/drone.bam")
+        self.drone = self.loader.loadModel("src/models/cube/cube.egg")
         self.starNode = NodePath("starNode")
         self.starNode.reparentTo(self.render)
         disp.GUI.setup(disp.GUI)
@@ -461,6 +464,14 @@ class Main(ShowBase):
         # self.skybox2.setLightOff()
         self.skybox2.setAntialias(AntialiasAttrib.MNone)
         self.skybox2.reparentTo(self.render)
+    
+    def setupAiWorld(self):
+        self.AIworld = AIWorld(self.render)
+
+        self.AIchar = AICharacter("seeker",self.seeker, 100, 0.05, 5)
+        self.AIworld.addAiChar(self.AIchar)
+        self.AIbehaviors = self.AIchar.getAiBehaviors()
+        self.AIbehaviors.seek(self.ship)
 
     def setupScene(self):
         # setup sun
@@ -553,6 +564,5 @@ class Main(ShowBase):
 
         droneMasterNode = NodePath("drone-MN")
         droneMasterNode.reparentTo(self.render)
-
 
 app = Main()
