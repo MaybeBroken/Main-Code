@@ -13,4 +13,10 @@ cursorLock = True
 movementEnabled = True
 winMode = "full-win"
 resolution = [600, 800]
-wantServer = False
+dataKeys: dict = {
+    "shipPos": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+    }
+}

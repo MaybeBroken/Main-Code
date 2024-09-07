@@ -1,5 +1,4 @@
 pyyaml
 screeninfo
-python-rtmidi
 setuptools
-panda3d
+panda3d~=1.10
