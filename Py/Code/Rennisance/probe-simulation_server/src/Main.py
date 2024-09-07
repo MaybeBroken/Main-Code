@@ -284,9 +284,10 @@ class GUI(Main):
             parent=self.startupMenuFrame,
             pos=(-0.7 * monitor[0].width / monitor[0].height, 0, 0.6),
             scale=(0.12 * (553 / 194), 1, 0.12),
-            relief=DGG.FLAT,
+            relief=None,
             image=spriteSheet["startButton"],
             geom=None,
+            frameColor = (1.0,1.0,1.0,0.0),
             command=thread.Thread(
                 target=self.fadeOutGuiElement_ThreadedOnly,
                 args=[
@@ -308,6 +309,7 @@ class GUI(Main):
             relief=DGG.FLAT,
             image=spriteSheet["exitButton"],
             geom=None,
+            frameColor = (1.0,1.0,1.0,0.0),
             command=sys.exit,
         )
 
