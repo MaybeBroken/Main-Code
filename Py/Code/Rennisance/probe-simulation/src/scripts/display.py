@@ -55,13 +55,13 @@ class GUI:
         self.main.chargingScreen.hide()
 
     def show(self):
-        self.border.show()
+        # self.border.show()
         self.main.crosshair.show()
         self.main.chargingScreen.show()
         self.main.velocityMeter.hide()
 
     def hide(self):
-        self.border.hide()
+        # self.border.hide()
         self.main.crosshair.hide()
         self.main.chargingScreen.hide()
         self.main.velocityMeter.show()

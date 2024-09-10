@@ -17,7 +17,8 @@ from direct.showbase.ShowBase import ShowBase
 from panda3d.ai import *
 from panda3d.ai import (
     AIWorld,
-    AICharacter
+    AICharacter,
+    Flock
 )
 
 from panda3d.core import *
@@ -120,6 +121,7 @@ class Main(ShowBase):
         self.setupCamera()
         self.setupSkybox()
         self.setupScene()
+        self.setupAiWorld()
 
         thread.Thread(target=cli.runClient, daemon=True, args=[Wvars.dataKeys]).start()
 
@@ -137,11 +139,23 @@ class Main(ShowBase):
             }
         }
         return task.cont
+    
+    def updateAiWorld(self):
+        self.AIworld.update()
+        for aiChar in range(len(self.aiChars)):
+            ai = self.aiChars[aiChar]['ai']
+            node = self.aiChars[aiChar]['mesh']
+            AIbehaviors = ai.getAiBehaviors()
+            # if self.ship.getDistance(node) < 50:
+            #     AIbehaviors.flee(self.ship)
+            # if self.ship.getDistance(node) > 100:
+            #     AIbehaviors.pursue(self.ship)
 
     def update(self, task):
         result = task.cont
         playerMoveSpeed = Wvars.speed / 100
-        drag = 0.001
+        self.updateAiWorld()
+        
 
         # update velocities
         if self.update_time > 4:
@@ -380,11 +394,12 @@ class Main(ShowBase):
         slight = Spotlight("slight")
         slight.setColor((1, 1, 1, 1))
         lens = OrthographicLens()
+        lens.setFov(80)
         slight.setLens(lens)
 
         self.SceneLightNode_sm = self.render.attachNewNode(slight)
 
-        self.SceneLightNode_sm.setPos(self.starNode.getPos())
+        self.SceneLightNode_sm.setPos(100000, 0, 10000)
         self.SceneLightNode_sm.lookAt(self.ship)
 
         self.render.setLight(self.SceneLightNode_sm)
@@ -467,11 +482,26 @@ class Main(ShowBase):
     
     def setupAiWorld(self):
         self.AIworld = AIWorld(self.render)
+        self.AiFlock = Flock(1, 270, 10, 2, 4, 1)
+        self.AIworld.addFlock(self.AiFlock)
+        self.AIworld.flockOn(1)
 
-        self.AIchar = AICharacter("seeker",self.seeker, 100, 0.05, 5)
-        self.AIworld.addAiChar(self.AIchar)
-        self.AIbehaviors = self.AIchar.getAiBehaviors()
-        self.AIbehaviors.seek(self.ship)
+        self.aiChars = {}
+        for num in range(3):
+            dNode = self.loader.loadModel("src/models/cube/cube.egg")
+            dNode.instanceTo(self.render)
+            dNode.setPos(randint(-100, 100), randint(-100, 100), randint(-100, 100))
+            dNode.setScale(3)
+            AIchar = AICharacter("seeker",dNode, 1, 15, 1)
+            self.AIworld.addAiChar(AIchar)
+            self.AiFlock.addAiChar(AIchar)
+            AIbehaviors = AIchar.getAiBehaviors()
+            # AIbehaviors.pursue(self.ship)
+            AIbehaviors.flock(0.5)
+            self.aiChars[num] = {
+                'mesh':dNode,
+                'ai':AIchar
+            }
 
     def setupScene(self):
         # setup sun
@@ -506,7 +536,7 @@ class Main(ShowBase):
         self.voyager.setPos(-3000, 1500, 100)
         self.camera.lookAt(self.voyager)
 
-        worldDistance = 5000
+        worldDistance = 1000
 
         physics.physicsMgr.registerColliderPlane(
             self=physics.physicsMgr,
