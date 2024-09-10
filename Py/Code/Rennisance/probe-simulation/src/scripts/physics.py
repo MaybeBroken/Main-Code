@@ -29,7 +29,7 @@ class physicsMgr:
         collisionAction: str | None = "rebound",
     ):
         self.colliders.append([object, name, pos, orientation, collisionAction])
-    
+
     def registerCollisionAction(self, action, extraArgs:list):
         self.collisionActions.append([action, extraArgs])
 

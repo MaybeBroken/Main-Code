@@ -399,7 +399,7 @@ class Main(ShowBase):
 
         self.SceneLightNode_sm = self.render.attachNewNode(slight)
 
-        self.SceneLightNode_sm.setPos(100000, 0, 10000)
+        self.SceneLightNode_sm.setPos(10000, 0, 1000)
         self.SceneLightNode_sm.lookAt(self.ship)
 
         self.render.setLight(self.SceneLightNode_sm)
@@ -446,14 +446,14 @@ class Main(ShowBase):
         self.velocityMeter = OnscreenText(
             text="",
             scale=(0.1 * (monitor[0].height / monitor[0].width), 0.1, 0.1),
-            pos=(-0.7, -0.95),
+            pos=(-0.5, -0.95),
             fg=(1, 1, 1, 1),
             parent=self.render2d,
         )
         self.posMeter = OnscreenText(
             text="",
             scale=(0.1 * (monitor[0].height / monitor[0].width), 0.1, 0.1),
-            pos=(-0.7, -0.8),
+            pos=(-0.5, -0.8),
             fg=(1, 1, 1, 1),
             parent=self.render2d,
         )
@@ -489,7 +489,7 @@ class Main(ShowBase):
         self.aiChars = {}
         for num in range(3):
             dNode = self.loader.loadModel("src/models/cube/cube.egg")
-            dNode.instanceTo(self.render)
+            dNode.instanceTo(self.droneMasterNode)
             dNode.setPos(randint(-100, 100), randint(-100, 100), randint(-100, 100))
             dNode.setScale(3)
             AIchar = AICharacter("seeker",dNode, 1, 15, 1)
@@ -592,7 +592,15 @@ class Main(ShowBase):
             collisionAction="stop",
         )
 
-        droneMasterNode = NodePath("drone-MN")
-        droneMasterNode.reparentTo(self.render)
+        self.droneMasterNode = NodePath("drone-MN")
+        self.droneMasterNode.reparentTo(self.render)
+
+        self.shipTrailNode = NodePath('shipTrailNode')
+
+        shipTrail = MotionTrail('shipTrail', self.shipTrailNode)
+        shipTrail.geom_node = self.ship
+        shipTrail.register_motion_trail()
+
+
 
 app = Main()
