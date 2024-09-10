@@ -21,11 +21,9 @@ def Download(link):
     except:
         print(f"\n\nAn error occurred with file {name}!\n\n")
 
-
 def getPlaylist(link):
     x = Playlist(link)
     return x
-
 
 def _Wrapper(link):
     list = getPlaylist(link)
