@@ -15,11 +15,7 @@ from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
 
 from panda3d.ai import *
-from panda3d.ai import (
-    AIWorld,
-    AICharacter,
-    Flock
-)
+from panda3d.ai import AIWorld, AICharacter, Flock
 
 from panda3d.core import *
 from panda3d.core import (
@@ -54,6 +50,7 @@ from panda3d.core import (
     CollisionRay,
     CollisionHandlerQueue,
     Vec3,
+    Vec4,
     CollisionHandlerPusher,
 )
 from direct.gui.OnscreenImage import OnscreenImage
@@ -139,12 +136,12 @@ class Main(ShowBase):
             }
         }
         return task.cont
-    
+
     def updateAiWorld(self):
         self.AIworld.update()
         for aiChar in range(len(self.aiChars)):
-            ai = self.aiChars[aiChar]['ai']
-            node = self.aiChars[aiChar]['mesh']
+            ai = self.aiChars[aiChar]["ai"]
+            node = self.aiChars[aiChar]["mesh"]
             AIbehaviors = ai.getAiBehaviors()
             # if self.ship.getDistance(node) < 50:
             #     AIbehaviors.flee(self.ship)
@@ -155,7 +152,6 @@ class Main(ShowBase):
         result = task.cont
         playerMoveSpeed = Wvars.speed / 100
         self.updateAiWorld()
-        
 
         # update velocities
         if self.update_time > 4:
@@ -479,7 +475,7 @@ class Main(ShowBase):
         # self.skybox2.setLightOff()
         self.skybox2.setAntialias(AntialiasAttrib.MNone)
         self.skybox2.reparentTo(self.render)
-    
+
     def setupAiWorld(self):
         self.AIworld = AIWorld(self.render)
         self.AiFlock = Flock(1, 270, 10, 2, 4, 1)
@@ -492,16 +488,13 @@ class Main(ShowBase):
             dNode.instanceTo(self.droneMasterNode)
             dNode.setPos(randint(-100, 100), randint(-100, 100), randint(-100, 100))
             dNode.setScale(3)
-            AIchar = AICharacter("seeker",dNode, 1, 15, 1)
+            AIchar = AICharacter("seeker", dNode, 1, 15, 1)
             self.AIworld.addAiChar(AIchar)
             self.AiFlock.addAiChar(AIchar)
             AIbehaviors = AIchar.getAiBehaviors()
             # AIbehaviors.pursue(self.ship)
             AIbehaviors.flock(0.5)
-            self.aiChars[num] = {
-                'mesh':dNode,
-                'ai':AIchar
-            }
+            self.aiChars[num] = {"mesh": dNode, "ai": AIchar}
 
     def setupScene(self):
         # setup sun
@@ -596,11 +589,32 @@ class Main(ShowBase):
         self.droneMasterNode.reparentTo(self.render)
 
         self.shipTrailNode = NodePath('shipTrailNode')
+        self.shipTrailNode.reparentTo(self.ship)
 
-        shipTrail = MotionTrail('shipTrail', self.shipTrailNode)
-        shipTrail.geom_node = self.ship
+        shipTrail = MotionTrail("shipTrail", self.shipTrailNode)
+
+        flame_colors = (
+            Vec4(0, 0.0, 1.0, 1),
+            Vec4(0, 0.2, 1.0, 1),
+            Vec4(0, 0.7, 1.0, 1),
+            Vec4(0.0, 0.0, 0.2, 1),
+        )
+
+        center = self.render.attach_new_node("center")
+        around = center.attach_new_node("around")
+        around.set_z(1)
+        res = 8
+        for i in range(res + 1):
+            center.set_r((360 / res) * i)
+            vertex_pos = around.get_pos(self.render)
+            shipTrail.add_vertex(vertex_pos)
+
+            start_color = flame_colors[i % len(flame_colors)] * 1.7
+            end_color = Vec4(1, 1, 0, 1)
+            shipTrail.set_vertex_color(i, start_color, end_color)
+        shipTrail.update_vertices()
+
         shipTrail.register_motion_trail()
-
 
 
 app = Main()

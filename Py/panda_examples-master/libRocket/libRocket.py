@@ -1,12 +1,10 @@
-#!/usr/bin/env python2
-
 from direct.showbase.ShowBase import ShowBase
 from panda3d.rocket import RocketRegion, RocketInputHandler, LoadFontFace
 import sys
 
 class GUI(ShowBase):
     def __init__(self):
-        # Basics
+		# Basics
         ShowBase.__init__(self)
         base.disableMouse()
         self.accept("escape", sys.exit)
@@ -33,19 +31,11 @@ class GUI(ShowBase):
         self.inputHandler = RocketInputHandler()
         base.mouseWatcher.attachNewNode(self.inputHandler)
         self.region.setInputHandler(self.inputHandler)
-
-        # taskMgr.doMethodLater(5, self.loadingFinished, 'HUD Loading Finished')
-
-        # Setup the messages we accept.
-        #self.accept('update', self.updateMessage)
-
 	def update(self, dt):
 		BaseDirectObject.update(self, dt)
 		self.updateElementEffects(dt)
-		
-	def destroy(self):
+    def destroy(self):
 		BaseDirectObject.destroy(self)
-		 
 		for key in self.documents:
 			self.documents[key].Close()
 			self.context.UnloadDocument(self.documents[key])

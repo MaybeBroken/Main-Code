@@ -82,8 +82,6 @@ if firstchoice == "c" or firstchoice == "C":
                                 outputPath, i, "converted", name.replace(".mp4", ".mp3")
                             )
                         )
-                        dirInput = f"'{dirInput}'"
-                        dirOutput = f"'{dirOutput}'"
-                        os.system(f"Py/utils/ffmpeg -v 1 -i {dirInput} {dirOutput}")
+                        os.system(f'ffmpeg -v 1 -i "{dirInput}" "{dirOutput}"')
                 except:
                     print("file conversion error")
