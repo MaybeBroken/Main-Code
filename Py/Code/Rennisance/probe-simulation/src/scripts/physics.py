@@ -4,11 +4,11 @@ import direct.stdpy.threading as thread
 class physicsMgr:
     def enable(
         self,
-        minimum_motion_check: float | None = 0.001,
-        drag: float | None = 0.001,
-        gravity: tuple | None = (0, 0, -0.098),
+        minimum_motion_check: float = 0.001,
+        drag: float = 0.001,
+        gravity: tuple = (0, 0, -0.098),
     ):
-        self.minimum_motion_check: float | None = minimum_motion_check
+        self.minimum_motion_check: float = minimum_motion_check
         self.drag = drag
         self.gravity = gravity
         self.registeredObjects = []
@@ -25,12 +25,12 @@ class physicsMgr:
         object,
         pos: int,
         name: str,
-        orientation: str | None = "+x",
-        collisionAction: str | None = "rebound",
+        orientation: str = "+x",
+        collisionAction: str = "rebound",
     ):
         self.colliders.append([object, name, pos, orientation, collisionAction])
 
-    def registerCollisionAction(self, action, extraArgs:list):
+    def registerCollisionAction(self, action, extraArgs: list):
         self.collisionActions.append([action, extraArgs])
 
     def removeObject(self, object: None, name: str):
@@ -114,11 +114,11 @@ class physicsMgr:
                 for collider in self.colliders:
                     if collider[3] == "+x":
                         if node[0].getPos()[0] + node[2][0] <= collider[2]:
-                            if collider[4] == 'rebound':
+                            if collider[4] == "rebound":
                                 node[2][0] = -(node[2][0])
-                            if collider[4] == 'damp':
-                                node[2][0] = -(0.5*node[2][0])
-                            if collider[4] == 'stop':
+                            if collider[4] == "damp":
+                                node[2][0] = -(0.5 * node[2][0])
+                            if collider[4] == "stop":
                                 node[2][0] = 0
                             self.collisions.append(
                                 [
@@ -133,11 +133,11 @@ class physicsMgr:
                             self.runCollisionActions(self=self)
                     if collider[3] == "-x":
                         if node[0].getPos()[0] + node[2][0] >= collider[2]:
-                            if collider[4] == 'rebound':
+                            if collider[4] == "rebound":
                                 node[2][0] = -(node[2][0])
-                            if collider[4] == 'damp':
-                                node[2][0] = -(0.5*node[2][0])
-                            if collider[4] == 'stop':
+                            if collider[4] == "damp":
+                                node[2][0] = -(0.5 * node[2][0])
+                            if collider[4] == "stop":
                                 node[2][0] = 0
                             self.collisions.append(
                                 [
@@ -152,11 +152,11 @@ class physicsMgr:
                             self.runCollisionActions(self=self)
                     if collider[3] == "+y":
                         if node[0].getPos()[1] + node[2][1] <= collider[2]:
-                            if collider[4] == 'rebound':
+                            if collider[4] == "rebound":
                                 node[2][1] = -(node[2][1])
-                            if collider[4] == 'damp':
-                                node[2][1] = -(0.5*node[2][1])
-                            if collider[4] == 'stop':
+                            if collider[4] == "damp":
+                                node[2][1] = -(0.5 * node[2][1])
+                            if collider[4] == "stop":
                                 node[2][1] = 0
                             self.collisions.append(
                                 [
@@ -171,11 +171,11 @@ class physicsMgr:
                             self.runCollisionActions(self=self)
                     if collider[3] == "-y":
                         if node[0].getPos()[1] + node[2][1] >= collider[2]:
-                            if collider[4] == 'rebound':
+                            if collider[4] == "rebound":
                                 node[2][1] = -(node[2][1])
-                            if collider[4] == 'damp':
-                                node[2][1] = -(0.5*node[2][1])
-                            if collider[4] == 'stop':
+                            if collider[4] == "damp":
+                                node[2][1] = -(0.5 * node[2][1])
+                            if collider[4] == "stop":
                                 node[2][1] = 0
                             self.collisions.append(
                                 [
@@ -190,11 +190,11 @@ class physicsMgr:
                             self.runCollisionActions(self=self)
                     if collider[3] == "+z":
                         if node[0].getPos()[2] + node[2][2] <= collider[2]:
-                            if collider[4] == 'rebound':
+                            if collider[4] == "rebound":
                                 node[2][2] = -(node[2][2])
-                            if collider[4] == 'damp':
-                                node[2][2] = -(0.5*node[2][2])
-                            if collider[4] == 'stop':
+                            if collider[4] == "damp":
+                                node[2][2] = -(0.5 * node[2][2])
+                            if collider[4] == "stop":
                                 node[2][2] = 0
                             self.collisions.append(
                                 [
@@ -209,11 +209,11 @@ class physicsMgr:
                             self.runCollisionActions(self=self)
                     if collider[3] == "-z":
                         if node[0].getPos()[2] + node[2][2] >= collider[2]:
-                            if collider[4] == 'rebound':
+                            if collider[4] == "rebound":
                                 node[2][2] = -(node[2][2])
-                            if collider[4] == 'damp':
-                                node[2][2] = -(0.5*node[2][2])
-                            if collider[4] == 'stop':
+                            if collider[4] == "damp":
+                                node[2][2] = -(0.5 * node[2][2])
+                            if collider[4] == "stop":
                                 node[2][2] = 0
                             self.collisions.append(
                                 [

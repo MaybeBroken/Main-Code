@@ -615,6 +615,7 @@ class Main(ShowBase):
         shipTrail.update_vertices()
 
         shipTrail.register_motion_trail()
+        shipTrail.geom_node_path.reparentTo(self.render)
 
 
 app = Main()
