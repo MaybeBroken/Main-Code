@@ -7,30 +7,49 @@ outputPath = "./youtubeDownloader/"
 threadQueue = []
 
 
-def Download(link):
+def Download(link, format):
     youtubeObject = YouTube(link)
-    youtubeObject = youtubeObject.streams.get_highest_resolution()
+    if format == "mp4":
+        None
+        dataObject = youtubeObject.streams.get_highest_resolution()
+    elif format == "mp3":
+        dataObject = youtubeObject.streams.get_audio_only(format)
     try:
-        name = youtubeObject.default_filename.replace(" ", "_")
-        name = youtubeObject.default_filename.replace("(", "")
-        name = youtubeObject.default_filename.replace(")", "")
-        name = youtubeObject.default_filename.replace("[", "")
-        name = youtubeObject.default_filename.replace("]", "")
-        youtubeObject.download(outputPath, filename=name)
+        name = dataObject.default_filename
+    except:
+        try:
+            name = dataObject.audio_track_name
+        except:
+            try:
+                _stream = youtubeObject.streams.get_highest_resolution()
+                name = _stream.default_filename
+            except:
+                print(f"failed fetch at link {link} with format {format}")
+                return
+    for var in [" ", "(", ")", "[", "]"]:
+        name = name.replace(var, "_")
+    try:
+        dataObject.download(outputPath, filename=name if name != None else "name lost")
         print(f"Download of {name} has completed successfully")
     except:
-        print(f"\n\nAn error occurred with file {name}!\n\n")
+        print(
+            f"failed download at link {link} with format {format}, resorting to fallback mp4"
+        )
+        Download(link, "mp4")
+        return
+
 
 def getPlaylist(link):
     x = Playlist(link)
     return x
 
-def _Wrapper(link):
+
+def _Wrapper(link, format):
     list = getPlaylist(link)
     global outputPath
-    outputPath += list.title.replace(" ", "_") + "/"
+    outputPath += list.title.replace(" ", "_") + f"_{format}/"
     for uri in list:
-        thread = Thread(target=Download, daemon=True, args=[uri])
+        thread = Thread(target=Download, daemon=True, args=[uri, format])
         thread.start()
         threadQueue.append(thread)
         sleep(0.1)
@@ -40,7 +59,7 @@ def _Wrapper(link):
     print("\n\n\n*********\nFinished\n*********\n")
 
 
-def _Song(link):
+def _Song(link, format):
     global outputPath
     outputPath += "_songs/"
     Download(link)
@@ -50,21 +69,25 @@ def _Song(link):
 firstchoice = input(
     "\n\nWelcome to the Downloader Utility!\ndownload or convert? (D/C)   "
 )
-print("\n")
 if firstchoice == "d" or firstchoice == "D":
+    format = input("\nwhich format? mp(3/4):   ")
+    if format == "3":
+        format = "mp3"
+    if format == "4":
+        format = "mp4"
     secondChoice = input("\nIs this a song or a playlist? (S/P)   ")
     if secondChoice == "p" or secondChoice == "P":
         url = input(f"\nyt Playlist Url:\n-->  ")
         if url == "" or url == None or len(url) < 20:
             url = "https://music.youtube.com/playlist?list=PLt-QnSFN9Gjp2sD8DmeY1B0awsd7tmpP7&si=yqYOMDGHaWBLElwP"
         print("\n")
-        _Wrapper(url)
+        _Wrapper(url, format)
     if secondChoice == "s" or secondChoice == "S":
         url = input(f"\nyt song Url:\n-->  ")
         if url == "" or url == None or len(url) < 20:
             url = "https://music.youtube.com/watch?v=aZti2SC6MFY&si=WtZlNftPk1Im5N1q"
         print("\n")
-        _Song(url)
+        _Song(url, format)
 if firstchoice == "c" or firstchoice == "C":
     mpQuery = input("\nConvert all to mp3?: (Y/N)  ")
     if mpQuery == "y" or mpQuery == "Y":
