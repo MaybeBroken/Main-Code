@@ -13,7 +13,6 @@ import src.scripts.client as cli
 
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
-
 from panda3d.ai import *
 from panda3d.ai import AIWorld, AICharacter, Flock
 
@@ -244,21 +243,7 @@ class Main(ShowBase):
         mouseX = md.getX()
         mouseY = md.getY()
         if Wvars.cursorLock == True:
-            if int(monitor[0].width / 2) - mouseX >= int(monitor[0].width / 4):
-                self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
-                self.lastMouseX = int(monitor[0].width / 2)
-            elif int(monitor[0].width / 2) - mouseX <= -int(monitor[0].width / 4):
-                self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
-                self.lastMouseX = int(monitor[0].width / 2)
-            elif int(monitor[0].height / 2) - mouseY >= int(monitor[0].height / 4):
-                self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
-                self.lastMouseY = int(monitor[0].height / 2)
-            elif int(monitor[0].height / 2) - mouseY <= -int(monitor[0].height / 4):
-                self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
-                self.lastMouseY = int(monitor[0].height / 2)
-
-            else:
-                # move camera based on mouse position
+            def moveCam():
                 mouseChangeX = mouseX - self.lastMouseX
                 mouseChangeY = mouseY - self.lastMouseY
 
@@ -280,6 +265,24 @@ class Main(ShowBase):
 
                 self.lastMouseX = mouseX
                 self.lastMouseY = mouseY
+            if sys.platform == 'darwin':
+                moveCam()
+            elif int(monitor[0].width / 2) - mouseX >= int(monitor[0].width / 4):
+                self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
+                self.lastMouseX = int(monitor[0].width / 2)
+            elif int(monitor[0].width / 2) - mouseX <= -int(monitor[0].width / 4):
+                self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
+                self.lastMouseX = int(monitor[0].width / 2)
+            elif int(monitor[0].height / 2) - mouseY >= int(monitor[0].height / 4):
+                self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
+                self.lastMouseY = int(monitor[0].height / 2)
+            elif int(monitor[0].height / 2) - mouseY <= -int(monitor[0].height / 4):
+                self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
+                self.lastMouseY = int(monitor[0].height / 2)
+            else:
+                # move camera based on mouse position
+                moveCam()
+        
 
         if Wvars.aiming == True:
             md = self.win.getPointer(0)
