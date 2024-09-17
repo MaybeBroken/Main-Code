@@ -10,6 +10,7 @@ import src.scripts.physics as physics
 import src.scripts.display as disp
 import src.scripts.fileManager as fMgr
 import src.scripts.client as cli
+import src.scripts.weapons as weapons
 
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
@@ -118,6 +119,7 @@ class Main(ShowBase):
         self.setupSkybox()
         self.setupScene()
         self.setupAiWorld()
+        weapons.lasers.__init__(self=self, internalArgs=[["objects", ["cube", self.loader.loadModel("src/models/cube/cube.egg")]], ["sceneGraphs", ["render3d", self.render]]])
 
         thread.Thread(target=cli.runClient, daemon=True, args=[Wvars.dataKeys]).start()
 
@@ -243,6 +245,7 @@ class Main(ShowBase):
         mouseX = md.getX()
         mouseY = md.getY()
         if Wvars.cursorLock == True:
+
             def moveCam():
                 mouseChangeX = mouseX - self.lastMouseX
                 mouseChangeY = mouseY - self.lastMouseY
@@ -265,7 +268,8 @@ class Main(ShowBase):
 
                 self.lastMouseX = mouseX
                 self.lastMouseY = mouseY
-            if sys.platform == 'darwin':
+
+            if sys.platform == "darwin":
                 moveCam()
             elif int(monitor[0].width / 2) - mouseX >= int(monitor[0].width / 4):
                 self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
@@ -282,7 +286,6 @@ class Main(ShowBase):
             else:
                 # move camera based on mouse position
                 moveCam()
-        
 
         if Wvars.aiming == True:
             md = self.win.getPointer(0)
@@ -316,7 +319,7 @@ class Main(ShowBase):
         }
 
         self.accept("escape", self.doNothing)
-        self.accept("mouse1", self.doNothing)
+        self.accept("mouse1", self.MouseClicked)
         self.accept("mouse1-up", self.doNothing)
         self.accept("mouse3", self.toggleTargetingGui)
         self.accept("mouse3-up", self.toggleTargetingGui)
@@ -423,6 +426,7 @@ class Main(ShowBase):
         fromObject = self.ship.attachNewNode(CollisionNode("shipColNode"))
         fromObject.node().addSolid(CollisionSphere(0, 0, 0, 3))
         fromObject.node().set_from_collide_mask(1)
+        fromObject.node().set_from_collide_mask(0)
         pusher = CollisionHandlerPusher()
         pusher.addCollider(fromObject, self.ship)
         self.cTrav.addCollider(fromObject, pusher)
@@ -430,9 +434,19 @@ class Main(ShowBase):
         fromObject = self.camera.attachNewNode(CollisionNode("cameraColNode"))
         fromObject.node().addSolid(CollisionSphere(0, 0, 0, 1.5))
         fromObject.node().set_from_collide_mask(1)
-        pusher = CollisionHandlerPusher()
+        fromObject.node().set_from_collide_mask(0)
         pusher.addCollider(fromObject, self.camera, self.drive.node())
         self.cTrav.addCollider(fromObject, pusher)
+
+        self.ray = CollisionRay()
+        self.ray.setFromLens(self.camNode, (0, 0))
+        self.rayNode = CollisionNode("line-of-sight")
+        self.rayNode.addSolid(self.ray)
+        self.rayNode.set_into_collide_mask(0)
+        self.rayNode.set_into_collide_mask(1)
+        self.rayNodePath = self.ship.attachNewNode(self.rayNode)
+        self.rayQueue = CollisionHandlerQueue()
+        self.cTrav.addCollider(self.rayNodePath, self.rayQueue)
 
         disp.ShaderCall.setupShaders(
             self=disp.ShaderCall,
@@ -497,6 +511,24 @@ class Main(ShowBase):
             AIbehaviors = AIchar.getAiBehaviors()
             # AIbehaviors.pursue(self.ship)
             AIbehaviors.flock(0.5)
+
+            size = 3
+
+            droneNode = CollisionBox((-size, -size, -size), (size, size, size))
+            droneNodeSolid = CollisionNode("block-collision-node")
+            droneNodeSolid.addSolid(droneNode)
+
+            collider = dNode.attachNewNode(droneNodeSolid)
+            collider.setPythonTag("owner", num)
+
+            fromObject = dNode.attachNewNode(CollisionNode("colNode"))
+            fromObject.node().addSolid(CollisionSphere(0, 0, 0, size))
+            fromObject.node().set_from_collide_mask(0)
+            fromObject.node().setPythonTag("owner", num)
+            pusher = CollisionHandlerPusher()
+            pusher.addCollider(fromObject, dNode)
+            self.cTrav.addCollider(fromObject, pusher)
+
             self.aiChars[num] = {"mesh": dNode, "ai": AIchar}
 
     def setupScene(self):
@@ -512,11 +544,11 @@ class Main(ShowBase):
             )
         )
         self.sun.instanceTo(sunNode)
-        blockSolid = CollisionSphere(0, 0, 0, 1)
-        blockNode = CollisionNode("block-collision-node")
-        blockNode.addSolid(blockSolid)
+        droneNode = CollisionSphere(0, 0, 0, 1)
+        droneNodeSolid = CollisionNode("block-collision-node")
+        droneNodeSolid.addSolid(droneNode)
 
-        collider = sunNode.attachNewNode(blockNode)
+        collider = sunNode.attachNewNode(droneNodeSolid)
         collider.setPythonTag("owner", sunNode)
 
         fromObject = sunNode.attachNewNode(CollisionNode("colNode"))
@@ -591,8 +623,9 @@ class Main(ShowBase):
         self.droneMasterNode = NodePath("drone-MN")
         self.droneMasterNode.reparentTo(self.render)
 
-        self.shipTrailNode = NodePath('shipTrailNode')
+        self.shipTrailNode = NodePath("shipTrailNode")
         self.shipTrailNode.reparentTo(self.ship)
+        self.shipTrailNode.set_y(-10)
 
         shipTrail = MotionTrail("shipTrail", self.shipTrailNode)
 
@@ -602,23 +635,42 @@ class Main(ShowBase):
             Vec4(0, 0.7, 1.0, 1),
             Vec4(0.0, 0.0, 0.2, 1),
         )
+        for x in [-6, 6]:
+            center = self.render.attach_new_node("center")
+            around = center.attach_new_node("around")
+            around.set_z(1.5)
+            center.set_x(x)
+            res = 8
+            for i in range(res + 1):
+                center.set_r((360 / res) * i)
+                vertex_pos = around.get_pos(self.render)
+                shipTrail.add_vertex(vertex_pos)
 
-        center = self.render.attach_new_node("center")
-        around = center.attach_new_node("around")
-        around.set_z(1)
-        res = 8
-        for i in range(res + 1):
-            center.set_r((360 / res) * i)
-            vertex_pos = around.get_pos(self.render)
-            shipTrail.add_vertex(vertex_pos)
-
-            start_color = flame_colors[i % len(flame_colors)] * 1.7
-            end_color = Vec4(1, 1, 0, 1)
-            shipTrail.set_vertex_color(i, start_color, end_color)
+                start_color = flame_colors[i % len(flame_colors)] * 1.7
+                end_color = Vec4(1, 1, 0, 1)
+                shipTrail.set_vertex_color(i, start_color, end_color)
         shipTrail.update_vertices()
 
         shipTrail.register_motion_trail()
         shipTrail.geom_node_path.reparentTo(self.render)
+
+    def MouseClicked(self):
+        mpos = self.mouseWatcherNode.getMouse()
+        # self.ray.setFromLens(self.camNode, mpos.getX(), mpos.getY())
+        self.cTrav.traverse(self.render)
+        if self.rayQueue.getNumEntries() > 2:
+            self.rayQueue.sortEntries()
+            try:
+                rayHit = self.rayQueue.getEntry(2)
+                hitNodePath = rayHit.getIntoNodePath()
+                normal = rayHit.getSurfaceNormal(hitNodePath)
+            except:
+                return
+            try:
+                hitObject = self.aiChars[hitNodePath.getPythonTag("owner")]["mesh"]
+            except:
+                None
+            weapons.lasers.fire(origin=self.ship, target=hitObject)
 
 
 app = Main()
