@@ -681,10 +681,11 @@ class Main(ShowBase):
 
         shipTrail.register_motion_trail()
         shipTrail.geom_node_path.reparentTo(self.render)
+        self.enableParticles()
 
     def MouseClicked(self):
         mpos = self.mouseWatcherNode.getMouse()
-        self.cTrav.showCollisions(self.render)
+        # self.cTrav.showCollisions(self.render)
         # self.ray.setFromLens(self.camNode, mpos.getX(), mpos.getY())
         self.cTrav.traverse(self.render)
         destroy = False
@@ -693,6 +694,7 @@ class Main(ShowBase):
             try:
                 rayHit = self.rayQueue.getEntry(1)
                 hitNodePath = rayHit.getIntoNodePath()
+                normal = rayHit.getSurfaceNormal(hitNodePath)
             except:
                 None
             try:
@@ -708,7 +710,7 @@ class Main(ShowBase):
             if type(hitObject) == int:
                 return
             else:
-                weapons.lasers.fire(origin=self.ship, target=hitObject, destroy=destroy)
+                weapons.lasers.fire(origin=self.ship, target=hitObject, normal=normal, destroy=destroy)
 
 
 app = Main()

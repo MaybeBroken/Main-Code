@@ -47,12 +47,12 @@ class ParticleDemo(ShowBase):
 
         # More standard initialization
         self.accept('escape', sys.exit)
-        self.accept('1', self.loadParticleConfig, ['steam.ptf'])
-        self.accept('2', self.loadParticleConfig, ['dust.ptf'])
-        self.accept('3', self.loadParticleConfig, ['fountain.ptf'])
-        self.accept('4', self.loadParticleConfig, ['smoke.ptf'])
-        self.accept('5', self.loadParticleConfig, ['smokering.ptf'])
-        self.accept('6', self.loadParticleConfig, ['fireish.ptf'])
+        self.accept('1', self.loadParticleConfig, ['Py/master panda3d examples/particles/steam.ptf'])
+        self.accept('2', self.loadParticleConfig, ['Py/master panda3d examples/particles/dust.ptf'])
+        self.accept('3', self.loadParticleConfig, ['Py/master panda3d examples/particles/fountain.ptf'])
+        self.accept('4', self.loadParticleConfig, ['Py/master panda3d examples/particles/smoke.ptf'])
+        self.accept('5', self.loadParticleConfig, ['Py/master panda3d examples/particles/smokering.ptf'])
+        self.accept('6', self.loadParticleConfig, ['Py/master panda3d examples/particles/fireish.ptf'])
 
         self.accept('escape', sys.exit)
         base.disableMouse()
@@ -67,7 +67,7 @@ class ParticleDemo(ShowBase):
         self.t.reparentTo(render)
         self.setupLights()
         self.p = ParticleEffect()
-        self.loadParticleConfig('steam.ptf')
+        self.loadParticleConfig('Py/master panda3d examples/particles/steam.ptf')
 
     def loadParticleConfig(self, filename):
         # Start of the code from steam.ptf
