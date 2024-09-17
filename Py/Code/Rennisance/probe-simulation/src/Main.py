@@ -119,7 +119,16 @@ class Main(ShowBase):
         self.setupSkybox()
         self.setupScene()
         self.setupAiWorld()
-        weapons.lasers.__init__(self=self, internalArgs=[["objects", ["cube", self.loader.loadModel("src/models/cube/cube.egg")]], ["sceneGraphs", ["render3d", self.render]]])
+        weapons.lasers.__init__(
+            self=self,
+            internalArgs=[
+                [
+                    "objects",
+                    ["cube", self.loader.loadModel("src/models/cube/cube.egg")],
+                ],
+                ["sceneGraphs", ["render3d", self.render]],
+            ],
+        )
 
         thread.Thread(target=cli.runClient, daemon=True, args=[Wvars.dataKeys]).start()
 
@@ -140,14 +149,17 @@ class Main(ShowBase):
 
     def updateAiWorld(self):
         self.AIworld.update()
-        for aiChar in range(len(self.aiChars)):
-            ai = self.aiChars[aiChar]["ai"]
-            node = self.aiChars[aiChar]["mesh"]
-            AIbehaviors = ai.getAiBehaviors()
-            # if self.ship.getDistance(node) < 50:
-            #     AIbehaviors.flee(self.ship)
-            # if self.ship.getDistance(node) > 100:
-            #     AIbehaviors.pursue(self.ship)
+        try:
+            for aiChar in range(len(self.aiChars)):
+                ai = self.aiChars[aiChar]["ai"]
+                node = self.aiChars[aiChar]["mesh"]
+                AIbehaviors = ai.getAiBehaviors()
+                # if self.ship.getDistance(node) < 50:
+                #     AIbehaviors.flee(self.ship)
+                # if self.ship.getDistance(node) > 100:
+                #     AIbehaviors.pursue(self.ship)
+        except:
+            None
 
     def update(self, task):
         result = task.cont
@@ -448,6 +460,24 @@ class Main(ShowBase):
         self.rayQueue = CollisionHandlerQueue()
         self.cTrav.addCollider(self.rayNodePath, self.rayQueue)
 
+        targetNode = NodePath("targetingNode")
+        targetNode.reparentTo(self.ship)
+        targetNode.set_y(45)
+
+        size = 3
+
+        fromObject = self.ship.attachNewNode(CollisionNode("colNode"))
+        fromObject.node().addSolid(CollisionSphere(0, 0, 0, size))
+        fromObject.node().set_from_collide_mask(0)
+        fromObject.node().setPythonTag("owner", targetNode)
+        fromObject.set_y(10000)
+
+        sNodeSolid = CollisionNode("block-collision-node")
+        collider = self.ship.attachNewNode(sNodeSolid)
+        collider.setPythonTag("owner", targetNode)
+
+        self.cTrav.addCollider(fromObject, self.rayQueue)
+
         disp.ShaderCall.setupShaders(
             self=disp.ShaderCall,
             mainApp=self,
@@ -514,17 +544,11 @@ class Main(ShowBase):
 
             size = 3
 
-            droneNode = CollisionBox((-size, -size, -size), (size, size, size))
-            droneNodeSolid = CollisionNode("block-collision-node")
-            droneNodeSolid.addSolid(droneNode)
-
-            collider = dNode.attachNewNode(droneNodeSolid)
-            collider.setPythonTag("owner", num)
-
             fromObject = dNode.attachNewNode(CollisionNode("colNode"))
             fromObject.node().addSolid(CollisionSphere(0, 0, 0, size))
             fromObject.node().set_from_collide_mask(0)
             fromObject.node().setPythonTag("owner", num)
+            fromObject.node().setPythonTag("collision", fromObject)
             pusher = CollisionHandlerPusher()
             pusher.addCollider(fromObject, dNode)
             self.cTrav.addCollider(fromObject, pusher)
@@ -634,6 +658,10 @@ class Main(ShowBase):
             Vec4(0, 0.2, 1.0, 1),
             Vec4(0, 0.7, 1.0, 1),
             Vec4(0.0, 0.0, 0.2, 1),
+            Vec4(0, 0.7, 0.5, 1),
+            Vec4(0, 0, 1.0, 1),
+            Vec4(0.3, 0.7, 0.0, 1),
+            Vec4(0.1, 0.1, 0.2, 1),
         )
         for x in [-6, 6]:
             center = self.render.attach_new_node("center")
@@ -656,21 +684,31 @@ class Main(ShowBase):
 
     def MouseClicked(self):
         mpos = self.mouseWatcherNode.getMouse()
+        self.cTrav.showCollisions(self.render)
         # self.ray.setFromLens(self.camNode, mpos.getX(), mpos.getY())
         self.cTrav.traverse(self.render)
-        if self.rayQueue.getNumEntries() > 2:
+        destroy = False
+        if self.rayQueue.getNumEntries() > 1:
             self.rayQueue.sortEntries()
             try:
-                rayHit = self.rayQueue.getEntry(2)
+                rayHit = self.rayQueue.getEntry(1)
                 hitNodePath = rayHit.getIntoNodePath()
-                normal = rayHit.getSurfaceNormal(hitNodePath)
-            except:
-                return
-            try:
-                hitObject = self.aiChars[hitNodePath.getPythonTag("owner")]["mesh"]
             except:
                 None
-            weapons.lasers.fire(origin=self.ship, target=hitObject)
+            try:
+                hitObject = self.aiChars[hitNodePath.getPythonTag("owner")]["mesh"]
+                colNode = hitNodePath.getPythonTag("collision")
+                self.cTrav.removeCollider(colNode)
+                del self.aiChars[hitNodePath.getPythonTag("owner")]
+                destroy = True
+                print(f"destroyed node {colNode} at path {hitNodePath}")
+            except:
+                hitObject = hitNodePath.getPythonTag("owner")
+                destroy = False
+            if type(hitObject) == int:
+                return
+            else:
+                weapons.lasers.fire(origin=self.ship, target=hitObject, destroy=destroy)
 
 
 app = Main()
