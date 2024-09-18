@@ -150,14 +150,14 @@ class Main(ShowBase):
     def updateAiWorld(self):
         self.AIworld.update()
         try:
-            for aiChar in range(len(self.aiChars)):
+            for aiChar in self.aiChars:
                 ai = self.aiChars[aiChar]["ai"]
                 node = self.aiChars[aiChar]["mesh"]
                 AIbehaviors = ai.getAiBehaviors()
-                # if self.ship.getDistance(node) < 50:
-                #     AIbehaviors.flee(self.ship)
-                # if self.ship.getDistance(node) > 100:
-                #     AIbehaviors.pursue(self.ship)
+                if self.ship.getDistance(node) < 50:
+                    AIbehaviors.flee(self.ship)
+                if self.ship.getDistance(node) > 100:
+                    AIbehaviors.pursue(self.ship)
         except:
             None
 
@@ -547,7 +547,7 @@ class Main(ShowBase):
             self.AIworld.addAiChar(AIchar)
             self.AiFlock.addAiChar(AIchar)
             AIbehaviors = AIchar.getAiBehaviors()
-            # AIbehaviors.pursue(self.ship)
+            AIbehaviors.pursue(self.ship)
             AIbehaviors.flock(0.5)
 
             size = 3
