@@ -2,8 +2,6 @@ from math import pi, sin, cos, sqrt
 from random import randint
 import time as t
 import sys
-from yaml import load, dump
-from yaml import CLoader as fLoader, CDumper as fDumper
 import websockets as ws
 import src.scripts.vars as Wvars
 import src.scripts.physics as physics
@@ -28,8 +26,6 @@ from panda3d.core import (
     AudioSound,
     AntialiasAttrib,
     GeomVertexReader,
-)
-from panda3d.core import (
     WindowProperties,
     NodePath,
     TextNode,
@@ -41,8 +37,6 @@ from panda3d.core import (
     OrthographicLens,
     Point3,
     OccluderNode,
-)
-from panda3d.core import (
     CollisionTraverser,
     CollisionNode,
     CollisionBox,
@@ -132,10 +126,15 @@ class Main(ShowBase):
 
         thread.Thread(target=cli.runClient, daemon=True, args=[Wvars.dataKeys]).start()
 
+        self.postLoad()
+
         # end of setup tasks
         self.update_time = 0
         self.taskMgr.add(self.update, "update")
         self.taskMgr.add(self.sync, "syncServer+Client")
+    
+    def postLoad(self):
+        self.render.prepareScene(self.win.getGsg())
 
     def sync(self, task):
         Wvars.dataKeys = {
@@ -399,9 +398,6 @@ class Main(ShowBase):
         self.ship = self.loader.loadModel("src/models/simple_ship/model.egg")
         self.skybox2 = self.loader.loadModel("src/models/skybox/stars.egg")
         self.voyager = self.loader.loadModel("src/models/cube/cube.egg")
-        self.laser_base_geom = self.loader.loadModel(
-            "src/models/simple_ship/redRect.bam"
-        )
         self.drone = self.loader.loadModel("src/models/cube/cube.egg")
         self.starNode = NodePath("starNode")
         self.starNode.reparentTo(self.render)

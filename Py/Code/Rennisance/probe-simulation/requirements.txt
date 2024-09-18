@@ -1,4 +1,5 @@
 pyyaml
 screeninfo
 setuptools
+websockets
 panda3d~=1.10
