@@ -347,12 +347,20 @@ class Main(ShowBase):
         self.accept("space-up", self.updateKeyMap, ["up", False])
         self.accept("lshift", self.updateKeyMap, ["down", True])
         self.accept("lshift-up", self.updateKeyMap, ["down", False])
-        self.accept("wheel_up", self.wireframeOn)
-        self.accept("wheel_down", self.wireframeOff)
+        self.accept("wheel_up", self.devModeOn)
+        self.accept("wheel_down", self.devModeOff)
         self.accept("t", self.toggleTargetingGui)
         self.accept("r", self.doNothing)
         self.accept("q", sys.exit)
         self.accept("f", self.fullStop)
+
+    def devModeOn(self):
+        self.cTrav.showCollisions(self.render)
+        self.wireframeOn()
+
+    def devModeOff(self):
+        self.cTrav.hideCollisions()
+        self.wireframeOff()
 
     def toggleTargetingGui(self):
         if Wvars.aiming == False:
@@ -684,8 +692,6 @@ class Main(ShowBase):
         self.enableParticles()
 
     def MouseClicked(self):
-        mpos = self.mouseWatcherNode.getMouse()
-        # self.cTrav.showCollisions(self.render)
         # self.ray.setFromLens(self.camNode, mpos.getX(), mpos.getY())
         self.cTrav.traverse(self.render)
         destroy = False

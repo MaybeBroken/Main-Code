@@ -1,5 +1,6 @@
 from direct.filter.CommonFilters import CommonFilters
 from direct.gui.DirectGui import *
+from src.scripts.guiUtils import fade
 
 monitor = None
 
