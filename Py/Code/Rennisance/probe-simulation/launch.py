@@ -1,3 +1,4 @@
 import src.Main
 
-src.Main.app.run()  # type: ignore
+app = src.Main.Main()
+app.run()  # type: ignore

@@ -561,7 +561,7 @@ class Main(ShowBase):
             pusher.addCollider(fromObject, dNode)
             self.cTrav.addCollider(fromObject, pusher)
 
-            self.aiChars[num] = {"mesh": dNode, "ai": AIchar}
+            self.aiChars[num] = {"mesh": dNode, "ai": AIchar, "active":True}
 
     def setupScene(self):
         # setup sun
@@ -707,7 +707,7 @@ class Main(ShowBase):
                 hitObject = self.aiChars[hitNodePath.getPythonTag("owner")]["mesh"]
                 colNode = hitNodePath.getPythonTag("collision")
                 self.cTrav.removeCollider(colNode)
-                del self.aiChars[hitNodePath.getPythonTag("owner")]
+                self.aiChars[hitNodePath.getPythonTag("owner")]["active"] = False
                 destroy = True
                 print(f"destroyed node {colNode} at path {hitNodePath}")
             except:
@@ -717,6 +717,3 @@ class Main(ShowBase):
                 return
             else:
                 weapons.lasers.fire(origin=self.ship, target=hitObject, normal=normal, destroy=destroy)
-
-
-app = Main()
