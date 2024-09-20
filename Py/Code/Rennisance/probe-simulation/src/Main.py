@@ -9,6 +9,7 @@ import src.scripts.display as disp
 import src.scripts.fileManager as fMgr
 import src.scripts.client as cli
 import src.scripts.weapons as weapons
+import src.scripts.ai as ai
 
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
@@ -132,7 +133,7 @@ class Main(ShowBase):
         self.update_time = 0
         self.taskMgr.add(self.update, "update")
         self.taskMgr.add(self.sync, "syncServer+Client")
-    
+
     def postLoad(self):
         self.render.prepareScene(self.win.getGsg())
 
@@ -148,17 +149,7 @@ class Main(ShowBase):
 
     def updateAiWorld(self):
         self.AIworld.update()
-        try:
-            for aiChar in self.aiChars:
-                ai = self.aiChars[aiChar]["ai"]
-                node = self.aiChars[aiChar]["mesh"]
-                AIbehaviors = ai.getAiBehaviors()
-                if self.ship.getDistance(node) < 50:
-                    AIbehaviors.flee(self.ship)
-                if self.ship.getDistance(node) > 100:
-                    AIbehaviors.pursue(self.ship)
-        except:
-            None
+        ai.update(aiChars=self.aiChars, ship=self.ship)
 
     def update(self, task):
         result = task.cont
@@ -527,9 +518,6 @@ class Main(ShowBase):
 
     def setupAiWorld(self):
         self.AIworld = AIWorld(self.render)
-        self.AiFlock = Flock(1, 270, 10, 2, 4, 1)
-        self.AIworld.addFlock(self.AiFlock)
-        self.AIworld.flockOn(1)
 
         self.aiChars = {}
         for num in range(3):
@@ -539,10 +527,6 @@ class Main(ShowBase):
             dNode.setScale(3)
             AIchar = AICharacter("seeker", dNode, 1, 15, 1)
             self.AIworld.addAiChar(AIchar)
-            self.AiFlock.addAiChar(AIchar)
-            AIbehaviors = AIchar.getAiBehaviors()
-            AIbehaviors.pursue(self.ship)
-            AIbehaviors.flock(0.5)
 
             size = 3
 
@@ -555,7 +539,7 @@ class Main(ShowBase):
             pusher.addCollider(fromObject, dNode)
             self.cTrav.addCollider(fromObject, pusher)
 
-            self.aiChars[num] = {"mesh": dNode, "ai": AIchar, "active":True}
+            self.aiChars[num] = {"mesh": dNode, "ai": AIchar, "active": True}
 
     def setupScene(self):
         # setup sun
@@ -710,4 +694,6 @@ class Main(ShowBase):
             if type(hitObject) == int:
                 return
             else:
-                weapons.lasers.fire(origin=self.ship, target=hitObject, normal=normal, destroy=destroy)
+                weapons.lasers.fire(
+                    origin=self.ship, target=hitObject, normal=normal, destroy=destroy
+                )
