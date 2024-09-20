@@ -8,12 +8,17 @@ from direct.particles.ParticleEffect import ParticleEffect
 from math import sin, cos
 
 
-def destroyNode(node):
-    node.destroy()
+def destroyNode(node, particleId):
+    _internals["particles"][particleId].disable()
+    node.removeNode()
+
+
+
+particleId = 0
 
 
 class _firing:
-    def addLaser(data):
+    def addLaser(data, particleId, destroy):
         origin = data["origin"]
         target = data["target"]
         render3d = _internals["sceneGraphs"]["render3d"]
@@ -27,12 +32,12 @@ class _firing:
         modelNode.lookAt(target)
         model.lookAt(origin)
         model.setMaterial(_internals["materials"]["glowMat"])
-        model.setTransparency(True)
-        Thread(
-            target=fade.fadeOutGuiElement_ThreadedOnly,
-            args=[modelNode, 25, "after", destroyNode, (modelNode)],
-            daemon=True,
-        ).start()
+        if destroy:
+            model.setTransparency(True)
+            Thread(
+                target=fade.fadeOutGuiElement_ThreadedOnly,
+                args=[modelNode, 25, "after", destroyNode, (modelNode, particleId)],
+            ).start()
 
 
 class lasers:
@@ -49,24 +54,31 @@ class lasers:
         glowMat.setEmission((5, 0, 0, 1))
         _internals["materials"]["glowMat"] = glowMat
 
-    def fire(self: None = _self, origin=None, target=None, normal=None, destroy=True):
-        _firing.addLaser(data={"origin": origin, "target": target})
-        # target.setMaterial(_internals["materials"]["glowMat"])
+    def fire(
+        
+        self: None = _self, origin=None, target=None, normal=(0, 0, 0), destroy=True
+    ):
+        global particleId
+        _firing.addLaser(
+            data={"origin": origin, "target": target}, particleId=particleId, destroy=destroy
+        )
+        target.setMaterial(_internals["materials"]["glowMat"])
         if destroy:
-            particleEngine.loadParticleConfig(self, target, normal)
+            particleEngine.loadParticleConfig(self, target, normal, particleId)
+            particleId += 1
             target.setTransparency(True)
             Thread(
                 target=fade.fadeOutGuiElement_ThreadedOnly,
                 args=[target, 100, None, None, None],
-                daemon=True,
             ).start()
 
 
 class particleEngine:
-    def loadParticleConfig(self, object, normal):
-        _internals["particles"][object] = ParticleEffect()
-        _internals["particles"][object].loadConfig(
-            Filename("Py/Code/Rennisance/probe-simulation/src/particles/fireish.ptf")
+    def loadParticleConfig(self, object, normal, particleId):
+        _internals["particles"][particleId] = ParticleEffect()
+        _internals["particles"][particleId].loadConfig(
+            Filename("src/particles/fireish.ptf")
         )
-        _internals["particles"][object].start(object)
-        _internals["particles"][object].setPos(-normal)
+        _internals["particles"][particleId].renderParent = object
+        _internals["particles"][particleId].start(object)
+        _internals["particles"][particleId].setPos(-normal)

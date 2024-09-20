@@ -5,7 +5,7 @@ class fade:
     def fadeOutGuiElement_ThreadedOnly(
         element, timeToFade, execBeforeOrAfter, target, args=()
     ):
-        if execBeforeOrAfter == "Before":
+        if execBeforeOrAfter == "before":
             target(*args)
 
         for i in range(timeToFade):
@@ -16,7 +16,7 @@ class fade:
                 None
             sleep(0.01)
         element.hide()
-        if execBeforeOrAfter == "After":
+        if execBeforeOrAfter == "after":
             target(*args)
 
     def fadeInGuiElement_ThreadedOnly(

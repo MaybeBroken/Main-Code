@@ -148,8 +148,7 @@ class Main(ShowBase):
         return task.cont
 
     def updateAiWorld(self):
-        self.AIworld.update()
-        ai.update(aiChars=self.aiChars, ship=self.ship)
+        ai.update(AIworld=self.AIworld, aiChars=self.aiChars, ship=self.ship)
 
     def update(self, task):
         result = task.cont
@@ -687,7 +686,6 @@ class Main(ShowBase):
                 self.cTrav.removeCollider(colNode)
                 self.aiChars[hitNodePath.getPythonTag("owner")]["active"] = False
                 destroy = True
-                print(f"destroyed node {colNode} at path {hitNodePath}")
             except:
                 hitObject = hitNodePath.getPythonTag("owner")
                 destroy = False
