@@ -1,8 +1,4 @@
 import os
-
-os.system("python3 -m pip install pytubefix")
-os.system("python3 -m pip install requests")
-os.system("python3 -m pip install mutagen")
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, error
 from time import sleep
@@ -60,10 +56,10 @@ def Download(link, format):
             file.write(response.content)
 
         os.system(
-            f'ffmpeg -v 1 -i "{outputPath+name+"."+format}" "{outputPath+"_"+name+"."+format}"'
+            f'ffmpeg -v 1 -i "{outputPath+name+"."+format}" "{outputPath+name+"."+format}"'
         )
 
-        audio = MP3(outputPath + "_" + name + "." + format, ID3=ID3)
+        audio = MP3(outputPath +name + "." + format, ID3=ID3)
         audio.tags.add(
             APIC(
                 encoding=3,
@@ -101,46 +97,49 @@ def _Song(link, format):
     Download(link, format)
     print("\n\n\n*********\nFinished\n*********\n")
 
-
-firstchoice = input(
-    "\nAnother project by MaybeBroken\nWelcome to the Youtube Downloader Utility!\ndownload or convert? (D/C)   "
-)
-if firstchoice == "d" or firstchoice == "D":
-    format = input("\nwhich format? mp(3/4):  ")
-    if format == "3":
-        format = "mp3"
-    if format == "4":
-        format = "mp4"
-    secondChoice = input("\nIs this a song or a playlist? (S/P)  ")
-    if secondChoice == "p" or secondChoice == "P":
-        url = input(f"\nyt Playlist Url:\n-->  ")
-        if url == "" or url == None or len(url) < 20:
-            url = "https://music.youtube.com/playlist?list=PLt-QnSFN9Gjp2sD8DmeY1B0awsd7tmpP7&si=yqYOMDGHaWBLElwP"
-        print("\n")
-        _Wrapper(url, format)
-    if secondChoice == "s" or secondChoice == "S":
-        url = input(f"\nyt song Url:\n-->  ")
-        if url == "" or url == None or len(url) < 20:
-            url = "https://music.youtube.com/watch?v=aZti2SC6MFY&si=WtZlNftPk1Im5N1q"
-        print("\n")
-        _Song(url, format)
-if firstchoice == "c" or firstchoice == "C":
-    mpQuery = input("\nConvert all to mp3?: (Y/N)  ")
-    if mpQuery == "y" or mpQuery == "Y":
-        for i in os.listdir(outputPath):
-            if i != ".DS_Store":
-                try:
-                    try:
-                        os.mkdir(os.path.join(outputPath, i, "converted"))
-                    except:
-                        None
-                    for name in os.listdir(os.path.join(outputPath, i)):
-                        dirInput = os.path.abspath(os.path.join(outputPath, i, name))
-                        dirOutput = os.path.abspath(
-                            os.path.join(
-                                outputPath, i, "converted", name.replace(".mp4", ".mp3")
-                            )
-                        )
-                        os.system(f'ffmpeg -v 1 -i "{dirInput}" "{dirOutput}"')
-                except:
-                    print("file conversion error")
+while True:
+    try:
+        firstchoice = input(
+            "Another project by MaybeBroken\nWelcome to the Youtube Downloader Utility!\ndownload or convert? (D/C)   "
+        )
+        if firstchoice == "d" or firstchoice == "D":
+            format = input("\nwhich format? mp(3/4):  ")
+            if format == "3":
+                format = "mp3"
+            if format == "4":
+                format = "mp4"
+            secondChoice = input("\nIs this a song or a playlist? (S/P)  ")
+            if secondChoice == "p" or secondChoice == "P":
+                url = input(f"\nyt Playlist Url:\n-->  ")
+                if url == "" or url == None or len(url) < 20:
+                    url = "https://music.youtube.com/playlist?list=PLt-QnSFN9Gjp2sD8DmeY1B0awsd7tmpP7&si=yqYOMDGHaWBLElwP"
+                print("\n")
+                _Wrapper(url, format)
+            if secondChoice == "s" or secondChoice == "S":
+                url = input(f"\nyt song Url:\n-->  ")
+                if url == "" or url == None or len(url) < 20:
+                    url = "https://music.youtube.com/watch?v=aZti2SC6MFY&si=WtZlNftPk1Im5N1q"
+                print("\n")
+                _Song(url, format)
+        if firstchoice == "c" or firstchoice == "C":
+            mpQuery = input("\nConvert all to mp3?: (Y/N)  ")
+            if mpQuery == "y" or mpQuery == "Y":
+                for i in os.listdir(outputPath):
+                    if i != ".DS_Store":
+                        try:
+                            try:
+                                os.mkdir(os.path.join(outputPath, i, "converted"))
+                            except:
+                                None
+                            for name in os.listdir(os.path.join(outputPath, i)):
+                                dirInput = os.path.abspath(os.path.join(outputPath, i, name))
+                                dirOutput = os.path.abspath(
+                                    os.path.join(
+                                        outputPath, i, "converted", name.replace(".mp4", ".mp3")
+                                    )
+                                )
+                                os.system(f'ffmpeg -v 1 -i "{dirInput}" "{dirOutput}"')
+                        except:
+                            print("file conversion error")
+    except:
+        print(ExceptionGroup)
