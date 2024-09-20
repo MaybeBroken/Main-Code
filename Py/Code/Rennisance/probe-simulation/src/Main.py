@@ -118,7 +118,7 @@ class Main(ShowBase):
             internalArgs=[
                 [
                     "objects",
-                    ["cube", self.loader.loadModel("src/models/cube/cube.egg")],
+                    ["cube", self.loader.loadModel("models/box")],
                 ],
                 ["sceneGraphs", ["render3d", self.render]],
             ],
@@ -397,29 +397,27 @@ class Main(ShowBase):
         self.skybox = self.loader.loadModel("src/models/skybox/stars.egg")
         self.ship = self.loader.loadModel("src/models/simple_ship/model.egg")
         self.skybox2 = self.loader.loadModel("src/models/skybox/stars.egg")
-        self.voyager = self.loader.loadModel("src/models/cube/cube.egg")
-        self.drone = self.loader.loadModel("src/models/cube/cube.egg")
+        self.voyager = self.loader.loadModel("src/models/voyager/voyager.bam")
+        self.drone = self.loader.loadModel("src/models/drone/drone.bam")
         self.starNode = NodePath("starNode")
         self.starNode.reparentTo(self.render)
         disp.GUI.setup(disp.GUI)
 
     def setupLights(self):
         ambientLight = AmbientLight("ambientLight")
-        ambientLight.setColor((0.1, 0.1, 0.1, 1))
+        ambientLight.setColor((0.3, 0.3, 0.3, 1))
         ambientLightNP = self.render.attachNewNode(ambientLight)
         self.render.setLight(ambientLightNP)
 
         slight = Spotlight("slight")
-        slight.setColor((1, 1, 1, 1))
+        slight.setColor((2, 2, 2, 1))
         lens = OrthographicLens()
-        lens.setFov(80)
+        lens.setFov(140)
         slight.setLens(lens)
 
         self.SceneLightNode_sm = self.render.attachNewNode(slight)
-
         self.SceneLightNode_sm.setPos(10000, 0, 1000)
         self.SceneLightNode_sm.lookAt(self.ship)
-
         self.render.setLight(self.SceneLightNode_sm)
 
     def setupCamera(self):
@@ -535,7 +533,7 @@ class Main(ShowBase):
 
         self.aiChars = {}
         for num in range(3):
-            dNode = self.loader.loadModel("src/models/cube/cube.egg")
+            dNode = self.loader.loadModel("src/models/drone/drone.bam")
             dNode.instanceTo(self.droneMasterNode)
             dNode.setPos(randint(-100, 100), randint(-100, 100), randint(-100, 100))
             dNode.setScale(3)
