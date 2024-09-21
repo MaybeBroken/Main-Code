@@ -1,6 +1,6 @@
 load-display pandagl
 sync-video true
-window-title PyCraft
+window-title Probe Simulation 3000
 fullscreen false
 show-frame-rate-meter true
 want-pstats 0

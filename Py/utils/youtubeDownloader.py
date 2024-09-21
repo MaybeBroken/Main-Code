@@ -19,7 +19,7 @@ def Download(link, format):
         dataObject = youtubeObject.streams.get_highest_resolution()
     elif format == "mp3":
         dataObject = youtubeObject.streams.filter(only_audio=True)
-        dataObject = dataObject.get_audio_only()
+        dataObject = dataObject[1]
     try:
         name = dataObject.default_filename
     except:
@@ -55,20 +55,20 @@ def Download(link, format):
         with open(outputPath + name + ".jpg", "wb") as file:
             file.write(response.content)
 
-        os.system(
-            f'ffmpeg -v 1 -i "{outputPath+name+"."+format}" "{outputPath+name+"."+format}"'
-        )
+        # os.system(
+        #     f'ffmpeg -v 1 -i "{outputPath+name+"."+format}" "{outputPath+name+"."+format}"'
+        # )
 
-        audio = MP3(outputPath +name + "." + format, ID3=ID3)
-        audio.tags.add(
-            APIC(
-                encoding=3,
-                mime="image/jpeg",
-                type=3,
-                desc="Cover",
-                data=open(outputPath + name + ".jpg", "rb").read(),
-            )
-        )
+        # audio = MP3(outputPath +name + "." + format, ID3=ID3)
+        # audio.tags.add(
+        #     APIC(
+        #         encoding=3,
+        #         mime="image/jpeg",
+        #         type=3,
+        #         desc="Cover",
+        #         data=open(outputPath + name + ".jpg", "rb").read(),
+        #     )
+        # )
 
 
 def getPlaylist(link):
@@ -142,4 +142,4 @@ while True:
                         except:
                             print("file conversion error")
     except:
-        print(ExceptionGroup)
+        None

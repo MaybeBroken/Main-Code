@@ -139,6 +139,7 @@ class Main(ShowBase):
         self.render.prepareScene(self.win.getGsg())
         guiUtils.TaskMgr = self.taskMgr
         guiUtils.globalClock = globalClock # type: ignore
+        guiUtils.fade.setup()
 
     def sync(self, task):
         Wvars.dataKeys = {
@@ -150,13 +151,10 @@ class Main(ShowBase):
         }
         return task.cont
 
-    def updateAiWorld(self):
-        ai.update(AIworld=self.AIworld, aiChars=self.aiChars, ship=self.ship)
-
     def update(self, task):
         result = task.cont
         playerMoveSpeed = Wvars.speed / 100
-        self.updateAiWorld()
+        ai.update(AIworld=self.AIworld, aiChars=self.aiChars, ship=self.ship)
 
         # update velocities
         if self.update_time > 4:
@@ -541,7 +539,7 @@ class Main(ShowBase):
             pusher.addCollider(fromObject, dNode)
             self.cTrav.addCollider(fromObject, pusher)
 
-            self.aiChars[num] = {"mesh": dNode, "ai": AIchar, "active": True, "id":num}
+            self.aiChars[num] = {"mesh": dNode, "ai": AIchar, "active": True, "firing": False, "id":num}
 
     def setupScene(self):
         # setup sun
@@ -688,8 +686,8 @@ class Main(ShowBase):
                 colNode = hitNodePath.getPythonTag("collision")
                 colNode.set_y(-10000)
                 self.aiChars[hitNodePath.getPythonTag("owner")]["active"] = False
-                ai.removeChar(self.aiChars[hitNodePath.getPythonTag("owner")], ship=self.ship)
                 destroy = True
+                ai.removeChar(self.aiChars[hitNodePath.getPythonTag("owner")], ship=self.ship)
             except:
                 hitObject = hitNodePath.getPythonTag("owner")
                 destroy = False

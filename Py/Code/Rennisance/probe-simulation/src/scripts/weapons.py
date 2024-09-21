@@ -18,14 +18,16 @@ class _firing:
     def addLaser(data, particleId, destroy):
         origin = data["origin"]
         target = data["target"]
-        render3d = _internals["sceneGraphs"]["render3d"]
         distance = origin.getDistance(target)
         model = _internals["objects"]["cube"]
         modelNode = NodePath("laserNode")
         modelNode.reparentTo(origin)
         model.reparentTo(modelNode)
-        model.setScale(0.25, distance, 0.25)
-        model.set_y((distance * 2) - 5)
+        if origin.getScale() == (1, 1, 1):
+            model.setScale(0.25, distance*1.25, 0.25)
+        else:
+            model.setScale(0.25, (distance/3)*1.25, 0.25)
+        model.set_y((distance * 2))
         modelNode.lookAt(target)
         model.lookAt(origin)
         model.setMaterial(_internals["materials"]["glowMat"])

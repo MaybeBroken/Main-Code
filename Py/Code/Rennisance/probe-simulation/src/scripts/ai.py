@@ -1,7 +1,9 @@
 from panda3d.ai import *
 from panda3d.ai import AIWorld, AICharacter
+from panda3d.core import NodePath
+from direct.stdpy.threading import Thread
 from src.scripts.weapons import lasers
-from time import monotonic
+from time import monotonic, sleep
 
 
 def behaviors(ai):
@@ -10,20 +12,23 @@ def behaviors(ai):
     class internals:
         FLEE = AIbehaviors.flee
         PURSUE = AIbehaviors.pursue
+        WANDER = AIbehaviors.wander
         PAUSE = AIbehaviors.pauseAi
-        SETMASS = AIbehaviors.setMass
-        GETMASS = AIbehaviors.getMass
+        REMOVE = AIbehaviors.removeAi
 
     return internals
 
 
-lastFire = monotonic()
-
 
 def droneFire(target, origin):
-    if abs(monotonic() - lastFire) > 3:
-        lasers.fire(origin=origin, target=target, destroy=False)
-        lastFire = monotonic()
+    lastFire = monotonic()
+    while True:
+        if abs(monotonic() - lastFire) > 3:
+            lasers.fire(origin=origin, target=target, destroy=False)
+            lastFire = monotonic()
+        if target.getDistance(origin) > 40:
+            return False
+        sleep(0.01)
 
 
 def removeChar(ai, ship):
@@ -31,19 +36,23 @@ def removeChar(ai, ship):
 
 
 def update(AIworld, aiChars, ship):
-    try:
-        for aiChar in aiChars:
-            ai = aiChars[aiChar]["ai"]
-            node = aiChars[aiChar]["mesh"]
-            if aiChars[aiChar]["active"]:
-                if ai.getDistance(ship) > 50:
-                    behaviors(ai).PURSUE(ship)
-                    behaviors(ai).SETMASS(50)
-                else:
-                    behaviors(ai).SETMASS(10000)
-                    droneFire(ship, node)
+    for aiChar in aiChars:
+        ai = aiChars[aiChar]["ai"]
+        node = aiChars[aiChar]["mesh"]
+        if aiChars[aiChar]["active"]:
+            if ship.getDistance(node) > 50:
+                behaviors(ai).PURSUE(ship)
             else:
-                behaviors(ai).FLEE(ship, 100000, 100000, 1)
-    except:
-        None
+                behaviors(ai).REMOVE('pursue')
+                node.lookAt((ship.get_x(), ship.get_y(), ship.get_z()))
+                node.setP(node.getP() +180)
+                node.setR(node.getR() +180)
+                if not aiChars[aiChar]["firing"]:
+                    if ship.getDistance(node) < 40:
+                        Thread(target=droneFire, args=(ship, node)).start()
+                        aiChars[aiChar]["firing"] = True
+            if ship.getDistance(node) > 40:
+                aiChars[aiChar]["firing"] = False
+        else:
+            behaviors(ai).FLEE(ship, 10000, 10000, 1)
     AIworld.update()
