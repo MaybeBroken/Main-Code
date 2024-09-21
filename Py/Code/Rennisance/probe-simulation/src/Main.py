@@ -98,7 +98,7 @@ class Main(ShowBase):
         disp.GUI.start(
             self=disp.GUI,
             render=self.render2d,
-            main=self,
+            _main=self,
             TransparencyAttrib=TransparencyAttrib,
             monitor_=monitor,
         )
@@ -140,6 +140,7 @@ class Main(ShowBase):
         guiUtils.TaskMgr = self.taskMgr
         guiUtils.globalClock = globalClock # type: ignore
         guiUtils.fade.setup()
+        disp.GUI.miniMap(disp.GUI)
 
     def sync(self, task):
         Wvars.dataKeys = {
@@ -267,6 +268,9 @@ class Main(ShowBase):
                     currentP - mouseChangeY * dt * self.cameraSwingFactor,
                     0,
                 )
+                disp.GUI.mapGeom.setH(- self.camNodePath.getH())
+                disp.GUI.mapGeom.setP(self.camNodePath.getP())
+                disp.GUI.mapGeom.setR(self.camNodePath.getR())
 
                 self.lastMouseX = mouseX
                 self.lastMouseY = mouseY

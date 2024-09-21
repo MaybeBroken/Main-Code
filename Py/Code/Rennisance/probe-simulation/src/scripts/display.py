@@ -1,8 +1,11 @@
 from direct.filter.CommonFilters import CommonFilters
 from direct.gui.DirectGui import *
 from src.scripts.guiUtils import fade
-
+from direct.directtools.DirectGrid import DirectGrid
+from panda3d.core import deg2Rad
 monitor = None
+main = None
+guiClass = None
 
 
 class ShaderCall:
@@ -23,14 +26,17 @@ class ShaderCall:
             filters.setHighDynamicRange()
             # filters.setBlurSharpen(1.5)
 
+
 class GUI:
-    def start(self, render, main, TransparencyAttrib, monitor_):
+    def start(self, render, _main, TransparencyAttrib, monitor_):
         self.guiFrame = DirectFrame(parent=render)
         self.render = render
-        self.main = main
+        self.main = _main
         self.TransparencyAttrib = TransparencyAttrib
-        global monitor
+        global monitor, main, guiClass
         monitor = monitor_
+        main = _main
+        guiClass = self
 
     def setup(self):
         borderFrame = self.main.loader.loadTexture("src/textures/GUI/bar.png")
@@ -52,7 +58,13 @@ class GUI:
         self.main.crosshair.hide()
 
         self.main.chargingScreen = DirectFrame(parent=self.guiFrame)
-        self.main.progress = DirectWaitBar(parent=self.main.chargingScreen, value=0, scale=(0.95, 1, 0.75), pos=(0, 0, -0.9), barColor=(1, 0, 0, 1))
+        self.main.progress = DirectWaitBar(
+            parent=self.main.chargingScreen,
+            value=0,
+            scale=(0.95, 1, 0.75),
+            pos=(0, 0, -0.9),
+            barColor=(1, 0, 0, 1),
+        )
         self.main.chargingScreen.hide()
 
     def show(self):
@@ -66,3 +78,14 @@ class GUI:
         self.main.crosshair.hide()
         self.main.chargingScreen.hide()
         self.main.velocityMeter.show()
+
+    def miniMap(self):
+        self.mapFrame = DirectFrame(
+                parent=guiClass.guiFrame,
+                pos=(0.8, 1, 0.75),
+                scale=(0.20, 0.20, 0.20),
+            )
+        self.mapGeom = main.loader.loadModel("src/models/circle_grid/mesh.bam")
+        self.mapGeom.reparentTo(self.mapFrame)
+        self.mapGeom.setHpr(90, 90, 90)
+        self.mapGeom.setScale(0.025)
