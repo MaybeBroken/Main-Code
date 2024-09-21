@@ -10,6 +10,7 @@ import src.scripts.fileManager as fMgr
 import src.scripts.client as cli
 import src.scripts.weapons as weapons
 import src.scripts.ai as ai
+import src.scripts.guiUtils as guiUtils
 
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
@@ -119,7 +120,7 @@ class Main(ShowBase):
             internalArgs=[
                 [
                     "objects",
-                    ["cube", self.loader.loadModel("models/box")],
+                    ["cube", self.loader.loadModel("src/models/drone/cube.egg")],
                 ],
                 ["sceneGraphs", ["render3d", self.render]],
             ],
@@ -136,6 +137,8 @@ class Main(ShowBase):
 
     def postLoad(self):
         self.render.prepareScene(self.win.getGsg())
+        guiUtils.TaskMgr = self.taskMgr
+        guiUtils.globalClock = globalClock # type: ignore
 
     def sync(self, task):
         Wvars.dataKeys = {
@@ -524,7 +527,7 @@ class Main(ShowBase):
             dNode.instanceTo(self.droneMasterNode)
             dNode.setPos(randint(-100, 100), randint(-100, 100), randint(-100, 100))
             dNode.setScale(3)
-            AIchar = AICharacter("seeker", dNode, 1, 15, 1)
+            AIchar = AICharacter("seeker", dNode, 50, 5, 10)
             self.AIworld.addAiChar(AIchar)
 
             size = 3
@@ -538,7 +541,7 @@ class Main(ShowBase):
             pusher.addCollider(fromObject, dNode)
             self.cTrav.addCollider(fromObject, pusher)
 
-            self.aiChars[num] = {"mesh": dNode, "ai": AIchar, "active": True}
+            self.aiChars[num] = {"mesh": dNode, "ai": AIchar, "active": True, "id":num}
 
     def setupScene(self):
         # setup sun
@@ -683,8 +686,9 @@ class Main(ShowBase):
             try:
                 hitObject = self.aiChars[hitNodePath.getPythonTag("owner")]["mesh"]
                 colNode = hitNodePath.getPythonTag("collision")
-                self.cTrav.removeCollider(colNode)
+                colNode.set_y(-10000)
                 self.aiChars[hitNodePath.getPythonTag("owner")]["active"] = False
+                ai.removeChar(self.aiChars[hitNodePath.getPythonTag("owner")], ship=self.ship)
                 destroy = True
             except:
                 hitObject = hitNodePath.getPythonTag("owner")

@@ -1,12 +1,8 @@
-_colliders = []
-_triggers = []
 _internals = {"materials": {}, "objects": {}, "sceneGraphs": {}, "particles": {}}
 from panda3d.core import Material, NodePath, Filename
 from direct.stdpy.threading import Thread
 from src.scripts.guiUtils import fade
 from direct.particles.ParticleEffect import ParticleEffect
-from math import sin, cos
-
 
 def destroyNode(node, particleId):
     _internals["particles"][particleId].disable()
@@ -15,6 +11,7 @@ def destroyNode(node, particleId):
 
 
 particleId = 0
+print("loaded weapons config")
 
 
 class _firing:
@@ -32,12 +29,11 @@ class _firing:
         modelNode.lookAt(target)
         model.lookAt(origin)
         model.setMaterial(_internals["materials"]["glowMat"])
+        model.setTransparency(True)
         if destroy:
-            model.setTransparency(True)
-            Thread(
-                target=fade.fadeOutGuiElement_ThreadedOnly,
-                args=[modelNode, 25, "after", destroyNode, (modelNode, particleId)],
-            ).start()
+            fade.fadeOutNode(modelNode, 60, {'exec':destroyNode, 'args':(modelNode, particleId)})
+        else:
+            fade.fadeOutNode(modelNode, 60)
 
 
 class lasers:
@@ -55,22 +51,19 @@ class lasers:
         _internals["materials"]["glowMat"] = glowMat
 
     def fire(
-        
         self: None = _self, origin=None, target=None, normal=(0, 0, 0), destroy=True
     ):
         global particleId
         _firing.addLaser(
-            data={"origin": origin, "target": target}, particleId=particleId, destroy=destroy
+            data={"origin": origin, "target": target},
+            particleId=particleId,
+            destroy=destroy,
         )
-        target.setMaterial(_internals["materials"]["glowMat"])
         if destroy:
             particleEngine.loadParticleConfig(self, target, normal, particleId)
             particleId += 1
             target.setTransparency(True)
-            Thread(
-                target=fade.fadeOutGuiElement_ThreadedOnly,
-                args=[target, 100, None, None, None],
-            ).start()
+            fade.fadeOutNode(target, 200)
 
 
 class particleEngine:
