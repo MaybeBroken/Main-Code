@@ -37,6 +37,7 @@ class GUI:
         monitor = monitor_
         main = _main
         guiClass = self
+        
 
     def setup(self):
         borderFrame = self.main.loader.loadTexture("src/textures/GUI/bar.png")
