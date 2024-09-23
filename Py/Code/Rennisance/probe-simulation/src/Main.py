@@ -11,7 +11,7 @@ import src.scripts.client as cli
 import src.scripts.weapons as weapons
 import src.scripts.ai as ai
 import src.scripts.guiUtils as guiUtils
-hi
+
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
 from panda3d.ai import *
