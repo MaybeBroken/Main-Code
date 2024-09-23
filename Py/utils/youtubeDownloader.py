@@ -97,6 +97,7 @@ def _Song(link, format):
     Download(link, format)
     print("\n\n\n*********\nFinished\n*********\n")
 
+
 while True:
     try:
         firstchoice = input(
@@ -126,20 +127,25 @@ while True:
             if mpQuery == "y" or mpQuery == "Y":
                 for i in os.listdir(outputPath):
                     if i != ".DS_Store":
-                        try:
+                        # try:
                             try:
                                 os.mkdir(os.path.join(outputPath, i, "converted"))
                             except:
                                 None
                             for name in os.listdir(os.path.join(outputPath, i)):
-                                dirInput = os.path.abspath(os.path.join(outputPath, i, name))
+                                dirInput = os.path.abspath(
+                                    os.path.join(outputPath, i, name)
+                                )
                                 dirOutput = os.path.abspath(
                                     os.path.join(
-                                        outputPath, i, "converted", name.replace(".mp4", ".mp3")
+                                        outputPath,
+                                        i,
+                                        "converted",
+                                        name.replace(".mp3", ".wav"),
                                     )
                                 )
-                                os.system(f'ffmpeg -v 1 -i "{dirInput}" "{dirOutput}"')
-                        except:
-                            print("file conversion error")
+                                os.system(f'./ffmpeg -v 2 -i "{dirInput}" "{dirOutput}"')
+                        # except:
+                            # print("file conversion error")
     except:
         None
