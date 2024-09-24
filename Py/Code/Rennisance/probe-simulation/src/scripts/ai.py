@@ -48,10 +48,10 @@ def update(AIworld, aiChars, ship):
                 node.setP(node.getP() +180)
                 node.setR(node.getR() +180)
                 if not aiChars[aiChar]["firing"]:
-                    if ship.getDistance(node) < 40:
+                    if ship.getDistance(node) <= 50:
                         Thread(target=droneFire, args=(ship, node)).start()
                         aiChars[aiChar]["firing"] = True
-            if ship.getDistance(node) > 40:
+            if ship.getDistance(node) > 50:
                 aiChars[aiChar]["firing"] = False
         else:
             behaviors(ai).FLEE(ship, 10000, 10000, 1)

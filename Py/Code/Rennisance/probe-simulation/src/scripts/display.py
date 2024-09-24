@@ -3,6 +3,7 @@ from direct.gui.DirectGui import *
 from src.scripts.guiUtils import fade
 from direct.directtools.DirectGrid import DirectGrid
 from panda3d.core import deg2Rad
+
 monitor = None
 main = None
 guiClass = None
@@ -37,7 +38,6 @@ class GUI:
         monitor = monitor_
         main = _main
         guiClass = self
-        
 
     def setup(self):
         borderFrame = self.main.loader.loadTexture("src/textures/GUI/bar.png")
@@ -82,11 +82,11 @@ class GUI:
 
     def miniMap(self):
         self.mapFrame = DirectFrame(
-                parent=guiClass.guiFrame,
-                pos=(0.8, 1, 0.75),
-                scale=(0.20, 0.20, 0.20),
-            )
+            parent=guiClass.guiFrame,
+            pos=(0.9, 1, 0.9),
+            scale=(0.3),
+        )
         self.mapGeom = main.loader.loadModel("src/models/circle_grid/mesh.bam")
         self.mapGeom.reparentTo(self.mapFrame)
-        self.mapGeom.setHpr(90, 90, 90)
-        self.mapGeom.setScale(0.025)
+        self.mapGeom.setHpr(0, 90, 0)
+        self.mapGeom.setScale(0.025 / (monitor[0].width / monitor[0].height), 0.025 / (monitor[0].width / monitor[0].height), 0.025 )

@@ -138,7 +138,7 @@ class Main(ShowBase):
     def postLoad(self):
         self.render.prepareScene(self.win.getGsg())
         guiUtils.TaskMgr = self.taskMgr
-        guiUtils.globalClock = globalClock # type: ignore
+        guiUtils.globalClock = globalClock  # type: ignore
         guiUtils.fade.setup()
         disp.GUI.miniMap(disp.GUI)
 
@@ -185,8 +185,6 @@ class Main(ShowBase):
 
         # do system updates
         dt = globalClock.getDt()  # type: ignore
-        self.camera.setHpr(0, 0, 0)
-        self.camera.setPos(0, -50, 40)
         self.camera.lookAt(self.ship)
         self.skybox.setPos(self.camNodePath.getPos())
         self.skybox2.setPos(self.camNodePath.getPos())
@@ -268,9 +266,8 @@ class Main(ShowBase):
                     currentP - mouseChangeY * dt * self.cameraSwingFactor,
                     0,
                 )
-                disp.GUI.mapGeom.setH(- self.camNodePath.getH())
-                disp.GUI.mapGeom.setP(self.camNodePath.getP())
-                disp.GUI.mapGeom.setR(self.camNodePath.getR())
+
+                disp.GUI.mapFrame.setR(self.camNodePath.getH())
 
                 self.lastMouseX = mouseX
                 self.lastMouseY = mouseY
@@ -343,10 +340,18 @@ class Main(ShowBase):
         self.accept("lshift-up", self.updateKeyMap, ["down", False])
         self.accept("wheel_up", self.devModeOn)
         self.accept("wheel_down", self.devModeOff)
-        self.accept("t", self.toggleTargetingGui)
-        self.accept("r", self.doNothing)
+        self.accept("control-wheel_up", self.cameraZoom, ["in"])
+        self.accept("control-wheel_down", self.cameraZoom, ["out"])
         self.accept("q", sys.exit)
         self.accept("f", self.fullStop)
+
+    def cameraZoom(self, inOrOut):
+        if inOrOut == "in":
+            self.camera.setPos(
+                self.camera.getPos() - (1 + (self.camera.getDistance(self.camNodePath)/500))
+            )
+        elif inOrOut == "out":
+            self.camera.setPos(self.camera.getPos() + (1 + (self.camera.getDistance(self.camNodePath)/500)))
 
     def devModeOn(self):
         self.cTrav.showCollisions(self.render)
@@ -543,7 +548,13 @@ class Main(ShowBase):
             pusher.addCollider(fromObject, dNode)
             self.cTrav.addCollider(fromObject, pusher)
 
-            self.aiChars[num] = {"mesh": dNode, "ai": AIchar, "active": True, "firing": False, "id":num}
+            self.aiChars[num] = {
+                "mesh": dNode,
+                "ai": AIchar,
+                "active": True,
+                "firing": False,
+                "id": num,
+            }
 
     def setupScene(self):
         # setup sun
@@ -691,7 +702,9 @@ class Main(ShowBase):
                 colNode.set_y(-10000)
                 self.aiChars[hitNodePath.getPythonTag("owner")]["active"] = False
                 destroy = True
-                ai.removeChar(self.aiChars[hitNodePath.getPythonTag("owner")], ship=self.ship)
+                ai.removeChar(
+                    self.aiChars[hitNodePath.getPythonTag("owner")], ship=self.ship
+                )
             except:
                 hitObject = hitNodePath.getPythonTag("owner")
                 destroy = False
