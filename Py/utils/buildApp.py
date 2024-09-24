@@ -1,1 +1,1 @@
-~/Library/Python/3.9/bin/py2applet py/utils/youtubedownloader.py
+#~/Library/Python/3.9/bin/py2applet py/utils/youtubedownloader.py
