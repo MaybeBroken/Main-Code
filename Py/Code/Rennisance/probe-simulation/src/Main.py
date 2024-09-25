@@ -440,7 +440,7 @@ class Main(ShowBase):
         self.cTrav = CollisionTraverser()
 
         fromObject = self.ship.attachNewNode(CollisionNode("shipColNode"))
-        fromObject.node().addSolid(CollisionSphere(0, 0, 0, 3))
+        fromObject.node().addSolid(CollisionSphere(0, 0, 0, Wvars.shipHitRadius))
         fromObject.node().set_from_collide_mask(1)
         fromObject.node().set_from_collide_mask(0)
         pusher = CollisionHandlerPusher()
@@ -530,7 +530,7 @@ class Main(ShowBase):
     def setupAiWorld(self):
         self.AIworld = AIWorld(self.render)
         self.aiChars = {}
-        for num in range(3):
+        for num in range(Wvars.droneNum):
             dNode = self.loader.loadModel("src/models/drone/drone.bam")
             dNode.instanceTo(self.droneMasterNode)
             dNode.setPos(randint(-100, 100), randint(-100, 100), randint(-100, 100))
@@ -538,7 +538,7 @@ class Main(ShowBase):
             AIchar = AICharacter("seeker", dNode, 50, 5, 10)
             self.AIworld.addAiChar(AIchar)
 
-            size = 3
+            size = Wvars.droneHitRadius
 
             fromObject = dNode.attachNewNode(CollisionNode("colNode"))
             fromObject.node().addSolid(CollisionSphere(0, 0, 0, size))

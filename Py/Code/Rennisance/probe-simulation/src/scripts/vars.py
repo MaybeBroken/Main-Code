@@ -19,5 +19,8 @@ dataKeys: dict = {
         "y": 0,
         "z": 0,
     },
-    "shipHealth": 0,
 }
+shipHealth = None
+shipHitRadius = None
+droneHitRadius = None
+droneNum = None

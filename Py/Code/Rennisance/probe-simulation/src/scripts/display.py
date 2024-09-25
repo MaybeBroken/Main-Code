@@ -1,6 +1,7 @@
 from direct.filter.CommonFilters import CommonFilters
 from direct.gui.DirectGui import *
 from src.scripts.guiUtils import fade
+import src.scripts.vars as Wvars
 from direct.directtools.DirectGrid import DirectGrid
 from panda3d.core import deg2Rad
 import sys
@@ -34,25 +35,32 @@ class settingsScreen:
     def start(self):
         def updateDifficulty(arg):
             if arg == "Blank":
-                self.shipHealthSlider['value'] = 0
-                self.shipHitRadiusSlider['value'] = 0
-                self.droneHitRadiusSlider['value'] = 0
+                self.shipHealthSlider["value"] = 0
+                self.shipHitRadiusSlider["value"] = 0
+                self.droneHitRadiusSlider["value"] = 0
+                self.droneNum.set('0')
+                
             elif arg == "Easy":
-                self.shipHealthSlider['value'] = 20
-                self.shipHitRadiusSlider['value'] = 2
-                self.droneHitRadiusSlider['value'] = 12
+                self.shipHealthSlider["value"] = 20
+                self.shipHitRadiusSlider["value"] = 2
+                self.droneHitRadiusSlider["value"] = 12
+                self.droneNum.set('5')
             elif arg == "Medium":
-                self.shipHealthSlider['value'] = 15
-                self.shipHitRadiusSlider['value'] = 6
-                self.droneHitRadiusSlider['value'] = 8
+                self.shipHealthSlider["value"] = 15
+                self.shipHitRadiusSlider["value"] = 6
+                self.droneHitRadiusSlider["value"] = 8
+                self.droneNum.set('10')
             elif arg == "Hard":
-                self.shipHealthSlider['value'] = 8
-                self.shipHitRadiusSlider['value'] = 8
-                self.droneHitRadiusSlider['value'] = 5
+                self.shipHealthSlider["value"] = 8
+                self.shipHitRadiusSlider["value"] = 8
+                self.droneHitRadiusSlider["value"] = 5
+                self.droneNum.set('25')
             elif arg == "Impossible ;)":
-                self.shipHealthSlider['value'] = 3
-                self.shipHitRadiusSlider['value'] = 12
-                self.droneHitRadiusSlider['value'] = 3
+                self.shipHealthSlider["value"] = 3
+                self.shipHitRadiusSlider["value"] = 12
+                self.droneHitRadiusSlider["value"] = 3
+                self.droneNum.set('50')
+
         def updateGuiValues():
             self.shipHealthTitle["text"] = (
                 f"Ship Hit Points: {int(self.shipHealthSlider['value'])}"
@@ -63,6 +71,10 @@ class settingsScreen:
             self.droneHitRadiusTitle["text"] = (
                 f"Drone Hitbox Radius: {int(self.droneHitRadiusSlider['value'])}"
             )
+            Wvars.shipHealth = int(self.shipHealthSlider['value'])
+            Wvars.shipHitRadius = int(self.shipHitRadiusSlider['value'])
+            Wvars.droneHitRadius = int(self.droneHitRadiusSlider['value'])
+            Wvars.droneNum = int(self.droneNum.get())
 
         global spriteSheet
         self.setBackgroundColor(0, 0, 0, 1)
@@ -203,8 +215,20 @@ class settingsScreen:
             command=updateGuiValues,
         )
 
+        self.droneNumTitle = OnscreenText(
+            text=f"Number of Drones:",
+            parent=self.settingsFrame,
+            scale=0.05,
+            pos=(0.05, 0.05),
+            fg=(1, 1, 1, 1),
+        )
         self.droneNum = DirectEntry(
-            parent=self.settingsFrame, scale=0.05, pos=(-0.15, 0, 0)
+            parent=self.settingsFrame,
+            scale=0.05,
+            pos=(-0.15, 0, -0.05),
+            initialText="5",
+            cursorKeys=True,
+            focusOutCommand=updateGuiValues,
         )
 
 
