@@ -1,4 +1,5 @@
 import asyncio
+import os
 import src.scripts.decoder as decoder
 import websockets
 import functools
@@ -20,6 +21,8 @@ async def _buildServe(portNum, var):
         print(f'*********\n:SERVER(notice): listening on port {portNum}\n*********')
         await asyncio.Future()
 
+def startLocalTunnel(portNum):
+    os.system(f'lt -p {portNum} -s rennisance')
 
 def startServer(portNum, var):
     asyncio.run(_buildServe(portNum, var))

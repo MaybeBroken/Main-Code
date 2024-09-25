@@ -87,6 +87,11 @@ def degToRad(degrees):
 class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
+        self.accept("q", sys.exit)
+        disp.monitor = monitor
+        disp.settingsScreen.start(self)
+    def load(self):
+        self.guiFrame.hide()
         self.backfaceCullingOn()
         self.disableMouse()
 
@@ -100,7 +105,6 @@ class Main(ShowBase):
             render=self.render2d,
             _main=self,
             TransparencyAttrib=TransparencyAttrib,
-            monitor_=monitor,
         )
         physics.physicsMgr.enable(
             self=physics.physicsMgr,
@@ -134,7 +138,6 @@ class Main(ShowBase):
         self.update_time = 0
         self.taskMgr.add(self.update, "update")
         self.taskMgr.add(self.sync, "syncServer+Client")
-
     def postLoad(self):
         self.render.prepareScene(self.win.getGsg())
         guiUtils.TaskMgr = self.taskMgr
@@ -342,7 +345,6 @@ class Main(ShowBase):
         self.accept("wheel_down", self.devModeOff)
         self.accept("control-wheel_up", self.cameraZoom, ["in"])
         self.accept("control-wheel_down", self.cameraZoom, ["out"])
-        self.accept("q", sys.exit)
         self.accept("f", self.fullStop)
 
     def cameraZoom(self, inOrOut):
@@ -527,7 +529,6 @@ class Main(ShowBase):
 
     def setupAiWorld(self):
         self.AIworld = AIWorld(self.render)
-
         self.aiChars = {}
         for num in range(3):
             dNode = self.loader.loadModel("src/models/drone/drone.bam")
@@ -554,13 +555,14 @@ class Main(ShowBase):
                 "active": True,
                 "firing": False,
                 "id": num,
+                "health":None
             }
 
     def setupScene(self):
         # setup sun
         nodeScale = 5000
         sunNode = NodePath("sun")
-        sunNode.reparentTo(self.starNode)
+        # sunNode.reparentTo(self.starNode)
         self.starNode.setPos(100000, 0, 10000)
         self.starNode.setScale(nodeScale)
         self.sun.setTexture(

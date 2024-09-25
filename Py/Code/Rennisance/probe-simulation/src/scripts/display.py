@@ -3,10 +3,12 @@ from direct.gui.DirectGui import *
 from src.scripts.guiUtils import fade
 from direct.directtools.DirectGrid import DirectGrid
 from panda3d.core import deg2Rad
+import sys
 
 monitor = None
 main = None
 guiClass = None
+spriteSheet = {}
 
 
 class ShaderCall:
@@ -28,14 +30,91 @@ class ShaderCall:
             # filters.setBlurSharpen(1.5)
 
 
+class settingsScreen:
+    def start(self):
+        global spriteSheet
+        self.setBackgroundColor(0, 0, 0, 1)
+        self.guiFrame = DirectFrame(parent=self.aspect2d)
+        spriteSheet["menuBackground"] = self.loader.loadTexture(
+            "src/textures/raw/menuBackground.png"
+        )
+        spriteSheet["startButton"] = self.loader.loadTexture(
+            "src/textures/raw/startButton.png"
+        )
+        spriteSheet["startButton"]
+        spriteSheet["exitButton"] = self.loader.loadTexture(
+            "src/textures/raw/exitButton.png"
+        )
+        spriteSheet["voyagerLogo"] = self.loader.loadTexture(
+            texturePath="src/textures/raw/Voyager_Logo.png",
+        )
+        spriteSheet["flightDirector"] = self.loader.loadTexture(
+            texturePath="src/textures/raw/flightDirectorTile.png",
+        )
+
+        self.startupMenuFrame = DirectFrame(parent=self.guiFrame)
+        self.startupMenuFrame.set_transparency(1)
+
+        self.startupMenuBackgroundImage = OnscreenImage(
+            parent=self.startupMenuFrame,
+            image=spriteSheet["menuBackground"],
+            scale=(1 * monitor[0].width / monitor[0].height, 1, 1),
+        )
+
+        self.startupMenuBackgroundImage2 = OnscreenImage(
+            parent=self.startupMenuFrame,
+            image=spriteSheet["voyagerLogo"],
+            scale=0.25,
+            pos=(0.825 * monitor[0].width / monitor[0].height, 0, -0.725),
+        )
+
+        self.startupMenuStartButton = DirectButton(
+            parent=self.startupMenuFrame,
+            pos=(-0.7 * monitor[0].width / monitor[0].height, 0, 0.6),
+            scale=(0.12 * (553 / 194), 1, 0.12),
+            relief=None,
+            image=spriteSheet["startButton"],
+            geom=None,
+            frameColor=(1.0, 1.0, 1.0, 0.0),
+            command=self.load,
+        )
+
+        self.startupMenuQuitButton = DirectButton(
+            parent=self.startupMenuFrame,
+            pos=(-0.7 * monitor[0].width / monitor[0].height, 0, 0.3),
+            scale=(0.12 * (553 / 194), 1, 0.12),
+            relief=DGG.FLAT,
+            image=spriteSheet["exitButton"],
+            geom=None,
+            frameColor=(1.0, 1.0, 1.0, 0.0),
+            command=sys.exit,
+        )
+
+        self.startupMenuCreditsText = OnscreenText(
+            "Programmed by David Sponseller",
+            pos=(-0.8 * monitor[0].width / monitor[0].height, -0.95),
+            scale=0.04,
+            parent=self.startupMenuFrame,
+            fg=(0.5, 7, 7, 0.75),
+        )
+
+        self.settingsFrame = DirectFrame(parent=self.guiFrame, frameSize = (-0.25, 0.75, -0.75, 0.75), frameColor = (0, 0, 0, 0.4))
+        self.settingsTopBar = DirectFrame(parent=self.settingsFrame, frameSize = (-0.25, 0.75, 0.65, 0.75), frameColor = (0, 0, 0, 0.4))
+        self.presetsTitle = OnscreenText(text='Presets: ', parent=self.settingsTopBar, scale=0.04, pos=(-0.1, 0.69), fg=(1, 1, 1, 1))
+        self.presetsMenu = DirectOptionMenu(parent=self.settingsTopBar, items=['Blank', 'Easy', 'Medium', 'Hard', 'Impossible ;)'], scale=0.06, pos=(0.05, 1, 0.69))
+
+        self.droneNum = DirectEntry(
+            parent=self.settingsFrame, scale=0.05, pos=(-0.15, 0, 0)
+        )
+
+
 class GUI:
-    def start(self, render, _main, TransparencyAttrib, monitor_):
+    def start(self, render, _main, TransparencyAttrib):
         self.guiFrame = DirectFrame(parent=render)
         self.render = render
         self.main = _main
         self.TransparencyAttrib = TransparencyAttrib
-        global monitor, main, guiClass
-        monitor = monitor_
+        global main, guiClass
         main = _main
         guiClass = self
 
@@ -89,4 +168,8 @@ class GUI:
         self.mapGeom = main.loader.loadModel("src/models/circle_grid/mesh.bam")
         self.mapGeom.reparentTo(self.mapFrame)
         self.mapGeom.setHpr(0, 90, 0)
-        self.mapGeom.setScale(0.025 / (monitor[0].width / monitor[0].height), 0.025 / (monitor[0].width / monitor[0].height), 0.025 )
+        self.mapGeom.setScale(
+            0.025 / (monitor[0].width / monitor[0].height),
+            0.025 / (monitor[0].width / monitor[0].height),
+            0.025,
+        )

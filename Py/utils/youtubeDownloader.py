@@ -2,7 +2,7 @@ import os
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, error
 from time import sleep
-from pytubefix import YouTube, Playlist
+from pytubefix import YouTube, Playlist, exceptions
 from threading import Thread
 import requests
 
@@ -18,8 +18,13 @@ def Download(link, format):
         None
         dataObject = youtubeObject.streams.get_highest_resolution()
     elif format == "mp3":
-        dataObject = youtubeObject.streams.filter(only_audio=True)
-        dataObject = dataObject[1]
+        while 1==1:
+            try:
+                dataObject = youtubeObject.streams.filter(only_audio=True)
+                break
+            except exceptions.VideoUnavailable:
+                ...
+        dataObject = dataObject[0]
     try:
         name = dataObject.default_filename
     except:
@@ -144,7 +149,7 @@ while True:
                                         name.replace(".mp3", ".wav"),
                                     )
                                 )
-                                os.system(f'./ffmpeg -v 2 -i "{dirInput}" "{dirOutput}"')
+                                os.system(f'ffmpeg -i "{dirInput}" "{dirOutput}"')
                         # except:
                             # print("file conversion error")
     except:
