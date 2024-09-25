@@ -32,6 +32,38 @@ class ShaderCall:
 
 class settingsScreen:
     def start(self):
+        def updateDifficulty(arg):
+            if arg == "Blank":
+                self.shipHealthSlider['value'] = 0
+                self.shipHitRadiusSlider['value'] = 0
+                self.droneHitRadiusSlider['value'] = 0
+            elif arg == "Easy":
+                self.shipHealthSlider['value'] = 20
+                self.shipHitRadiusSlider['value'] = 2
+                self.droneHitRadiusSlider['value'] = 12
+            elif arg == "Medium":
+                self.shipHealthSlider['value'] = 15
+                self.shipHitRadiusSlider['value'] = 6
+                self.droneHitRadiusSlider['value'] = 8
+            elif arg == "Hard":
+                self.shipHealthSlider['value'] = 8
+                self.shipHitRadiusSlider['value'] = 8
+                self.droneHitRadiusSlider['value'] = 5
+            elif arg == "Impossible ;)":
+                self.shipHealthSlider['value'] = 3
+                self.shipHitRadiusSlider['value'] = 12
+                self.droneHitRadiusSlider['value'] = 3
+        def updateGuiValues():
+            self.shipHealthTitle["text"] = (
+                f"Ship Hit Points: {int(self.shipHealthSlider['value'])}"
+            )
+            self.shipHitRadiusTitle["text"] = (
+                f"Ship Hitbox Radius: {int(self.shipHitRadiusSlider['value'])}"
+            )
+            self.droneHitRadiusTitle["text"] = (
+                f"Drone Hitbox Radius: {int(self.droneHitRadiusSlider['value'])}"
+            )
+
         global spriteSheet
         self.setBackgroundColor(0, 0, 0, 1)
         self.guiFrame = DirectFrame(parent=self.aspect2d)
@@ -98,10 +130,78 @@ class settingsScreen:
             fg=(0.5, 7, 7, 0.75),
         )
 
-        self.settingsFrame = DirectFrame(parent=self.guiFrame, frameSize = (-0.25, 0.75, -0.75, 0.75), frameColor = (0, 0, 0, 0.4))
-        self.settingsTopBar = DirectFrame(parent=self.settingsFrame, frameSize = (-0.25, 0.75, 0.65, 0.75), frameColor = (0, 0, 0, 0.4))
-        self.presetsTitle = OnscreenText(text='Presets: ', parent=self.settingsTopBar, scale=0.04, pos=(-0.1, 0.69), fg=(1, 1, 1, 1))
-        self.presetsMenu = DirectOptionMenu(parent=self.settingsTopBar, items=['Blank', 'Easy', 'Medium', 'Hard', 'Impossible ;)'], scale=0.06, pos=(0.05, 1, 0.69))
+        self.settingsFrame = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-0.25, 0.75, -0.75, 0.75),
+            frameColor=(0, 0, 0, 0.4),
+        )
+        self.settingsTopBar = DirectFrame(
+            parent=self.settingsFrame,
+            frameSize=(-0.25, 0.75, 0.65, 0.75),
+            frameColor=(0, 0, 0, 0.4),
+        )
+        self.presetsTitle = OnscreenText(
+            text="Presets: ",
+            parent=self.settingsTopBar,
+            scale=0.04,
+            pos=(-0.1, 0.69),
+            fg=(1, 1, 1, 1),
+        )
+        self.presetsMenu = DirectOptionMenu(
+            parent=self.settingsTopBar,
+            items=["Blank", "Easy", "Medium", "Hard", "Impossible ;)"],
+            command=updateDifficulty,
+            scale=0.06,
+            pos=(0.05, 1, 0.69),
+        )
+
+        self.shipHealthTitle = OnscreenText(
+            text=f"Ship Hit Points: 1",
+            parent=self.settingsFrame,
+            scale=0.05,
+            pos=(0.05, 0.55),
+            fg=(1, 1, 1, 1),
+        )
+        self.shipHealthSlider = DirectSlider(
+            parent=self.settingsFrame,
+            range=(1, 32),
+            pageSize=1,
+            scale=0.15,
+            pos=(0.05, 0, 0.485),
+            command=updateGuiValues,
+        )
+
+        self.shipHitRadiusTitle = OnscreenText(
+            text=f"Ship Hitbox Radius: 3",
+            parent=self.settingsFrame,
+            scale=0.05,
+            pos=(0.05, 0.4),
+            fg=(1, 1, 1, 1),
+        )
+        self.shipHitRadiusSlider = DirectSlider(
+            parent=self.settingsFrame,
+            range=(3, 15),
+            pageSize=1,
+            scale=0.15,
+            pos=(0.05, 0, 0.335),
+            command=updateGuiValues,
+        )
+
+        self.droneHitRadiusTitle = OnscreenText(
+            text=f"Drone Hitbox Radius: 3",
+            parent=self.settingsFrame,
+            scale=0.05,
+            pos=(0.05, 0.25),
+            fg=(1, 1, 1, 1),
+        )
+        self.droneHitRadiusSlider = DirectSlider(
+            parent=self.settingsFrame,
+            range=(3, 15),
+            pageSize=1,
+            scale=0.15,
+            pos=(0.05, 0, 0.175),
+            command=updateGuiValues,
+        )
 
         self.droneNum = DirectEntry(
             parent=self.settingsFrame, scale=0.05, pos=(-0.15, 0, 0)

@@ -4,10 +4,10 @@ from direct.stdpy.threading import Thread
 from src.scripts.guiUtils import fade
 from direct.particles.ParticleEffect import ParticleEffect
 
+
 def destroyNode(node, particleId):
     _internals["particles"][particleId].disable()
     node.removeNode()
-
 
 
 particleId = 0
@@ -25,14 +25,16 @@ class _firing:
             modelNode.setScale(0.3)
         modelNode.reparentTo(origin)
         model.reparentTo(modelNode)
-        model.setScale(0.25, (distance)*1.25, 0.25)
+        model.setScale(0.25, (distance) * 1.25, 0.25)
         model.set_y((distance * 2))
         modelNode.lookAt(target)
         model.lookAt(origin)
         model.setMaterial(_internals["materials"]["glowMat"])
         model.setTransparency(True)
         if destroy:
-            fade.fadeOutNode(modelNode, 60, {'exec':destroyNode, 'args':(modelNode, particleId)})
+            fade.fadeOutNode(
+                modelNode, 60, {"exec": destroyNode, "args": (modelNode, particleId)}
+            )
         else:
             fade.fadeOutNode(modelNode, 60)
 
