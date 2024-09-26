@@ -39,27 +39,32 @@ class settingsScreen:
                 self.shipHitRadiusSlider["value"] = 0
                 self.droneHitRadiusSlider["value"] = 0
                 self.droneNum.set("0")
+                self.droneHealthSlider["value"] = 1
 
             elif arg == "Easy":
                 self.shipHealthSlider["value"] = 20
                 self.shipHitRadiusSlider["value"] = 2
                 self.droneHitRadiusSlider["value"] = 12
                 self.droneNum.set("5")
+                self.droneHealthSlider["value"] = 3
             elif arg == "Medium":
                 self.shipHealthSlider["value"] = 15
                 self.shipHitRadiusSlider["value"] = 6
                 self.droneHitRadiusSlider["value"] = 8
                 self.droneNum.set("10")
+                self.droneHealthSlider["value"] = 8
             elif arg == "Hard":
                 self.shipHealthSlider["value"] = 8
                 self.shipHitRadiusSlider["value"] = 8
                 self.droneHitRadiusSlider["value"] = 5
                 self.droneNum.set("25")
+                self.droneHealthSlider["value"] = 16
             elif arg == "Impossible ;)":
                 self.shipHealthSlider["value"] = 3
                 self.shipHitRadiusSlider["value"] = 12
                 self.droneHitRadiusSlider["value"] = 3
                 self.droneNum.set("50")
+                self.droneHealthSlider["value"] = 32
 
         def updateGuiValues():
             self.shipHealthTitle["text"] = (
@@ -281,27 +286,14 @@ class GUI:
         self.main.crosshair.setTransparency(self.TransparencyAttrib.MAlpha)
         self.main.crosshair.hide()
 
-        self.main.chargingScreen = DirectFrame(parent=self.guiFrame)
-        self.main.progress = DirectWaitBar(
-            parent=self.main.chargingScreen,
+        self.main.HpIndicator = DirectWaitBar(
+            parent=self.guiFrame,
             value=0,
-            scale=(0.95, 1, 0.75),
+            scale=(0.25, 1, 0.5),
             pos=(0, 0, -0.9),
             barColor=(1, 0, 0, 1),
         )
-        self.main.chargingScreen.hide()
-
-    def show(self):
-        # self.border.show()
-        self.main.crosshair.show()
-        self.main.chargingScreen.show()
-        self.main.velocityMeter.hide()
-
-    def hide(self):
-        # self.border.hide()
-        self.main.crosshair.hide()
-        self.main.chargingScreen.hide()
-        self.main.velocityMeter.show()
+        self.main.displayOverlay = DirectFrame(parent=self.guiFrame)
 
     def miniMap(self):
         self.mapFrame = DirectFrame(

@@ -20,6 +20,7 @@ dataKeys: dict = {
         "z": 0,
     },
 }
+shipHitPoints = None
 shipHealth = None
 shipHitRadius = None
 droneHitRadius = None

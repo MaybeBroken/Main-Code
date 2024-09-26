@@ -5,32 +5,8 @@ registeredNodes = []
 globalClock = None
 
 
-def _fadeOutNode(task):
-    for id in registeredNodes:
-        if id[1] > 0:
-            id[1] -= 5
-            if id[2] != None:
-                id[0].setTransparency(True)
-                id[0].getParent().setAlphaScale(id[1])
-                id[0].setAlphaScale(id[1])
-            else:
-                id[0].setTransparency(True)
-                id[0].setAlphaScale(id[1])
-        else:
-            id[0].hide()
-            if id[2] != None:
-                id[2]["exec"](*id[2]["args"])
-            registeredNodes.remove(id)
-    sleep(0.01)
-    return task.cont
-
 taskload = True
 class fade:
-    def setup():
-        TaskMgr.add(_fadeOutNode, priority=-1)
-    def fadeOutNode(node, time, exec: dict = None):
-        registeredNodes.append([node, time, exec])
-
     def fadeOutGuiElement_ThreadedOnly(
         element, timeToFade, execBeforeOrAfter:None = None, target:None = None, args=()
     ):

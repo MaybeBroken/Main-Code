@@ -48,6 +48,8 @@ from panda3d.core import (
     Vec3,
     Vec4,
     CollisionHandlerPusher,
+    MovieTexture,
+    CardMaker,
 )
 
 from direct.gui.OnscreenImage import OnscreenImage
@@ -91,6 +93,7 @@ class Main(ShowBase):
         self.accept("q", sys.exit)
         disp.monitor = monitor
         disp.settingsScreen.start(self)
+
     def load(self):
         self.guiFrame.hide()
         self.backfaceCullingOn()
@@ -139,13 +142,18 @@ class Main(ShowBase):
         self.update_time = 0
         self.taskMgr.add(self.update, "update")
         self.taskMgr.add(self.sync, "syncServer+Client")
+
     def postLoad(self):
         self.render.prepareScene(self.win.getGsg())
         self.voyager.flattenLight()
-        guiUtils.TaskMgr = self.taskMgr
-        guiUtils.globalClock = globalClock  # type: ignore
-        guiUtils.fade.setup()
         disp.GUI.miniMap(disp.GUI)
+        Wvars.shipHitPoints = Wvars.shipHealth
+        self.static = self.startPlayer("src/movies/GUI/static.mp4")
+        self.static.setTransparency(True)
+        self.static.setAlphaScale(0)
+        self.playStaticTex()
+        self.velocityMeter.hide()
+        self.posMeter.hide()
 
     def sync(self, task):
         Wvars.dataKeys = {
@@ -307,7 +315,30 @@ class Main(ShowBase):
             )
             if self.progress["value"] < 100:
                 self.progress["value"] += 1
+
+        if self.ship.getDistance(self.voyager) > 5000:
+            self.updateOverlay()
+        if self.ship.getDistance(self.voyager) > 14000:
+            self.ship.setPos(0, 0, 0)
+            self.fullStop()
+            self.updateOverlay()
+            self.silenceInput()
+            self.pauseFrame = DirectFrame(
+                parent=self.render2d, frameSize=(-1, 1, -1, 1), frameColor=(0, 0, 0, 1)
+            )
+            self.doMethodLater(1.5, self.resume, "resume_graphics")
+            self.fullStop()
         return result
+
+    def resume(self, task):
+        self.pauseFrame.destroy()
+        self.fullStop()
+        self.reviveInput()
+
+    def updateOverlay(self):
+        self.static.setAlphaScale(
+            1 / (9000 / (self.ship.getDistance(self.voyager) - 6000))
+        )
 
     def setupControls(self):
         self.lastMouseX = self.win.getPointer(0).getX()
@@ -329,8 +360,9 @@ class Main(ShowBase):
         self.accept("escape", self.doNothing)
         self.accept("mouse1", self.MouseClicked)
         self.accept("mouse1-up", self.doNothing)
-        self.accept("mouse3", self.toggleTargetingGui)
-        self.accept("mouse3-up", self.toggleTargetingGui)
+        # self.accept("mouse3", self.toggleTargetingGui)
+        # self.accept("mouse3-up", self.toggleTargetingGui)
+
         self.accept("w", self.updateKeyMap, ["forward", True])
         self.accept("w-up", self.updateKeyMap, ["forward", False])
         self.accept("a", self.updateKeyMap, ["left", True])
@@ -352,18 +384,26 @@ class Main(ShowBase):
     def cameraZoom(self, inOrOut):
         if inOrOut == "in":
             self.camera.setPos(
-                self.camera.getPos() - (1 + (self.camera.getDistance(self.camNodePath)/500))
+                self.camera.getPos()
+                - (1 + (self.camera.getDistance(self.camNodePath) / 500))
             )
         elif inOrOut == "out":
-            self.camera.setPos(self.camera.getPos() + (1 + (self.camera.getDistance(self.camNodePath)/500)))
+            self.camera.setPos(
+                self.camera.getPos()
+                + (1 + (self.camera.getDistance(self.camNodePath) / 500))
+            )
 
     def devModeOn(self):
         self.cTrav.showCollisions(self.render)
         self.wireframeOn()
+        self.velocityMeter.show()
+        self.posMeter.show()
 
     def devModeOff(self):
         self.cTrav.hideCollisions()
         self.wireframeOff()
+        self.velocityMeter.hide()
+        self.posMeter.hide()
 
     def toggleTargetingGui(self):
         if Wvars.aiming == False:
@@ -387,8 +427,7 @@ class Main(ShowBase):
     def updateKeyMap(self, key, value):
         self.keyMap[key] = value
 
-    def doNothing(self):
-        return None
+    def doNothing(self): ...
 
     def fullStop(self):
         self.x_movement = 0
@@ -507,6 +546,24 @@ class Main(ShowBase):
             parent=self.render2d,
         )
 
+    def startPlayer(self, media_file):
+        self.tex = MovieTexture("name")
+        success = self.tex.read(media_file)
+        assert success, "Failed to load video!"
+        cm = CardMaker("fullscreenCard")
+        cm.setFrameFullscreenQuad()
+        cm.setUvRange(self.tex)
+        card = NodePath(cm.generate())
+        card.reparentTo(self.render2d)
+        card.setTexture(self.tex)
+        return card
+
+    def stopStaticTex(self):
+        self.tex.stop()
+
+    def playStaticTex(self):
+        self.tex.play()
+
     def hideCursor(self, boolVar):
         properties = WindowProperties()
         properties.setCursorHidden(boolVar)
@@ -535,7 +592,7 @@ class Main(ShowBase):
         for num in range(Wvars.droneNum):
             dNode = self.loader.loadModel("src/models/drone/drone.bam")
             dNode.instanceTo(self.droneMasterNode)
-            dNode.setPos(randint(-100, 100), randint(-100, 100), randint(-100, 100))
+            dNode.setPos(randint(-500, 500), randint(-400, 300), randint(-50, 50))
             dNode.setScale(3)
             AIchar = AICharacter("seeker", dNode, 50, 5, 10)
             self.AIworld.addAiChar(AIchar)
@@ -551,8 +608,14 @@ class Main(ShowBase):
             pusher.addCollider(fromObject, dNode)
             self.cTrav.addCollider(fromObject, pusher)
 
-            healthIndicatorFrame = DirectFrame(parent=dNode, pos=(0, 0, 1), scale=2)
-            healthBar = DirectWaitBar(parent=healthIndicatorFrame, range=Wvars.droneHealth, value=Wvars.droneHealth, barColor=(1, 0.1, 0.2, 1), relief=None)
+            healthIndicatorFrame = DirectFrame(parent=dNode, pos=(0, 0, 1), scale=5)
+            healthBar = DirectWaitBar(
+                parent=healthIndicatorFrame,
+                range=Wvars.droneHealth,
+                value=Wvars.droneHealth,
+                barColor=(1, 0.1, 0.2, 1),
+                relief=None,
+            )
 
             self.aiChars[num] = {
                 "mesh": dNode,
@@ -560,8 +623,8 @@ class Main(ShowBase):
                 "active": True,
                 "firing": False,
                 "id": num,
-                "health":Wvars.droneHealth,
-                "healthBar":healthBar,
+                "health": Wvars.droneHealth,
+                "healthBar": healthBar,
             }
 
     def setupScene(self):
@@ -656,8 +719,10 @@ class Main(ShowBase):
                         self.aiChars[hitNodePath.getPythonTag("owner")], ship=self.ship
                     )
                 else:
-                    self.aiChars[hitNodePath.getPythonTag("owner")]["healthBar"]["value"] = self.aiChars[hitNodePath.getPythonTag("owner")]["health"]
-                    destroy=False
+                    self.aiChars[hitNodePath.getPythonTag("owner")]["healthBar"][
+                        "value"
+                    ] = self.aiChars[hitNodePath.getPythonTag("owner")]["health"]
+                    destroy = False
             except:
                 hitObject = hitNodePath.getPythonTag("owner")
                 destroy = False

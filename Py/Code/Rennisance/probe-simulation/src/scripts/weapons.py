@@ -39,7 +39,7 @@ class _firing:
                 target=fade.fadeOutGuiElement_ThreadedOnly,
                 args=(
                     modelNode,
-                    40,
+                    20,
                     "after",
                     destroyNode,
                     (modelNode, particleId),
@@ -51,7 +51,7 @@ class _firing:
                 target=fade.fadeOutGuiElement_ThreadedOnly,
                 args=(
                     modelNode,
-                    40,
+                    20,
                 ),
             ).start()
 
