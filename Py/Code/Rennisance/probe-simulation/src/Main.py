@@ -604,19 +604,15 @@ class Main(ShowBase):
         self.shipTrailNode.reparentTo(self.ship)
         self.shipTrailNode.set_y(-10)
 
-        shipTrail = MotionTrail("shipTrail", self.shipTrailNode)
-
-        flame_colors = (
-            Vec4(0, 0.0, 1.0, 1),
-            Vec4(0, 0.2, 1.0, 1),
-            Vec4(0, 0.7, 1.0, 1),
-            Vec4(0.0, 0.0, 0.2, 1),
-            Vec4(0, 0.7, 0.5, 1),
-            Vec4(0, 0, 1.0, 1),
-            Vec4(0.3, 0.7, 0.0, 1),
-            Vec4(0.1, 0.1, 0.2, 1),
-        )
         for x in [-6, 6]:
+            shipTrail = MotionTrail("shipTrail", self.shipTrailNode)
+
+            flame_colors = (
+                Vec4(0, 0.0, 1.0, 1),
+                Vec4(0, 0.2, 1.0, 1),
+                Vec4(0, 0.1, 1.0, 1),
+                Vec4(0.0, 0.0, 0.4, 1),
+            )
             center = self.render.attach_new_node("center")
             around = center.attach_new_node("around")
             around.set_z(1.5)
@@ -628,12 +624,12 @@ class Main(ShowBase):
                 shipTrail.add_vertex(vertex_pos)
 
                 start_color = flame_colors[i % len(flame_colors)] * 1.7
-                end_color = Vec4(1, 1, 0, 1)
+                end_color = Vec4(0, 0, 0, 1)
                 shipTrail.set_vertex_color(i, start_color, end_color)
-        shipTrail.update_vertices()
+            shipTrail.update_vertices()
 
-        shipTrail.register_motion_trail()
-        shipTrail.geom_node_path.reparentTo(self.render)
+            shipTrail.register_motion_trail()
+            shipTrail.geom_node_path.reparentTo(self.render)
         self.enableParticles()
 
     def MouseClicked(self):

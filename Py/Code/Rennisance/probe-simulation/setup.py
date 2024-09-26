@@ -33,6 +33,7 @@ setup(
                 # "manylinux2014_x86_64"
             ],
             "include_modules": ["src"],
+            "use_optimized_wheels": False,
         }
     },
 )

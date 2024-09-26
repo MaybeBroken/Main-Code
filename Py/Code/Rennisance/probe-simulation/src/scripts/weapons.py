@@ -32,11 +32,28 @@ class _firing:
         model.setMaterial(_internals["materials"]["glowMat"])
         model.setTransparency(True)
         if destroy:
-            fade.fadeOutNode(
-                modelNode, 60, {"exec": destroyNode, "args": (modelNode, particleId)}
-            )
+            # fade.fadeOutNode(
+            #     modelNode, 60, {"exec": destroyNode, "args": (modelNode, particleId)}
+            # )
+            Thread(
+                target=fade.fadeOutGuiElement_ThreadedOnly,
+                args=(
+                    modelNode,
+                    40,
+                    "after",
+                    destroyNode,
+                    (modelNode, particleId),
+                ),
+            ).start()
         else:
-            fade.fadeOutNode(modelNode, 60)
+            # fade.fadeOutNode(modelNode, 60)
+            Thread(
+                target=fade.fadeOutGuiElement_ThreadedOnly,
+                args=(
+                    modelNode,
+                    40,
+                ),
+            ).start()
 
 
 class lasers:
@@ -66,7 +83,13 @@ class lasers:
             particleEngine.loadParticleConfig(self, target, normal, particleId)
             particleId += 1
             target.setTransparency(True)
-            fade.fadeOutNode(target, 200)
+            Thread(
+                target=fade.fadeOutGuiElement_ThreadedOnly,
+                args=(
+                    target,
+                    100,
+                ),
+            ).start()
 
 
 class particleEngine:
