@@ -24,3 +24,4 @@ shipHealth = None
 shipHitRadius = None
 droneHitRadius = None
 droneNum = None
+droneHealth = None

@@ -3,6 +3,7 @@ from panda3d.ai import AIWorld, AICharacter
 from panda3d.core import NodePath
 from direct.stdpy.threading import Thread
 from src.scripts.weapons import lasers
+
 from time import monotonic, sleep
 
 
@@ -24,6 +25,7 @@ def droneFire(target, origin):
     lastFire = monotonic()
     while True:
         if abs(monotonic() - lastFire) > 3:
+            
             lasers.fire(origin=origin, target=target, destroy=False)
             lastFire = monotonic()
         if target.getDistance(origin) > 40:

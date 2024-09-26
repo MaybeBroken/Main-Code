@@ -72,9 +72,12 @@ class lasers:
 class particleEngine:
     def loadParticleConfig(self, object, normal, particleId):
         _internals["particles"][particleId] = ParticleEffect()
-        _internals["particles"][particleId].loadConfig(
-            Filename("src/particles/fireish.ptf")
-        )
+        try:
+            _internals["particles"][particleId].loadConfig(
+                Filename("src/particles/fireish.ptf")
+            )
+        except:
+            None
         _internals["particles"][particleId].renderParent = object
         _internals["particles"][particleId].start(object)
         _internals["particles"][particleId].setPos(-normal)

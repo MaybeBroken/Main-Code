@@ -49,6 +49,7 @@ from panda3d.core import (
     Vec4,
     CollisionHandlerPusher,
 )
+
 from direct.gui.OnscreenImage import OnscreenImage
 import direct.stdpy.threading as thread
 import direct.stdpy.file as panda_fMgr
@@ -140,6 +141,7 @@ class Main(ShowBase):
         self.taskMgr.add(self.sync, "syncServer+Client")
     def postLoad(self):
         self.render.prepareScene(self.win.getGsg())
+        self.voyager.flattenLight()
         guiUtils.TaskMgr = self.taskMgr
         guiUtils.globalClock = globalClock  # type: ignore
         guiUtils.fade.setup()
@@ -549,13 +551,17 @@ class Main(ShowBase):
             pusher.addCollider(fromObject, dNode)
             self.cTrav.addCollider(fromObject, pusher)
 
+            healthIndicatorFrame = DirectFrame(parent=dNode, pos=(0, 0, 1), scale=2)
+            healthBar = DirectWaitBar(parent=healthIndicatorFrame, range=Wvars.droneHealth, value=Wvars.droneHealth, barColor=(1, 0.1, 0.2, 1), relief=None)
+
             self.aiChars[num] = {
                 "mesh": dNode,
                 "ai": AIchar,
                 "active": True,
                 "firing": False,
                 "id": num,
-                "health":None
+                "health":Wvars.droneHealth,
+                "healthBar":healthBar,
             }
 
     def setupScene(self):
@@ -590,62 +596,6 @@ class Main(ShowBase):
         self.voyager.setScale(280)
         self.voyager.setPos(-3000, 1500, 100)
         self.camera.lookAt(self.voyager)
-
-        worldDistance = 1000
-
-        physics.physicsMgr.registerColliderPlane(
-            self=physics.physicsMgr,
-            object="1",
-            pos=-worldDistance,
-            name="Collider1",
-            orientation="+x",
-            collisionAction="stop",
-        )
-
-        physics.physicsMgr.registerColliderPlane(
-            self=physics.physicsMgr,
-            object="2",
-            pos=worldDistance,
-            name="Collider2",
-            orientation="-x",
-            collisionAction="stop",
-        )
-
-        physics.physicsMgr.registerColliderPlane(
-            self=physics.physicsMgr,
-            object="3",
-            pos=-worldDistance,
-            name="Collider3",
-            orientation="+y",
-            collisionAction="stop",
-        )
-
-        physics.physicsMgr.registerColliderPlane(
-            self=physics.physicsMgr,
-            object="4",
-            pos=worldDistance,
-            name="Collider4",
-            orientation="-y",
-            collisionAction="stop",
-        )
-
-        physics.physicsMgr.registerColliderPlane(
-            self=physics.physicsMgr,
-            object="5",
-            pos=-worldDistance,
-            name="Collider5",
-            orientation="+z",
-            collisionAction="stop",
-        )
-
-        physics.physicsMgr.registerColliderPlane(
-            self=physics.physicsMgr,
-            object="6",
-            pos=worldDistance,
-            name="Collider6",
-            orientation="-z",
-            collisionAction="stop",
-        )
 
         self.droneMasterNode = NodePath("drone-MN")
         self.droneMasterNode.reparentTo(self.render)
@@ -699,14 +649,19 @@ class Main(ShowBase):
             except:
                 None
             try:
+                self.aiChars[hitNodePath.getPythonTag("owner")]["health"] -= 1
                 hitObject = self.aiChars[hitNodePath.getPythonTag("owner")]["mesh"]
-                colNode = hitNodePath.getPythonTag("collision")
-                colNode.set_y(-10000)
-                self.aiChars[hitNodePath.getPythonTag("owner")]["active"] = False
-                destroy = True
-                ai.removeChar(
-                    self.aiChars[hitNodePath.getPythonTag("owner")], ship=self.ship
-                )
+                if self.aiChars[hitNodePath.getPythonTag("owner")]["health"] == 0:
+                    destroy = True
+                    colNode = hitNodePath.getPythonTag("collision")
+                    colNode.set_y(-10000)
+                    self.aiChars[hitNodePath.getPythonTag("owner")]["active"] = False
+                    ai.removeChar(
+                        self.aiChars[hitNodePath.getPythonTag("owner")], ship=self.ship
+                    )
+                else:
+                    self.aiChars[hitNodePath.getPythonTag("owner")]["healthBar"]["value"] = self.aiChars[hitNodePath.getPythonTag("owner")]["health"]
+                    destroy=False
             except:
                 hitObject = hitNodePath.getPythonTag("owner")
                 destroy = False

@@ -38,28 +38,28 @@ class settingsScreen:
                 self.shipHealthSlider["value"] = 0
                 self.shipHitRadiusSlider["value"] = 0
                 self.droneHitRadiusSlider["value"] = 0
-                self.droneNum.set('0')
-                
+                self.droneNum.set("0")
+
             elif arg == "Easy":
                 self.shipHealthSlider["value"] = 20
                 self.shipHitRadiusSlider["value"] = 2
                 self.droneHitRadiusSlider["value"] = 12
-                self.droneNum.set('5')
+                self.droneNum.set("5")
             elif arg == "Medium":
                 self.shipHealthSlider["value"] = 15
                 self.shipHitRadiusSlider["value"] = 6
                 self.droneHitRadiusSlider["value"] = 8
-                self.droneNum.set('10')
+                self.droneNum.set("10")
             elif arg == "Hard":
                 self.shipHealthSlider["value"] = 8
                 self.shipHitRadiusSlider["value"] = 8
                 self.droneHitRadiusSlider["value"] = 5
-                self.droneNum.set('25')
+                self.droneNum.set("25")
             elif arg == "Impossible ;)":
                 self.shipHealthSlider["value"] = 3
                 self.shipHitRadiusSlider["value"] = 12
                 self.droneHitRadiusSlider["value"] = 3
-                self.droneNum.set('50')
+                self.droneNum.set("50")
 
         def updateGuiValues():
             self.shipHealthTitle["text"] = (
@@ -71,10 +71,14 @@ class settingsScreen:
             self.droneHitRadiusTitle["text"] = (
                 f"Drone Hitbox Radius: {int(self.droneHitRadiusSlider['value'])}"
             )
-            Wvars.shipHealth = int(self.shipHealthSlider['value'])
-            Wvars.shipHitRadius = int(self.shipHitRadiusSlider['value'])
-            Wvars.droneHitRadius = int(self.droneHitRadiusSlider['value'])
+            self.droneHealthTitle["text"] = (
+                f"Drone Hit Points: {int(self.droneHealthSlider['value'])}"
+            )
+            Wvars.shipHealth = int(self.shipHealthSlider["value"])
+            Wvars.shipHitRadius = int(self.shipHitRadiusSlider["value"])
+            Wvars.droneHitRadius = int(self.droneHitRadiusSlider["value"])
             Wvars.droneNum = int(self.droneNum.get())
+            Wvars.droneHealth = int(self.droneHealthSlider["value"])
 
         global spriteSheet
         self.setBackgroundColor(0, 0, 0, 1)
@@ -229,6 +233,22 @@ class settingsScreen:
             initialText="5",
             cursorKeys=True,
             focusOutCommand=updateGuiValues,
+        )
+
+        self.droneHealthTitle = OnscreenText(
+            text=f"Drone Hit Points: 1",
+            parent=self.settingsFrame,
+            scale=0.05,
+            pos=(0.05, -0.225),
+            fg=(1, 1, 1, 1),
+        )
+        self.droneHealthSlider = DirectSlider(
+            parent=self.settingsFrame,
+            range=(1, 32),
+            pageSize=1,
+            scale=0.15,
+            pos=(0.05, 0, -0.3),
+            command=updateGuiValues,
         )
 
 
