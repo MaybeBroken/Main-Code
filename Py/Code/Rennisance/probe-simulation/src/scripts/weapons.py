@@ -60,9 +60,8 @@ class lasers:
                 _internals[type[0]][arg[0]] = arg[1]
         _self = self
         glowMat = Material()
-        glowMat.setShininess(-5.0)
-        glowMat.setAmbient((1, 0, 0, 1))
-        glowMat.setEmission((5, 0, 0, 1))
+        glowMat.setAmbient((5, 0, 0, 1))
+        glowMat.setEmission((10, 0, 0, 1))
         _internals["materials"]["glowMat"] = glowMat
 
     def fire(

@@ -357,7 +357,7 @@ class Main(ShowBase):
             "secondary": False,
         }
 
-        self.accept("escape", self.doNothing)
+        self.accept("escape", sys.exit)
         self.accept("mouse1", self.MouseClicked)
         self.accept("mouse1-up", self.doNothing)
         # self.accept("mouse3", self.toggleTargetingGui)
@@ -377,9 +377,9 @@ class Main(ShowBase):
         self.accept("lshift-up", self.updateKeyMap, ["down", False])
         self.accept("wheel_up", self.devModeOn)
         self.accept("wheel_down", self.devModeOff)
-        self.accept("control-wheel_up", self.cameraZoom, ["in"])
-        self.accept("control-wheel_down", self.cameraZoom, ["out"])
-        self.accept("f", self.fullStop)
+        # self.accept("control-wheel_up", self.cameraZoom, ["in"])
+        # self.accept("control-wheel_down", self.cameraZoom, ["out"])
+        # self.accept("f", self.fullStop)
 
     def cameraZoom(self, inOrOut):
         if inOrOut == "in":
