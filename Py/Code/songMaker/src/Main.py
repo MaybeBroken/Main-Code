@@ -80,7 +80,7 @@ class Main(ShowBase):
     
     def intro(self):
         self.setBackgroundColor(0, 0, 0, 1)
-        movie = self.loader.loadTexture("src/movies/A Game by MaybeBroken Intro.avi")
+        movie = self.loader.loadTexture("src/movies/intro.mp4")
         image = OnscreenImage(movie, scale=1, parent=self.aspect2d)
         movie.play()
         movie.setLoopCount(1)

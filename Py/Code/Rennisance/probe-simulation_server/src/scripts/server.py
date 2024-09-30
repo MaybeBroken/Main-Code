@@ -19,10 +19,11 @@ async def _buildServe(portNum, var):
     bound_handler = functools.partial(_echo, var=var)
     async with websockets.serve(bound_handler, "localhost", int(portNum)):
         print(f'*********\n:SERVER(notice): listening on port {portNum}\n*********')
+        startLocalTunnel(portNum)
         await asyncio.Future()
 
 def startLocalTunnel(portNum):
-    os.system(f'lt -p {portNum} -s rennisance')
+    os.system(f'lt -p {portNum} -s SpacePlace3000')
 
 def startServer(portNum, var):
     asyncio.run(_buildServe(portNum, var))

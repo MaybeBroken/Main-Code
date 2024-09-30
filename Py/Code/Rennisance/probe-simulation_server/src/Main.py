@@ -287,7 +287,7 @@ class GUI(Main):
             relief=None,
             image=spriteSheet["startButton"],
             geom=None,
-            frameColor = (1.0,1.0,1.0,0.0),
+            frameColor=(1.0, 1.0, 1.0, 0.0),
             command=thread.Thread(
                 target=self.fadeOutGuiElement_ThreadedOnly,
                 args=[
@@ -309,7 +309,7 @@ class GUI(Main):
             relief=DGG.FLAT,
             image=spriteSheet["exitButton"],
             geom=None,
-            frameColor = (1.0,1.0,1.0,0.0),
+            frameColor=(1.0, 1.0, 1.0, 0.0),
             command=sys.exit,
         )
 
@@ -355,6 +355,8 @@ class GUI(Main):
             ],
             daemon=True,
         ).start()
+        self.setupMainframe()
+
 
     def fadeOutGuiElement_ThreadedOnly(
         self, element, timeToFade, execBeforeOrAfter, target, args=()
@@ -392,6 +394,9 @@ class GUI(Main):
 
     def hideGuiFrame(self):
         self.guiFrame.hide()
+    
+
+    def setupMainframe(self): ...
 
 
 app = Main()
