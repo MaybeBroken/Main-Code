@@ -1,10 +1,12 @@
 import asyncio
 import websockets
 import time as t
-import ipaddress
 from threading import Thread
-
+import subprocess as sp
+from panda3d.core import *
+from direct.showbase.ShowBase import ShowBase
 startTime = t.monotonic()
+
 
 def currentTime(dp):
     return t.monotonic() - startTime
@@ -15,13 +17,16 @@ ip = "localhost"
 
 
 async def _echo(websocket):
-    print(f"\nuser: {await websocket.recv()}\n")
+    print(f"\n{websocket.remote_address}: {await websocket.recv()}\n")
 
 
 async def _buildServe():
     async with websockets.serve(_echo, "localhost", int(portNum)):
         print(f"*********\n:SERVER (notice): listening on port {portNum}\n*********")
         await asyncio.Future()
+
+def runNgrok():
+    sp.run(['./ngrok', 'http', f'{portNum}'], capture_output=False)
 
 
 def startServer():
@@ -39,11 +44,12 @@ def runClient(data):
 
 class wrapper:
     global ip
-    ip = input("connect to ip: ")
-    # runClient()
-    # startServer()
     Thread(target=startServer, daemon=True).start()
+    Thread(target=runNgrok, daemon=True).start()
+    ip = input("connect to ip: ")
     while 1 == 1:
         t.sleep(2)
         data = input()
         runClient(data)
+
+# ip: 204.225.31.201

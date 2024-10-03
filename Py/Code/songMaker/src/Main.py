@@ -15,8 +15,6 @@ from panda3d.core import (
     loadPrcFile,
     ConfigVariableString,
     AudioSound,
-)
-from panda3d.core import (
     WindowProperties,
     NodePath,
     TextNode,
@@ -27,8 +25,6 @@ from panda3d.core import (
     PointLight,
     Point3,
     OccluderNode,
-)
-from panda3d.core import (
     CollisionTraverser,
     CollisionNode,
     CollisionBox,
@@ -77,7 +73,7 @@ class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         self.intro()
-    
+
     def intro(self):
         self.setBackgroundColor(0, 0, 0, 1)
         movie = self.loader.loadTexture("src/movies/intro.mp4")
@@ -85,8 +81,9 @@ class Main(ShowBase):
         movie.play()
         movie.setLoopCount(1)
         startTime = t.monotonic()
+
         def finishLaunch(task):
-            if t.monotonic()-startTime>3.1:
+            if t.monotonic() - startTime > 3.1:
                 image.destroy()
                 self.backfaceCullingOn()
                 self.disableMouse()
@@ -97,9 +94,10 @@ class Main(ShowBase):
                 self.setupControls()
 
                 # end of setup tasks
-                self.taskMgr.add(self.update, 'update')
+                self.taskMgr.add(self.update, "update")
             else:
                 return task.cont
+
         self.taskMgr.add(finishLaunch)
 
     def update(self, task):
@@ -142,20 +140,7 @@ class Main(ShowBase):
         mouseX = md.getX()
         mouseY = md.getY()
 
-        if int(monitor[0].width / 2) - mouseX >= int(monitor[0].width / 4):
-            self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
-            self.lastMouseX = int(monitor[0].width / 2)
-        elif int(monitor[0].width / 2) - mouseX <= -int(monitor[0].width / 4):
-            self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
-            self.lastMouseX = int(monitor[0].width / 2)
-        elif int(monitor[0].height / 2) - mouseY >= int(monitor[0].height / 4):
-            self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
-            self.lastMouseY = int(monitor[0].height / 2)
-        elif int(monitor[0].height / 2) - mouseY <= -int(monitor[0].height / 4):
-            self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
-            self.lastMouseY = int(monitor[0].height / 2)
-
-        else:
+        def moveCam():
             mouseChangeX = mouseX - self.lastMouseX
             mouseChangeY = mouseY - self.lastMouseY
 
@@ -176,9 +161,25 @@ class Main(ShowBase):
                 ),
                 0,
             )
-
             self.lastMouseX = mouseX
             self.lastMouseY = mouseY
+
+        if sys.platform == "darwin":
+            moveCam()
+        elif int(monitor[0].width / 2) - mouseX >= int(monitor[0].width / 4):
+            self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
+            self.lastMouseX = int(monitor[0].width / 2)
+        elif int(monitor[0].width / 2) - mouseX <= -int(monitor[0].width / 4):
+            self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
+            self.lastMouseX = int(monitor[0].width / 2)
+        elif int(monitor[0].height / 2) - mouseY >= int(monitor[0].height / 4):
+            self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
+            self.lastMouseY = int(monitor[0].height / 2)
+        elif int(monitor[0].height / 2) - mouseY <= -int(monitor[0].height / 4):
+            self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
+            self.lastMouseY = int(monitor[0].height / 2)
+        else:
+            moveCam()
         # if Wvars.inInventory == True:
         #     md = self.win.getPointer(0)
         #     self.lastMouseX = md.getX()

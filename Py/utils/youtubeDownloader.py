@@ -1,11 +1,9 @@
 import os
-from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, APIC, error
 from time import sleep
 from pytubefix import YouTube, Playlist, exceptions
 from threading import Thread
 import requests
-
+from cli import Color
 
 outputPath = "./youtubeDownloader/"
 threadQueue = []
@@ -35,7 +33,7 @@ def Download(link, format):
                 _stream = youtubeObject.streams.get_highest_resolution()
                 name = _stream.default_filename
             except:
-                print(f"failed fetch at link {link} with format {format}")
+                print(f"{Color.RED}failed fetch at link {Color.RESET}{link} {Color.RED}with format {Color.RESET}{format}")
                 return
     for var in [" ", "(", ")", "[", "]"]:
         name = name.replace(var, "_")
@@ -106,10 +104,10 @@ def _Song(link, format):
 while True:
     try:
         firstchoice = input(
-            "Another project by MaybeBroken\nWelcome to the Youtube Downloader Utility!\ndownload or convert? (D/C)   "
+            f"Another project by {Color.GREEN}MaybeBroken{Color.RESET}\nWelcome to the Youtube Downloader Utility!\nDownload or Convert? (D/C)   "
         )
         if firstchoice == "d" or firstchoice == "D":
-            format = input("\nwhich format? mp(3/4):  ")
+            format = input("\nWhich format? mp(3/4):  ")
             if format == "3":
                 format = "mp3"
             if format == "4":
