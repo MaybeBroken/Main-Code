@@ -21,7 +21,7 @@ def Download(link, format):
                 dataObject = youtubeObject.streams.filter(only_audio=True)
                 break
             except exceptions.VideoUnavailable:
-                ...
+                print('retrying')
         dataObject = dataObject[0]
     try:
         name = dataObject.default_filename
