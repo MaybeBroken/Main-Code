@@ -118,6 +118,7 @@ class mainGame(ShowBase):
                 self.startup()
             else:
                 return task.cont
+
         self.taskMgr.add(finishLaunch)
 
     def startup(self):
@@ -235,8 +236,6 @@ class mainGame(ShowBase):
             sleep(0.01)
         if execBeforeOrAfter == "After":
             target(*args)
-    
-
 
     def launch(self):
         None

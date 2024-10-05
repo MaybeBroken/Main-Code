@@ -51,3 +51,5 @@ def __wrapper():
             print("Runtime error in file //encoder.py>__init__>return>returnVal()")
             print("Failed to parse either string or key, please make sure string is longer than 2 charecters, and key is an integer between 1 and 32")
             print("  ")
+
+__wrapper()
