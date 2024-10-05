@@ -23,6 +23,9 @@ setup(
             ],
             "plugins": [
                 "pandagl",
+                "pandadx9",
+                "pandadx8",
+                "p3tinydisplay",
                 "p3openal_audio",
             ],
             "icons": {
@@ -30,7 +33,6 @@ setup(
             },
             "platforms": [
                 "win_amd64",
-                "manylinux2014_x86_64"
             ],
             "include_modules": ["src"],
             "use_optimized_wheels": False,

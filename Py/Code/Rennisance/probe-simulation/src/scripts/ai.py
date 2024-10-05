@@ -20,16 +20,12 @@ def behaviors(ai):
     return internals
 
 
-
-def droneFire(target, origin):
-    lastFire = monotonic()
-    while True:
-        if abs(monotonic() - lastFire) > 3:
-            lasers.fire(origin=origin, target=target, destroy=False)
-            lastFire = monotonic()
-        if target.getDistance(origin) > 40:
-            return False
-        sleep(0.1)
+def droneFire(target, origin, lastFire):
+    if abs(monotonic() - lastFire) > 3:
+        lasers.fire(origin=origin, target=target, destroy=False)
+        print(lastFire)
+        print(monotonic())
+        lastFire = monotonic()
 
 
 def removeChar(ai, ship):
@@ -39,7 +35,7 @@ updateTime = 0
 def update(AIworld, aiChars, ship):
     global updateTime
     updateTime+=1
-    if updateTime==16:
+    if updateTime==8:
         updateTime =0
         for aiChar in aiChars:
             ai = aiChars[aiChar]["ai"]
@@ -52,12 +48,8 @@ def update(AIworld, aiChars, ship):
                     node.lookAt((ship.get_x(), ship.get_y(), ship.get_z()))
                     node.setP(node.getP() +180)
                     node.setR(node.getR() +180)
-                    if not aiChars[aiChar]["firing"]:
-                        if ship.getDistance(node) <= 50:
-                            Thread(target=droneFire, args=(ship, node)).start()
-                            aiChars[aiChar]["firing"] = True
-                if ship.getDistance(node) > 50:
-                    aiChars[aiChar]["firing"] = False
+                    if ship.getDistance(node) <= 50:
+                        droneFire(ship, node, aiChars[aiChar]['lastFire'])
             else:
                 behaviors(ai).FLEE(ship, 10000, 10000, 1)
     AIworld.update()

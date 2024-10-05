@@ -625,6 +625,7 @@ class Main(ShowBase):
                 "id": num,
                 "health": Wvars.droneHealth,
                 "healthBar": healthBar,
+                "lastFire":t.monotonic()
             }
 
     def setupScene(self):
