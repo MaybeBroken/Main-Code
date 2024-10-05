@@ -2,47 +2,51 @@ import asyncio
 import websockets
 import time as t
 from threading import Thread
+import json as js
 
 startTime = t.monotonic()
+
 
 def currentTime(dp):
     return t.monotonic() - startTime
 
 
 portNum = 8765
-ip = "localhost"
+ip = "wss://maybebroken.loca.lt"
 
 
-async def _echo(websocket):
-    print(f"\nuser: {await websocket.recv()}\n")
-
-
-async def _buildServe():
-    async with websockets.serve(_echo, "localhost", int(portNum)):
-        print(f"*********\n:SERVER (notice): listening on port {portNum}\n*********")
-        await asyncio.Future()
-
-
-def startServer():
-    asyncio.run(_buildServe())
-
-
-async def _send_recieve(Keys):
+async def _send_recieve(data):
     async with websockets.connect(ip) as websocket:
-        await websocket.send(Keys)
+        if data == "!!#update":
+            await websocket.send("!!#update")
+            print(await websocket.recv())
+        else:
+            await websocket.send(
+                js.encoder.JSONEncoder.encode(o={"usr": usrName, "text": data})
+            )
 
 
 def runClient(data):
     asyncio.run(_send_recieve(data))
 
 
-class wrapper:
-    global ip
-    ip = input("connect to ip: ")
-    # runClient()
-    # startServer()
-    Thread(target=startServer, daemon=True).start()
+_ip = input("connect to external ip (leave blank for normal usage): ")
+if len(_ip) > 5:
+    ip = _ip
+else:
+    print(f"using default ip {ip}")
+usrName = input("what is your username: ")
+
+
+def mainLoop():
     while 1 == 1:
-        t.sleep(2)
         data = input()
         runClient(data)
+
+
+def update():
+    runClient("!!#update")
+
+
+Thread(target=update).start()
+mainLoop()
