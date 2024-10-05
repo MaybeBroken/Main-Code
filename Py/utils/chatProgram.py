@@ -11,18 +11,20 @@ def currentTime(dp):
     return t.monotonic() - startTime
 
 
+serverContents = []
 portNum = 8765
 ip = "wss://maybebroken.loca.lt"
 
 
 async def _send_recieve(data):
     async with websockets.connect(ip) as websocket:
+        encoder = js.encoder.JSONEncoder()
         if data == "!!#update":
             await websocket.send("!!#update")
-            print(await websocket.recv())
+            serverContents = js.decoder.JSONDecoder().decode(s=await websocket.recv())
         else:
             await websocket.send(
-                js.encoder.JSONEncoder.encode(o={"usr": usrName, "text": data})
+                encoder.encode(o={"usr": usrName, "text": data, "roomName": roomName})
             )
 
 
@@ -37,15 +39,27 @@ else:
     print(f"using default ip {ip}")
 usrName = input("what is your username: ")
 
+roomName = input(f'what room to join?\n{runClient("!!#update")}\n--> ')
+
 
 def mainLoop():
     while 1 == 1:
         data = input()
-        runClient(data)
+        try:
+            runClient(data)
+        except:
+            print(
+                f"failed to send message!\nplease ensure the server is runing by checking this link:\n{ip}"
+            )
 
 
 def update():
-    runClient("!!#update")
+    while True:
+        try:
+            runClient("!!#update")
+        except:
+            ...
+        t.sleep(1)
 
 
 Thread(target=update).start()

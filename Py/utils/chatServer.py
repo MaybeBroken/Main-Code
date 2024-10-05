@@ -17,9 +17,9 @@ chatRooms = [
 
 
 def parseMessage(msg: str):
-    parseMsg: dict = js.decoder.JSONDecoder.decode(s=msg)
+    parseMsg: dict = js.decoder.JSONDecoder().decode(s=msg)
     for chatRoom in chatRooms:
-        if chatRoom[parseMessage["roomName"]] == parseMsg["roomName"]:
+        if chatRoom["roomName"] == parseMsg["roomName"]:
             chatRoom["messages"].append(
                 {
                     "time": int(t.time()),
@@ -31,12 +31,13 @@ def parseMessage(msg: str):
 
 async def _echo(websocket):
     msg = await websocket.recv()
+    encoder = js.encoder.JSONEncoder()
     if msg == "!!#update":
-        await websocket.send(chatRooms)
+        await websocket.send(encoder.encode(o=chatRooms))
     else:
         usrIp = websocket.remote_address[0]
         parseMessage(msg)
-        await websocket.send(chatRooms)
+        await websocket.send(encoder.encode(o=chatRooms))
 
 
 async def _buildServe():
