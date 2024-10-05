@@ -1,7 +1,9 @@
 import asyncio
+from threading import Thread
 import websockets
 import json as js
 import time as t
+from os import system
 
 portNum = 8765
 
@@ -36,6 +38,7 @@ async def _echo(websocket):
         await websocket.send(encoder.encode(o=chatRooms))
     else:
         usrIp = websocket.remote_address[0]
+        print(f'{usrIp}: {msg}')
         parseMessage(msg)
         await websocket.send(encoder.encode(o=chatRooms))
 
@@ -46,4 +49,9 @@ async def _buildServe():
         await asyncio.Future()
 
 
+def startLocaltunnel():
+    system(command=f"lt -p {portNum} -s maybebroken")
+
+
+Thread(target=startLocaltunnel).start()
 asyncio.run(_buildServe())
