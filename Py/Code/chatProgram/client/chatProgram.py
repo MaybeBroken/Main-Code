@@ -1,20 +1,40 @@
-import asyncio
-import websockets
+from os import system
+
+try:
+    import websockets
+except:
+    system(f"python3 -m pip install websockets")
 import time as t
-from threading import Thread
-import json as js
 
+try:
+    import json as js
+except:
+    system(f"python3 -m pip install json")
+import asyncio
 
-startTime = t.monotonic()
+try:
+    from panda3d.core import *
+except:
+    system(f"python3 -m pip install panda3d")
+from panda3d.core import TextNode
+from direct.showbase.ShowBase import ShowBase
+from direct.stdpy.threading import Thread
+from direct.gui.DirectGui import *
 
-
-def currentTime(dp):
-    return t.monotonic() - startTime
-
+devMode = True
 
 serverContents = []
 portNum = 8765
-ip = "wss://maybebroken.loca.lt"
+if not devMode:
+    ip = "wss://maybebroken.loca.lt"
+else:
+    ip = "ws://localhost:8765"
+usrName = None
+roomName = None
+usrNameMenu = None
+passwdMenu = None
+auth = False
+setupReady = False
 
 
 async def _send_recieve(data):
@@ -22,7 +42,27 @@ async def _send_recieve(data):
         encoder = js.encoder.JSONEncoder()
         if data == "!!#update":
             await websocket.send("!!#update")
+            global serverContents
             serverContents = js.decoder.JSONDecoder().decode(s=await websocket.recv())
+        elif data == "!!#login":
+            global usrName, usrNameMenu, passwdMenu, auth
+            await websocket.send(f"+@\n{usrNameMenu}\n{passwdMenu}")
+            retVal = await websocket.recv()
+            if retVal == "!!#wrongPassword":
+                print("AUTH err, did you press enter on both fields and remember caps?")
+            elif retVal == "!!#wrongUsrname":
+                print("AUTH err, did you press enter on both fields and remember caps?")
+            elif retVal == "!!#internalErr":
+                print("AUTH server err, please try again")
+            elif retVal == "!!#authSuccess":
+                print("AUTH success")
+                usrName = usrNameMenu
+                auth = True
+            elif retVal == "!!#authDisabled":
+                print(f'AUTH disabled, using username "{usrNameMenu}"')
+                usrName = usrNameMenu + "-(!)"
+                auth = True
+
         else:
             await websocket.send(
                 encoder.encode(o={"usr": usrName, "text": data, "roomName": roomName})
@@ -30,28 +70,20 @@ async def _send_recieve(data):
 
 
 def runClient(data):
-    asyncio.run(_send_recieve(data))
-
-
-_ip = input("connect to external ip (leave blank for normal usage): ")
-if len(_ip) > 5:
-    ip = _ip
-else:
-    print(f"using default ip {ip}")
-usrName = input("what is your username: ")
-
-roomName = input(f'what room to join?\n{runClient("!!#update")}\n--> ')
-
-
-def mainLoop():
-    while 1 == 1:
-        data = input()
-        try:
-            runClient(data)
-        except:
-            print(
-                f"failed to send message!\nplease ensure the server is runing by checking this link:\n{ip}"
-            )
+    try:
+        asyncio.run(_send_recieve(data))
+    except:
+        global serverContents, auth
+        if not auth:
+            print("AUTH server err, please try again")
+        else:
+            serverContents = []
+            for i in range(5):
+                try:
+                    asyncio.run(_send_recieve(data))
+                    break
+                except:
+                    ...
 
 
 def update():
@@ -60,8 +92,229 @@ def update():
             runClient("!!#update")
         except:
             ...
-        t.sleep(1)
+        t.sleep(0.2)
 
 
-Thread(target=update).start()
-mainLoop()
+class chatApp(ShowBase):
+    def __init__(self):
+        ShowBase.__init__(self)
+        self.setupMenuGui()
+
+    def update(self, task):
+        global serverContents, roomName
+        for room in serverContents:
+            if room["roomName"] == roomName:
+                messages = ""
+                for message in room["messages"]:
+                    messages += f"| {message['time']} | {message['usr']}\n|  --> {message['text']}\n\n"
+                self.currentRoomFrame[1]["text"] = messages
+                self.currentRoomFrame[1].setPos(
+                    -0.5, 0.07 * len(messages.splitlines()) + self.scrollAmount
+                )
+        return task.cont
+
+    def moveTextUp(self):
+        self.scrollAmount -= 0.07
+
+    def moveTextDown(self):
+        self.scrollAmount += 0.07
+
+    def changeRoom(self, room):
+        self.currentRoomFrame[1].hide()
+        self.currentRoomFrame = [item for item in self.roomsList if room in item[0]]
+        self.currentRoomFrame = self.currentRoomFrame[0][1]
+        global roomName
+        roomName = room
+        self.currentRoomFrame[1].show()
+
+    def setupMenuGui(self):
+        self.set_background_color(0.2, 0.2, 0.3, 1)
+        self.guiFrame = DirectFrame(
+            parent=self.aspect2d,
+            frameSize=(-1.25, 1.25, -1, 1),
+            frameColor=(0.1, 0.1, 0.1, 1),
+        )
+
+        def setPassW(passW):
+            global passwdMenu
+            passwdMenu = passW
+
+        def setUsrName(usrN):
+            global usrNameMenu
+            usrNameMenu = usrN
+
+        self.usrNameBox = DirectEntry(
+            parent=self.guiFrame,
+            text="",
+            scale=0.1,
+            command=setUsrName,
+            initialText="",
+            numLines=1,
+            pos=(-1, 0, 0.25),
+        )
+
+        self.passwdBox = DirectEntry(
+            parent=self.guiFrame,
+            text="",
+            scale=0.1,
+            command=setPassW,
+            initialText="",
+            numLines=1,
+            obscured=1,
+            pos=(-1, 0, 0.0),
+        )
+
+        self.startButton = DirectButton(
+            parent=self.guiFrame,
+            text="login",
+            color=(1, 1, 1, 1),
+            scale=0.15,
+            pos=(-0.845, 0, -0.25),
+            command=runClient,
+            extraArgs=["!!#login"],
+        )
+        self.taskMgr.add(self.checkAuthTask, "checkAuthState")
+
+    def clearText(self):
+        self.textBar.destroy()
+        self.textBar = DirectEntry(
+            parent=self.guiFrame,
+            text="",
+            scale=0.1,
+            command=self.sendMessage,
+            numLines=1,
+            pos=(-0.5, 0, -0.9),
+            cursorKeys=1,
+            focus=1,
+            overflow=1,
+        )
+
+    def sendMessage(self, message):
+        Thread(target=runClient, args=[message]).start()
+        self.clearText()
+
+    def buildMainGUI(self):
+        self.guiFrame.destroy()
+        self.guiFrame = DirectFrame(parent=self.aspect2d)
+        self.roomFrame = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-1, -0.65, -1, 1),
+            frameColor=(0.15, 0.15, 0.2, 1),
+        )
+        self.lobbyFrame = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-0.64, 1, -1, 1),
+            frameColor=(0.3, 0.3, 0.3, 1),
+        )
+        self.currentRoomFrame = None
+        posIndex = 0
+        defaultDistance = 0.12
+        self.roomsList = []
+
+        self.textBar = DirectEntry(
+            parent=self.guiFrame,
+            text="",
+            scale=0.1,
+            command=self.sendMessage,
+            numLines=1,
+            pos=(-0.5, 0, -0.9),
+            cursorKeys=1,
+            overflow=1,
+        )
+        runClient("!!#update")
+        for room in serverContents:
+            name = room["roomName"]
+            newRoomButton = DirectButton(
+                parent=self.roomFrame,
+                pos=(-0.85, 1, 0.9 - (defaultDistance * posIndex)),
+                scale=0.06,
+                text=name,
+                command=self.changeRoom,
+                extraArgs=[name],
+            )
+
+            messages = ""
+            for message in room["messages"]:
+                messages += f"| {message['usr']}\n|  --> {message['text']}\n\n"
+            messageText = OnscreenText(
+                parent=self.lobbyFrame,
+                text=messages,
+                pos=(-0.5, 0.07 * len(messages.splitlines())),
+                scale=0.07,
+                align=TextNode.ALeft,
+                wordwrap=20,
+            )
+            messageText.hide()
+            self.roomsList.append([name, [newRoomButton, messageText]])
+            posIndex += 1
+        self.currentRoomFrame = self.roomsList[0][1]
+        self.currentRoomFrame[1].show()
+        global roomName
+        roomName = self.roomsList[0][0]
+        self.accept("wheel_up", self.moveTextUp)
+        self.accept("wheel_down", self.moveTextDown)
+        self.scrollAmount = 0
+
+    def startService(self):
+        Thread(target=update).start()
+        self.buildMainGUI()
+        self.taskMgr.add(self.update, "update")
+
+    def checkAuthTask(self, task):
+        if auth:
+            self.startService()
+        else:
+            return task.cont
+
+    def fadeOutGuiElement(
+        self,
+        element,
+        timeToFade,
+        daemon=True,
+        execBeforeOrAfter: None = None,
+        target: None = None,
+        args=(),
+    ):
+        def _internalThread():
+            if execBeforeOrAfter == "Before":
+                target(*args)
+
+            for i in range(timeToFade):
+                val = 1 - (1 / timeToFade) * (i + 1)
+                try:
+                    element.setAlphaScale(val)
+                except:
+                    None
+                t.sleep(0.01)
+            element.hide()
+            if execBeforeOrAfter == "After":
+                target(*args)
+
+        return Thread(target=_internalThread, daemon=daemon).start()
+
+    def fadeInGuiElement(
+        self,
+        element,
+        timeToFade,
+        daemon=True,
+        execBeforeOrAfter: None = None,
+        target: None = None,
+        args=(),
+    ):
+        def _internalThread():
+            if execBeforeOrAfter == "Before":
+                target(*args)
+
+            element.show()
+            for i in range(timeToFade):
+                val = abs(0 - (1 / timeToFade) * (i + 1))
+                element.setAlphaScale(val)
+                t.sleep(0.01)
+            if execBeforeOrAfter == "After":
+                target(*args)
+
+        return Thread(target=_internalThread, daemon=daemon).start()
+
+
+chatapp = chatApp()
+chatapp.run()
