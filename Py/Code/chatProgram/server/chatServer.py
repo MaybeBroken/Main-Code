@@ -1,24 +1,45 @@
-import asyncio
-from threading import Thread
-import websockets
-import json as js
-import time as t
 from os import system
+
+try:
+    import websockets
+except:
+    system(f"python3 -m pip install websockets")
+import time as t
+
+try:
+    import json as js
+except:
+    system(f"python3 -m pip install json")
+import asyncio
+
+try:
+    from panda3d.core import *
+except:
+    system(f"python3 -m pip install panda3d")
+from panda3d.core import TextNode, loadPrcFile
+from direct.showbase.ShowBase import ShowBase
+from direct.stdpy.threading import Thread
+from direct.gui.DirectGui import *
 
 portNum = 8765
 
 exampleMsg = {"time": 0, "usr": "MaybeBroken", "text": "test"}
 
-devMode = True
+devMode = False
 anyAuth = True
-chatRooms = [{"roomName": "hangout", "messages": []}]
+register_reset = False
+chatRooms = [
+    {"roomName": "hangout", "messages": []},
+    {"roomName": "spam", "messages": []},
+]
 
 accounts = {
     "MaybeBroken": "123456",
     "EthanG": "123456",
-    "Creeper": "123456",
-    "nobody-(!)": "",
+    "noAuth": "",
 }
+
+loadPrcFile("settings.prc")
 
 
 def parseMessage(msg: str):
@@ -34,6 +55,32 @@ def parseMessage(msg: str):
             )
 
 
+def newRoom(msg):
+    global register_reset
+    chatRooms.append({"roomName": msg, "messages": []})
+    register_reset = True
+
+
+def delRoom(roomName):
+    global register_reset
+    for room in chatRooms:
+        if room["roomName"] == roomName:
+            chatRooms.remove(room)
+    register_reset = True
+
+
+def controlLoop():
+    while True:
+        _in = input()
+        if _in == "help":
+            print("")
+        elif _in == "newRoom":
+            newRoom(input("new room name: "))
+        elif _in == "delRoom":
+            print([room["roomName"] for room in chatRooms])
+            delRoom(input("room to delete: "))
+
+
 async def _echo(websocket):
     try:
         msg = await websocket.recv()
@@ -42,6 +89,7 @@ async def _echo(websocket):
             await websocket.send(encoder.encode(o=chatRooms))
         elif msg[0] == "+" and msg[1] == "@":
             if anyAuth:
+                msg = msg.splitlines()
                 await websocket.send("!!#authDisabled")
             else:
                 try:
@@ -49,7 +97,6 @@ async def _echo(websocket):
                     try:
                         i = accounts[msg[1]]
                         if accounts[msg[1]] == msg[2]:
-                            print(f":auth: user {msg[1]} joined the lobby")
                             await websocket.send("!!#authSuccess")
                         else:
                             await websocket.send("!!#wrongPassword")
@@ -88,4 +135,149 @@ if not devMode:
 with open("./backup.dat", "rt") as backup:
     chatRooms = js.decoder.JSONDecoder().decode(s=backup.read())
 Thread(target=saveServer).start()
-asyncio.run(_buildServe())
+Thread(target=controlLoop).start()
+Thread(target=asyncio.run, args=[_buildServe()]).start()
+
+
+class chatApp(ShowBase):
+    def __init__(self):
+        ShowBase.__init__(self)
+        self.setupMenuGui()
+
+    def update(self, task):
+        global chatRooms, roomName
+        for room in chatRooms:
+            if room["roomName"] == roomName:
+                messages = ""
+                for message in room["messages"]:
+                    messages += f"| {message['time']} | {message['usr']}\n|  {message['text']}\n\n"
+                self.currentRoomFrame[1]["text"] = messages
+                self.currentRoomFrame[1].setPos(
+                    -0.5, 0.07 * len(messages.splitlines()) + self.scrollAmount
+                )
+        self.updateRooms()
+        return task.cont
+
+    def moveTextUp(self):
+        self.scrollAmount -= 0.07
+
+    def moveTextDown(self):
+        self.scrollAmount += 0.07
+
+    def updateRooms(self):
+        global register_reset
+        if register_reset:
+            self.guiFrame.destroy()
+            self.buildMainGUI()
+            register_reset = False
+
+    def changeRoom(self, room):
+        self.currentRoomFrame[1].hide()
+        self.currentRoomFrame = [item for item in self.roomsList if room in item[0]]
+        self.currentRoomFrame = self.currentRoomFrame[0][1]
+        global roomName
+        roomName = room
+        self.currentRoomFrame[1].show()
+
+    def setupMenuGui(self):
+        self.set_background_color(0.2, 0.2, 0.3, 1)
+        self.startService()
+    
+    def newRoomGUI(self):
+        self.newRoomTextBar = DirectEntry(
+            parent=self.guiFrame,
+            text="",
+            scale=0.06,
+            command=newRoom,
+            numLines=1,
+            pos=(-0.6, 0, -0.8),
+            cursorKeys=1,
+            overflow=0,
+        )
+
+    def clearText(self):
+        self.textBar.destroy()
+        self.textBar = DirectEntry(
+            parent=self.guiFrame,
+            text="",
+            scale=0.1,
+            command=self.sendMessage,
+            numLines=1,
+            pos=(-0.5, 0, -0.9),
+            cursorKeys=1,
+            focus=1,
+            overflow=1,
+        )
+
+    def buildMainGUI(self):
+        self.guiFrame = DirectFrame(parent=self.aspect2d)
+        self.roomFrame = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-1, -0.65, -1, 1),
+            frameColor=(0.15, 0.15, 0.2, 1),
+        )
+        self.lobbyFrame = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-0.64, 1, -1, 1),
+            frameColor=(0.3, 0.3, 0.3, 1),
+        )
+        self.newRoom = DirectButton(
+            parent=self.roomFrame,
+            pos=(-0.82, 1, -0.8),
+            scale=0.06,
+            text='New Room',
+            command=self.newRoomGUI,
+        )
+        self.currentRoomFrame = None
+        posIndex = 0
+        defaultDistance = 0.12
+        self.roomsList = []
+
+        for room in chatRooms:
+            name = room["roomName"]
+            newRoomButton = DirectButton(
+                parent=self.roomFrame,
+                pos=(-0.85, 1, 0.9 - (defaultDistance * posIndex)),
+                scale=0.06,
+                text=name,
+                command=self.changeRoom,
+                extraArgs=[name],
+            )
+            delRoomButton = DirectButton(
+                parent=self.roomFrame,
+                pos=(-1.2, 1, 0.9 - (defaultDistance * posIndex)),
+                scale=0.06,
+                text='del',
+                command=delRoom,
+                extraArgs=[name],
+            )
+
+            messages = ""
+            for message in room["messages"]:
+                messages += f"| {message['usr']}\n|  --> {message['text']}\n\n"
+            messageText = OnscreenText(
+                parent=self.lobbyFrame,
+                text=messages,
+                pos=(-0.5, 0.07 * len(messages.splitlines())),
+                scale=0.07,
+                align=TextNode.ALeft,
+                wordwrap=20,
+            )
+            messageText.hide()
+            self.roomsList.append([name, [newRoomButton, messageText, delRoomButton]])
+            posIndex += 1
+        self.currentRoomFrame = self.roomsList[0][1]
+        self.currentRoomFrame[1].show()
+        global roomName
+        roomName = self.roomsList[0][0]
+        self.accept("wheel_up", self.moveTextUp)
+        self.accept("wheel_down", self.moveTextDown)
+        self.scrollAmount = 0
+
+    def startService(self):
+        self.buildMainGUI()
+        self.taskMgr.add(self.update, "update")
+
+
+chatapp = chatApp()
+chatapp.run()

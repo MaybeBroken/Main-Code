@@ -16,7 +16,7 @@ try:
     from panda3d.core import *
 except:
     system(f"python3 -m pip install panda3d")
-from panda3d.core import TextNode
+from panda3d.core import TextNode, loadPrcFile
 from direct.showbase.ShowBase import ShowBase
 from direct.stdpy.threading import Thread
 from direct.gui.DirectGui import *
@@ -34,7 +34,7 @@ roomName = None
 usrNameMenu = None
 passwdMenu = None
 auth = False
-setupReady = False
+loadPrcFile("settings.prc")
 
 
 async def _send_recieve(data):
@@ -106,11 +106,14 @@ class chatApp(ShowBase):
             if room["roomName"] == roomName:
                 messages = ""
                 for message in room["messages"]:
-                    messages += f"| {message['time']} | {message['usr']}\n|  --> {message['text']}\n\n"
+                    messages += f"| {message['time']} | {message['usr']}\n|  {message['text']}\n\n"
                 self.currentRoomFrame[1]["text"] = messages
                 self.currentRoomFrame[1].setPos(
                     -0.5, 0.07 * len(messages.splitlines()) + self.scrollAmount
                 )
+        if len(serverContents) != self.len_last:
+            self.refreshGui()
+            self.len_last = len(serverContents)
         return task.cont
 
     def moveTextUp(self):
@@ -190,8 +193,11 @@ class chatApp(ShowBase):
         )
 
     def sendMessage(self, message):
-        Thread(target=runClient, args=[message]).start()
+        Thread(target=runClient, args=[f"--> {message}"]).start()
         self.clearText()
+
+    def refreshGui(self):
+        self.buildMainGUI()
 
     def buildMainGUI(self):
         self.guiFrame.destroy()
@@ -222,6 +228,7 @@ class chatApp(ShowBase):
             overflow=1,
         )
         runClient("!!#update")
+        self.len_last = len(serverContents)
         for room in serverContents:
             name = room["roomName"]
             newRoomButton = DirectButton(
