@@ -36,7 +36,7 @@ chatRooms = [
 accounts = {
     "MaybeBroken": "123456",
     "EthanG": "123456",
-    "noAuth": "",
+    "noAuth-(!!)": "",
 }
 
 loadPrcFile("settings.prc")
@@ -70,15 +70,34 @@ def delRoom(roomName):
 
 
 def controlLoop():
+    authMGR = False
     while True:
         _in = input()
         if _in == "help":
-            print("")
+            print(
+                f"\n{'='*20}\nSERVER COMMANDS:\nnewRoom: creates a new room\ndelRoom: deletes a room\nauthMgr: runs the authMgr\n{'='*20}"
+            )
         elif _in == "newRoom":
             newRoom(input("new room name: "))
         elif _in == "delRoom":
             print([room["roomName"] for room in chatRooms])
             delRoom(input("room to delete: "))
+        elif _in == "authMgr":
+            authMGR = True
+            print(f"ANYAUTH (!): {anyAuth}")
+            while authMGR:
+                _in = input("| ")
+                if _in == "help":
+                    print(
+                        "| viewAccounts: show a list of all registered users\n| exit: exits the authMgr"
+                    )
+                if _in == "exit":
+                    print("| closing...\n^")
+                    authMGR = False
+                if _in == "viewAccounts":
+                    print(f"{'='*20}\n|")
+                    for account in accounts:
+                        print(f"| |-->{account}, {accounts[account]}")
 
 
 async def _echo(websocket):
@@ -182,7 +201,7 @@ class chatApp(ShowBase):
     def setupMenuGui(self):
         self.set_background_color(0.2, 0.2, 0.3, 1)
         self.startService()
-    
+
     def newRoomGUI(self):
         self.newRoomTextBar = DirectEntry(
             parent=self.guiFrame,
@@ -195,20 +214,6 @@ class chatApp(ShowBase):
             overflow=0,
         )
 
-    def clearText(self):
-        self.textBar.destroy()
-        self.textBar = DirectEntry(
-            parent=self.guiFrame,
-            text="",
-            scale=0.1,
-            command=self.sendMessage,
-            numLines=1,
-            pos=(-0.5, 0, -0.9),
-            cursorKeys=1,
-            focus=1,
-            overflow=1,
-        )
-
     def buildMainGUI(self):
         self.guiFrame = DirectFrame(parent=self.aspect2d)
         self.roomFrame = DirectFrame(
@@ -219,13 +224,14 @@ class chatApp(ShowBase):
         self.lobbyFrame = DirectFrame(
             parent=self.guiFrame,
             frameSize=(-0.64, 1, -1, 1),
+            pos=(0, -1, 0),
             frameColor=(0.3, 0.3, 0.3, 1),
         )
         self.newRoom = DirectButton(
             parent=self.roomFrame,
             pos=(-0.82, 1, -0.8),
             scale=0.06,
-            text='New Room',
+            text="New Room",
             command=self.newRoomGUI,
         )
         self.currentRoomFrame = None
@@ -245,9 +251,9 @@ class chatApp(ShowBase):
             )
             delRoomButton = DirectButton(
                 parent=self.roomFrame,
-                pos=(-1.2, 1, 0.9 - (defaultDistance * posIndex)),
+                pos=(-1.05, 1, 0.9 - (defaultDistance * posIndex)),
                 scale=0.06,
-                text='del',
+                text="del",
                 command=delRoom,
                 extraArgs=[name],
             )
@@ -270,9 +276,9 @@ class chatApp(ShowBase):
         self.currentRoomFrame[1].show()
         global roomName
         roomName = self.roomsList[0][0]
+        self.scrollAmount = 0
         self.accept("wheel_up", self.moveTextUp)
         self.accept("wheel_down", self.moveTextDown)
-        self.scrollAmount = 0
 
     def startService(self):
         self.buildMainGUI()

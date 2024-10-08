@@ -21,7 +21,7 @@ from direct.showbase.ShowBase import ShowBase
 from direct.stdpy.threading import Thread
 from direct.gui.DirectGui import *
 
-devMode = True
+devMode = False
 
 serverContents = []
 portNum = 8765
@@ -34,6 +34,7 @@ roomName = None
 usrNameMenu = None
 passwdMenu = None
 auth = False
+appGuiFrame = None
 loadPrcFile("settings.prc")
 
 
@@ -49,17 +50,16 @@ async def _send_recieve(data):
             await websocket.send(f"+@\n{usrNameMenu}\n{passwdMenu}")
             retVal = await websocket.recv()
             if retVal == "!!#wrongPassword":
-                print("AUTH err, did you press enter on both fields and remember caps?")
+                notify("incorrect password!")
             elif retVal == "!!#wrongUsrname":
-                print("AUTH err, did you press enter on both fields and remember caps?")
+                notify("incorrect username/password!")
             elif retVal == "!!#internalErr":
-                print("AUTH server err, please try again")
+                notify("server error")
             elif retVal == "!!#authSuccess":
-                print("AUTH success")
                 usrName = usrNameMenu
                 auth = True
             elif retVal == "!!#authDisabled":
-                print(f'AUTH disabled, using username "{usrNameMenu}"')
+                notify(f'AUTH disabled, using username "{usrNameMenu  + "-(!)"}"')
                 usrName = usrNameMenu + "-(!)"
                 auth = True
 
@@ -75,7 +75,7 @@ def runClient(data):
     except:
         global serverContents, auth
         if not auth:
-            print("AUTH server err, please try again")
+            notify("network err")
         else:
             serverContents = []
             for i in range(5):
@@ -181,7 +181,7 @@ class chatApp(ShowBase):
     def clearText(self):
         self.textBar.destroy()
         self.textBar = DirectEntry(
-            parent=self.guiFrame,
+            parent=self.aspect2d,
             text="",
             scale=0.1,
             command=self.sendMessage,
@@ -218,7 +218,7 @@ class chatApp(ShowBase):
         self.roomsList = []
 
         self.textBar = DirectEntry(
-            parent=self.guiFrame,
+            parent=self.aspect2d,
             text="",
             scale=0.1,
             command=self.sendMessage,
@@ -273,54 +273,84 @@ class chatApp(ShowBase):
         else:
             return task.cont
 
-    def fadeOutGuiElement(
-        self,
-        element,
-        timeToFade,
-        daemon=True,
-        execBeforeOrAfter: None = None,
-        target: None = None,
-        args=(),
-    ):
-        def _internalThread():
-            if execBeforeOrAfter == "Before":
-                target(*args)
 
+def fadeOutGuiElement(
+    element,
+    timeToFade=100,
+    daemon=True,
+    execBeforeOrAfter: None = None,
+    target: None = None,
+    args=(),
+):
+    def _internalThread():
+        if execBeforeOrAfter == "Before":
+            target(*args)
+
+        for i in range(timeToFade):
+            val = 1 - (1 / timeToFade) * (i + 1)
+            try:
+                element.setAlphaScale(val)
+            except:
+                None
+            t.sleep(0.01)
+        element.hide()
+        if execBeforeOrAfter == "After":
+            target(*args)
+
+    return Thread(target=_internalThread, daemon=daemon).start()
+
+
+def fadeInGuiElement(
+    element,
+    timeToFade=100,
+    daemon=True,
+    execBeforeOrAfter: None = None,
+    target: None = None,
+    args=(),
+):
+    def _internalThread():
+        if execBeforeOrAfter == "Before":
+            target(*args)
+
+        element.show()
+        for i in range(timeToFade):
+            val = abs(0 - (1 / timeToFade) * (i + 1))
+            element.setAlphaScale(val)
+            t.sleep(0.01)
+        if execBeforeOrAfter == "After":
+            target(*args)
+
+    return Thread(target=_internalThread, daemon=daemon).start()
+
+
+def notify(message: str, pos=(0.8, 0, -0.5), scale=0.75):
+    global appGuiFrame
+
+    def fade(none):
+        timeToFade = 20
+        newMessage.setTransparency(True)
+
+        def _internalThread():
             for i in range(timeToFade):
                 val = 1 - (1 / timeToFade) * (i + 1)
-                try:
-                    element.setAlphaScale(val)
-                except:
-                    None
+                newMessage.setAlphaScale(val)
                 t.sleep(0.01)
-            element.hide()
-            if execBeforeOrAfter == "After":
-                target(*args)
+            newMessage.destroy()
+             #newMessage.cleanup()
 
-        return Thread(target=_internalThread, daemon=daemon).start()
+        Thread(target=_internalThread).start()
 
-    def fadeInGuiElement(
-        self,
-        element,
-        timeToFade,
-        daemon=True,
-        execBeforeOrAfter: None = None,
-        target: None = None,
-        args=(),
-    ):
-        def _internalThread():
-            if execBeforeOrAfter == "Before":
-                target(*args)
-
-            element.show()
-            for i in range(timeToFade):
-                val = abs(0 - (1 / timeToFade) * (i + 1))
-                element.setAlphaScale(val)
-                t.sleep(0.01)
-            if execBeforeOrAfter == "After":
-                target(*args)
-
-        return Thread(target=_internalThread, daemon=daemon).start()
+    newMessage = OkDialog(
+        parent=appGuiFrame,
+        text=message,
+        pos=pos,
+        scale=scale,
+        frameColor=(0.5, 0.5, 0.5, 0.25),
+        text_fg=(1, 1, 1, 1),
+        command=fade,
+        pad=[0.02, 0.02, 0.02, 0.02],
+    )
+    return newMessage
 
 
 chatapp = chatApp()
