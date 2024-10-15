@@ -1,6 +1,6 @@
 import os
 from time import sleep
-from pytubefix import YouTube, Playlist, exceptions
+from pytube import YouTube, Playlist, exceptions
 from threading import Thread
 import requests
 from cli import Color
@@ -23,8 +23,8 @@ def Download(link, format):
                 dataObject = youtubeObject.streams.filter(only_audio=True)
                 break
             except exceptions.VideoUnavailable:
-                # print('retrying')
-                ...
+                if i==19:
+                    print('Failed to fetch video')
         dataObject = dataObject[0]
     try:
         name = dataObject.default_filename
