@@ -1,6 +1,3 @@
-import sys, tty, os, termios, threading
-
-
 class Color:
     GREEN = "\033[92m"
     LIGHT_GREEN = "\033[1;92m"
@@ -62,63 +59,3 @@ class Control:
 
     def changeLineRight(len):
         return f"\033[{1}A\033[{len}C"
-
-
-def getKey():
-    old_settings = termios.tcgetattr(sys.stdin)
-    tty.setcbreak(sys.stdin.fileno())
-    try:
-        while True:
-            b = os.read(sys.stdin.fileno(), 3).decode()
-            if len(b) == 3:
-                k = ord(b[2])
-            else:
-                k = ord(b)
-            key_mapping = {
-                127: "backspace",
-                10: "\n",
-                32: "space",
-                9: "tab",
-                27: "esc",
-                65: "up",
-                66: "down",
-                67: "right",
-                68: "left",
-            }
-            return key_mapping.get(k, chr(k))
-    finally:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-
-
-def terminalMenu(itemList: list):
-    class menuInstance:
-        menuThread = None
-
-    for id in itemList:
-        print(f"{Color.__getattribute__(Color, id[1])}{id[0]}{Color.RESET}")
-
-    def updateThread():
-        while True:
-            try:
-                k = getKey()
-                if k == "up":
-                    print(Control.up(2))
-                elif k == "down":
-                    print()
-                elif k == "left":
-                    print(Control.changeLineRight(1))
-                elif k == "right":
-                    print(Control.changeLineLeft(1))
-                else:
-                    print(f"{k}{Control.up(1)}")
-            except:
-                None
-
-    _menuThread = threading.Thread(target=updateThread).start()
-    menuInstance.menuThread = _menuThread
-    return menuInstance
-
-
-menu = terminalMenu(
-    [["menu item 1", "GREEN"], ["menu item 2", "GREEN"], ["menu item 3", "BLUE"]],
-)

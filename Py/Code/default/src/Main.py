@@ -80,22 +80,21 @@ class Main(ShowBase):
     
     def intro(self):
         self.setBackgroundColor(0, 0, 0, 1)
-        movie = self.loader.loadTexture("src/movies/A Game by MaybeBroken Intro.avi")
+        movie = self.loader.loadTexture("src/movies/intro.mp4")
         image = OnscreenImage(movie, scale=1, parent=self.aspect2d)
         movie.play()
         movie.setLoopCount(1)
         startTime = t.monotonic()
         def finishLaunch(task):
-            if t.monotonic()-startTime>3.1:
+            if t.monotonic()-startTime>4:
                 image.destroy()
                 self.backfaceCullingOn()
                 self.disableMouse()
 
                 # do setup tasks
                 # ...
-
+                self.setupWorld()
                 self.setupControls()
-
                 # end of setup tasks
                 self.taskMgr.add(self.update, 'update')
             else:
@@ -217,12 +216,19 @@ class Main(ShowBase):
         self.accept("lshift-up", self.updateKeyMap, ["down", False])
         self.accept("wheel_up", self.wireframeOn)
         self.accept("wheel_down", self.wireframeOff)
+        self.accept("q", sys.exit)
 
     def updateKeyMap(self, key, value):
         self.keyMap[key] = value
 
     def doNothing(self):
         return None
+    
+    def setupWorld(self):
+        self.voyager = self.loader.loadModel(
+                "src/models/voyager/voyager.bam", noCache=True
+            )
+        self.voyager.reparentTo(self.render)
 
     def fadeOutGuiElement_ThreadedOnly(
         self, element, timeToFade, execBeforeOrAfter, target, args=()
