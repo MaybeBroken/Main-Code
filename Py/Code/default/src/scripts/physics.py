@@ -3,7 +3,7 @@ from time import sleep
 
 
 class physicsMgr:
-    def enable(
+    def __init__(
         self,
         minimum_motion_check: float = 0.001,
         drag: float = 0.001,
@@ -21,17 +21,15 @@ class physicsMgr:
     def registerObject(self, object, name: str, velocity=[0, 0, 0], rotation=[0, 0, 0]):
         node = [object, name, velocity, rotation]
         self.registeredObjects[name] = node
-        self.registeredObjects[f"{name}-t"] = Thread(
-            target=self.update, kwargs={"self": self, "nodeName": name}
-        ).start()
+        self.registeredObjects[f"{name}-t"] = Thread(target=self.update, args=[name])
 
     def registerColliderPlane(
         self,
+        object,
         pos: int,
         name: str,
         orientation: str = "+x",
         collisionAction: str = "rebound",
-        object=None,
     ):
         self.colliders.append([object, name, pos, orientation, collisionAction])
 
@@ -251,4 +249,4 @@ class physicsMgr:
                     )
 
         except:
-            print("err")
+            ...

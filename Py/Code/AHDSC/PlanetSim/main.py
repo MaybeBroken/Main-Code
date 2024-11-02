@@ -1,7 +1,34 @@
 import openpyxl as ex
-import formulas as fm
+import formulas
 
 File = ex.open("./book.xlsx")
+
+
+def __calculateFormulaInternal(formula, inputs):
+    func = formulas.Parser().ast(formula)[1].compile()
+    return func(inputs)
+
+
+def __getFormulaInputs(formula):
+    return formulas.Parser().ast(formula)[1].compile().inputs
+
+
+def calculateFormula(formula, sheet):
+    if type(formula) == str:
+        inputs = list(__getFormulaInputs(formula))
+        calcInputs = []
+        inputs.sort()
+
+        for cell in inputs:
+            if not type(sheet[cell].value) == str:
+                calcInputs.append(sheet[cell].value)
+            else:
+                print(sheet[cell].value)
+                calcInputs.append(calculateFormula(sheet[cell].value, sheet)[0])
+
+        return __calculateFormulaInternal(formula, inputs=calcInputs)[0]
+    else:
+        return formula
 
 
 class system:
@@ -21,13 +48,20 @@ class system:
                         class planet:
                             def __init__(self) -> None:
                                 self.mass = File["System Builder"][f"L{row}"].value
+                                self.massJm = calculateFormula(
+                                    File["System Builder"][f"M{row}"].value,
+                                    File["System Builder"],
+                                )
+                                self.radius = calculateFormula(
+                                    File["System Builder"][f"P{row}"].value,
+                                    File["System Builder"],
+                                )
 
                         self._list.append(planet())
+                for id in self._list:
+                    print(id.__dict__)
 
         self.planets = planets()
 
 
 data = system()
-
-for planet in data.planets._list:
-    print(planet.mass)
