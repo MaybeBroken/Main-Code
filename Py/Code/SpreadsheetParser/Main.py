@@ -1,5 +1,4 @@
 from os import system, mkdir
-import string
 
 try:
     import openpyxl as ex
@@ -44,25 +43,25 @@ masterFile = parseUrl(inUrl, "MASTER.xlsx")
 students: list[dict] = []
 commands = ["Help", "Add single student", "Grade all files"]
 
-checkRange = input("\nRange to check (LetterNumber:LetterNumber): ").split(":")
-rangeList = []
+# checkRange = input("\nRange to check (LetterNumber:LetterNumber): ").split(":")
+# rangeList = []
 
-rangeStart = checkRange[0]
-rangeEnd = checkRange[1]
+# rangeStart = checkRange[0]
+# rangeEnd = checkRange[1]
 
-for letter in range(
-    string.ascii_uppercase.index(rangeStart[0]),
-    string.ascii_uppercase.index(rangeEnd[0]),
-):
-    for number in range(int(rangeStart[1]), int(rangeEnd[1])):
-        rangeList.append(f"{string.ascii_uppercase[letter]}{number}")
+# for letter in range(
+#     string.ascii_uppercase.index(rangeStart[0]),
+#     string.ascii_uppercase.index(rangeEnd[0]),
+# ):
+#     for number in range(int(rangeStart[1]), int(rangeEnd[1])):
+#         rangeList.append(f"{string.ascii_uppercase[letter]}{number}")
 
 
 try:
     mkdir("studentFiles")
 except FileExistsError:
     ...
-
+ 
 
 def grade():
     for student in students:
@@ -70,44 +69,51 @@ def grade():
         errors = []
         sFile = student["file"]
         for sheet in masterFile:
-            for id in rangeList:
-                try:
-                    if (
-                        type(masterFile[sheet.title][id].value)
-                        == type(sFile[sheet.title][id].value)
-                        and type(masterFile[sheet.title][id].value) == float
-                    ):
+            for index in sheet:
+                for id in index:
+                    if id.value != None:
                         if (
-                            masterFile[sheet.title][id].value
-                            != sFile[sheet.title][id].value
+                            type(id.value)
+                            == type(sFile[sheet.title][id.coordinate].value)
+                            and type(id.value) == float
+                        ):
+                            if id.value != sFile[sheet.title][id.coordinate].value:
+                                dings.append(
+                                    [
+                                        id.coordinate,
+                                        id.value,
+                                        sFile[sheet.title][id.coordinate].value,
+                                    ]
+                                )
+                        elif (
+                            type(id.value)
+                            == type(sFile[sheet.title][id.coordinate].value)
+                            and type(id.value) == str
+                        ):
+                            if (
+                                id.value.lower()
+                                != sFile[sheet.title][id.coordinate].value.lower()
+                            ):
+                                dings.append(
+                                    [
+                                        id.coordinate,
+                                        id.value,
+                                        sFile[sheet.title][id.coordinate].value,
+                                    ]
+                                )
+                        elif (
+                            len(str(id.value)) > 0
+                            and len(sFile[sheet.title][id.coordinate].value) == 0
                         ):
                             dings.append(
                                 [
-                                    id,
-                                    masterFile[sheet.title][id].value,
-                                    sFile[sheet.title][id].value,
+                                    id.coordinate,
+                                    id.value,
+                                    sFile[sheet.title][id.coordinate].value,
                                 ]
                             )
-                    elif (
-                        type(masterFile[sheet.title][id].value)
-                        == type(sFile[sheet.title][id].value)
-                        and type(masterFile[sheet.title][id].value) == str
-                    ):
-                        if (
-                            masterFile[sheet.title][id].value.lower()
-                            != sFile[sheet.title][id].value.lower()
-                        ):
-                            dings.append(
-                                [
-                                    id,
-                                    masterFile[sheet.title][id].value,
-                                    sFile[sheet.title][id].value,
-                                ]
-                            )
-                    else:
-                        errors.append(id)
-                except:
-                    errors.append(id)
+                        else:
+                            errors.append(id)
 
         print(f"\nSystem had {len(errors)} errors on Cells: ")
         for err in errors:
@@ -119,27 +125,20 @@ def grade():
 
 
 while True:
-    try:
-        msg = input('Command ("help" for help): ').lower()
-        if msg == "help" or msg == "Help" or msg == "HELP":
-            print("-" * 25)
-            for cmd in commands:
-                print(f"| {cmd}")
-        if (
-            msg == "add single student"
-            or msg == "Add single student"
-            or msg == "Add Single Student"
-        ):
-            sName = input("| Student's name: ")
-            sFile = input("| Student's doc url (must be public): ")
-            sFile = parseUrl(sFile, f"studentFiles/{sName}.xlsx")
-            students.append({"name": sName, "file": sFile})
-            print(f"\n| Added {sName} to grading list\n")
-        if (
-            msg == "grade all files"
-            or msg == "Grade all files"
-            or msg == "Grade all Files"
-        ):
-            score = grade()
-    except:
-        print("System err, please try again!")
+    msg = input('Command ("help" for help): ').lower()
+    if msg == "help" or msg == "Help" or msg == "HELP":
+        print("-" * 25)
+        for cmd in commands:
+            print(f"| {cmd}")
+    if (
+        msg == "add single student"
+        or msg == "Add single student"
+        or msg == "Add Single Student"
+    ):
+        sName = input("| Student's name: ")
+        sFile = input("| Student's doc url (must be public): ")
+        sFile = parseUrl(sFile, f"studentFiles/{sName}.xlsx")
+        students.append({"name": sName, "file": sFile})
+        print(f"\n| Added {sName} to grading list\n")
+    if msg == "grade all files" or msg == "Grade all files" or msg == "Grade all Files":
+        score = grade()
