@@ -61,7 +61,7 @@ try:
     mkdir("studentFiles")
 except FileExistsError:
     ...
- 
+
 
 def grade():
     for student in students:
@@ -75,24 +75,12 @@ def grade():
                         if (
                             type(id.value)
                             == type(sFile[sheet.title][id.coordinate].value)
-                            and type(id.value) == float
-                        ):
-                            if id.value != sFile[sheet.title][id.coordinate].value:
-                                dings.append(
-                                    [
-                                        id.coordinate,
-                                        id.value,
-                                        sFile[sheet.title][id.coordinate].value,
-                                    ]
-                                )
-                        elif (
-                            type(id.value)
-                            == type(sFile[sheet.title][id.coordinate].value)
                             and type(id.value) == str
                         ):
                             if (
                                 id.value.lower()
                                 != sFile[sheet.title][id.coordinate].value.lower()
+                                and len(str(id.value)) > 0
                             ):
                                 dings.append(
                                     [
@@ -103,7 +91,19 @@ def grade():
                                 )
                         elif (
                             len(str(id.value)) > 0
-                            and len(sFile[sheet.title][id.coordinate].value) == 0
+                            and len(str(sFile[sheet.title][id.coordinate].value)) == 0
+                        ):
+                            dings.append(
+                                [
+                                    id.coordinate,
+                                    id.value,
+                                    sFile[sheet.title][id.coordinate].value,
+                                ]
+                            )
+                        elif (
+                            str(id.value)
+                            != str(sFile[sheet.title][id.coordinate].value)
+                            and len(str(id.value)) > 0
                         ):
                             dings.append(
                                 [
@@ -114,10 +114,10 @@ def grade():
                             )
                         else:
                             errors.append(id)
-
-        print(f"\nSystem had {len(errors)} errors on Cells: ")
-        for err in errors:
-            print(f"{err}")
+        if len(errors) > 0:
+            print(f"\nSystem had {len(errors)} errors on Cells: ")
+            for err in errors:
+                print(f"{err}")
         print(f"\n{student["name"]} had {len(dings)} errors:\n")
         for ding in dings:
             print(f"Cell {ding[0]}, Teacher: {ding[1]}, Student: {ding[2]}")
