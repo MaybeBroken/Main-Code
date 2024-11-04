@@ -41,7 +41,7 @@ if len(inUrl) == 0:
 masterFile = parseUrl(inUrl, "MASTER.xlsx")
 
 students: list[dict] = []
-commands = ["Help", "Add single student", "Grade all files"]
+commands = ["help", "add single student | add", "grade all files | grade"]
 
 # checkRange = input("\nRange to check (LetterNumber:LetterNumber): ").split(":")
 # rangeList = []
@@ -126,19 +126,15 @@ def grade():
 
 while True:
     msg = input('Command ("help" for help): ').lower()
-    if msg == "help" or msg == "Help" or msg == "HELP":
+    if msg == "help":
         print("-" * 25)
         for cmd in commands:
             print(f"| {cmd}")
-    if (
-        msg == "add single student"
-        or msg == "Add single student"
-        or msg == "Add Single Student"
-    ):
+    if msg == "add single student" or msg == "add":
         sName = input("| Student's name: ")
         sFile = input("| Student's doc url (must be public): ")
         sFile = parseUrl(sFile, f"studentFiles/{sName}.xlsx")
         students.append({"name": sName, "file": sFile})
         print(f"\n| Added {sName} to grading list\n")
-    if msg == "grade all files" or msg == "Grade all files" or msg == "Grade all Files":
+    if msg == "grade all files" or msg == "grade":
         score = grade()
