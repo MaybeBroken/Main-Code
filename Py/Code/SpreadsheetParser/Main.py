@@ -6,6 +6,30 @@ except:
     system("python3 -m pip install openpyxl")
 
 
+class CLI:
+    GREEN = "\033[92m"
+    LIGHT_GREEN = "\033[1;92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[1;34m"
+    MAGENTA = "\033[1;35m"
+    BOLD = "\033[;1m"
+    CYAN = "\033[1;36m"
+    LIGHT_CYAN = "\033[1;96m"
+    LIGHT_GREY = "\033[1;37m"
+    DARK_GREY = "\033[1;90m"
+    BLACK = "\033[1;30m"
+    WHITE = "\033[1;97m"
+    INVERT = "\033[;7m"
+    RESET = "\033[0m"
+
+    def up(num):
+        return f"\033[{num}A"
+
+    def resetline():
+        print(f"\033[1A\033[0m")
+
+
 def parseUrl(url, path):
     def _in(url):
         url = url.split("edit?")
@@ -30,10 +54,13 @@ def parseUrl(url, path):
             try:
                 return _in(url)
             except:
-                print(f"retrying time #{i}")
+                print(f"{CLI.RESET}retrying time #{CLI.RED}{i}{CLI.RESET}")
+            if i == 4:
+                exit(f"{CLI.RED}\nPlease enter a valid URL!\n{CLI.RESET}")
 
 
-inUrl: str = input("Master File Url (Must be made public): ")
+inUrl: str = input(f"{CLI.RESET}Master File Url (Must be made public): {CLI.INVERT}")
+CLI.resetline()
 
 if len(inUrl) == 0:
     inUrl = "https://docs.google.com/spreadsheets/d/1DtBwzigbbslESYkrX9IWsJf7_1KJOwa-FNEa4OiaDyU/edit?gid=0#gid=0"
@@ -115,26 +142,37 @@ def grade():
                         else:
                             errors.append(id)
         if len(errors) > 0:
-            print(f"\nSystem had {len(errors)} errors on Cells: ")
+            print(
+                f"{CLI.RESET}\nSystem had {CLI.RED}{len(errors)}{CLI.RESET} errors on Cells: "
+            )
             for err in errors:
                 print(f"{err}")
-        print(f"\n{student["name"]} had {len(dings)} errors:\n")
+        print(
+            f"{CLI.RESET}\n{student["name"]} had {CLI.RED}{len(dings)}{CLI.RESET} errors:\n"
+        )
         for ding in dings:
-            print(f"Cell {ding[0]}, Teacher: {ding[1]}, Student: {ding[2]}")
+            print(
+                f"{CLI.RESET}Cell {CLI.BOLD}{ding[0]}{CLI.RESET}, Teacher: {CLI.GREEN}{ding[1]}{CLI.RESET}, Student: {CLI.RED}{ding[2]}{CLI.RESET}"
+            )
         print("\n")
 
 
 while True:
-    msg = input('Command ("help" for help): ').lower()
+    msg = input(
+        f'{CLI.RESET}\nCommand ("{CLI.INVERT}help{CLI.RESET}" for help): {CLI.INVERT}'
+    ).lower()
+    CLI.resetline()
     if msg == "help":
-        print("-" * 25)
+        print(f"{CLI.RESET}-" * 25)
         for cmd in commands:
-            print(f"| {cmd}")
+            print(f"{CLI.RESET}| {CLI.INVERT}{cmd}{CLI.RESET}")
     if msg == "add single student" or msg == "add":
-        sName = input("| Student's name: ")
-        sFile = input("| Student's doc url (must be public): ")
+        sName = input(f"{CLI.RESET}| Student's name: {CLI.INVERT}")
+        sFile = input(f"{CLI.RESET}| Student's doc url (must be public): {CLI.INVERT}")
+        CLI.resetline()
         sFile = parseUrl(sFile, f"studentFiles/{sName}.xlsx")
         students.append({"name": sName, "file": sFile})
-        print(f"\n| Added {sName} to grading list\n")
+        print(f"{CLI.RESET}\n| Added {CLI.GREEN}{sName}{CLI.RESET} to grading list\n")
     if msg == "grade all files" or msg == "grade":
+        CLI.resetline()
         score = grade()
