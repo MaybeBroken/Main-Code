@@ -95,6 +95,7 @@ def grade():
         dings = []
         errors = []
         sFile = student["file"]
+        sName = student["name"]
         for sheet in masterFile:
             for index in sheet:
                 for id in index:
@@ -148,7 +149,7 @@ def grade():
             for err in errors:
                 print(f"{err}")
         print(
-            f"{CLI.RESET}\n{student["name"]} had {CLI.RED}{len(dings)}{CLI.RESET} errors:\n"
+            f"{CLI.RESET}\n{sName} had {CLI.RED}{len(dings)}{CLI.RESET} errors:\n"
         )
         for ding in dings:
             print(
