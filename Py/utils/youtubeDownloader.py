@@ -1,7 +1,16 @@
 import os
 from time import sleep
-import music_tag
-from pytubefix import YouTube, Playlist, exceptions
+
+try:
+    import music_tag
+except:
+    os.system("python3 -m pip install music_tag")
+    import music_tag
+try:
+    from pytubefix import YouTube, Playlist, exceptions
+except:
+    os.system("python3 -m pip install pytubefix")
+    from pytubefix import YouTube, Playlist, exceptions
 from threading import Thread
 import requests
 
@@ -31,10 +40,8 @@ threadQueue = []
 def get(url: str, dest_folder: str, dest_name: str):
     if not os.path.exists(dest_folder):
         os.makedirs(dest_folder)
-
     filename = dest_name
     file_path = os.path.join(dest_folder, filename)
-
     r = requests.get(url, stream=True)
     if r.ok:
         with open(file_path, "wb") as f:
@@ -45,7 +52,6 @@ def get(url: str, dest_folder: str, dest_name: str):
                     os.fsync(f.fileno())
     else:  # HTTP status code 4XX/5XX
         print("img download failed: status code {}\n{}".format(r.status_code, r.text))
-
     return file_path
 
 
@@ -54,7 +60,6 @@ def downloadSong(link, format):
     if format == "mp3":
         ys = yt.streams.get_audio_only()
         ys.download(outputPath, mp3=True)
-
     else:
         ys = yt.streams.get_highest_resolution()
         ys.download(outputPath)
@@ -67,15 +72,11 @@ def downloadPlaylist(link, format):
     imgPath = outputPath + "img/"
     vId = 0
     for yt in pl.videos:
-        songName = "(name)"
-        songPath = ""
         if format == "mp3":
             ys = yt.streams.get_audio_only()
             songName = ys.default_filename.replace("/", "-")
-
-            if not os.path.exists():
-
-                ys.download(
+            if not os.path.exists(outputPath + f"/{vId} | {songName}"):
+                songPath = ys.download(
                     outputPath,
                     filename=f"{vId} | {songName}",
                     mp3=False,
@@ -85,22 +86,20 @@ def downloadPlaylist(link, format):
                     imgPath,
                     "".join(f"{vId} | {songName}".split(".")[0] + ".png"),
                 )
-
                 song = music_tag.load_file(songPath)
-
                 with open(
                     imgPath + "".join(f"{vId} | {songName}".split(".")[0] + ".png"),
                     "rb",
                 ) as imgFile:
                     song["artwork"] = imgFile.read()
-
                 song.save()
-            print(f"Finished download of {songName}")
+                print(f"Finished download of {songName}")
+            print(f"Found cached version of {songName}")
         else:
             songName = ys.default_filename.replace("/", "-")
             ys = yt.streams.get_highest_resolution()
             songPath = ys.download(outputPath, filename=f"{vId} | {songName}")
-
+            print(f"Finished download of {songName}")
         vId += 1
 
 
@@ -118,7 +117,7 @@ while True:
         f"Another project by {Color.GREEN}MaybeBroken{Color.RESET}\nWelcome to the Youtube Downloader Utility!\nDownload or Convert? (D/C)   "
     )
     if firstchoice == "d" or firstchoice == "D":
-        format = input("\nWhich format? mp(3/4):  ")
+        format = input("\nWhich format? mp(3/4):  ").lower()
         if format == "3":
             format = "mp3"
         if format == "4":
