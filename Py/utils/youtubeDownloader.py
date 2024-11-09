@@ -1,5 +1,4 @@
 import os
-from time import sleep
 
 try:
     import music_tag
@@ -11,6 +10,7 @@ try:
 except:
     os.system("python3 -m pip install pytubefix")
     from pytubefix import YouTube, Playlist, exceptions
+from time import sleep
 from threading import Thread
 import requests
 
@@ -34,7 +34,7 @@ class Color:
 
 
 outputPath = "./youtubeDownloader/"
-threadQueue = []
+threadQueue = {}
 
 
 def get(url: str, dest_folder: str, dest_name: str):
@@ -72,35 +72,65 @@ def downloadPlaylist(link, format):
     imgPath = outputPath + "img/"
     vId = 0
     for yt in pl.videos:
-        if format == "mp3":
-            ys = yt.streams.get_audio_only()
-            songName = ys.default_filename.replace("/", "-")
-            if not os.path.exists(outputPath + f"/{vId} | {songName}"):
-                songPath = ys.download(
-                    outputPath,
-                    filename=f"{vId} | {songName}",
-                    mp3=False,
-                )
-                get(
-                    yt.thumbnail_url,
-                    imgPath,
-                    "".join(f"{vId} | {songName}".split(".")[0] + ".png"),
-                )
-                song = music_tag.load_file(songPath)
-                with open(
-                    imgPath + "".join(f"{vId} | {songName}".split(".")[0] + ".png"),
-                    "rb",
-                ) as imgFile:
-                    song["artwork"] = imgFile.read()
-                song.save()
-                print(f"Finished download of {songName}")
-            print(f"Found cached version of {songName}")
-        else:
-            songName = ys.default_filename.replace("/", "-")
-            ys = yt.streams.get_highest_resolution()
-            songPath = ys.download(outputPath, filename=f"{vId} | {songName}")
-            print(f"Finished download of {songName}")
+
+        def _th(format, outputPath, imgPath, yt, vId):
+            try:
+                if format == "mp3":
+                    ys = yt.streams.get_audio_only()
+                    songName = ys.default_filename.replace("/", "-")
+                    if not os.path.exists(outputPath + f"/{vId} | {songName}"):
+                        songPath = ys.download(
+                            outputPath,
+                            filename=f"{vId} | {songName}",
+                            mp3=False,
+                        )
+                        get(
+                            yt.thumbnail_url,
+                            imgPath,
+                            "".join(f"{vId} | {songName}".split(".")[0] + ".png"),
+                        )
+                        song = music_tag.load_file(songPath)
+                        with open(
+                            imgPath
+                            + "".join(f"{vId} | {songName}".split(".")[0] + ".png"),
+                            "rb",
+                        ) as imgFile:
+                            song["artwork"] = imgFile.read()
+                        song.save()
+                        print(f"Finished download of {songName}")
+                    else:
+                        print(f"Found cached version of {songName}")
+                else:
+                    songName = ys.default_filename.replace("/", "-")
+                    ys = yt.streams.get_highest_resolution()
+                    songPath = ys.download(outputPath, filename=f"{vId} | {songName}")
+                    print(f"Finished download of {songName}")
+            except:
+                ...
+            finally:
+                del threadQueue[vId]
+
+        t = Thread(
+            target=_th,
+            args=(
+                format,
+                outputPath,
+                imgPath,
+                yt,
+                vId,
+            ),
+        ).start()
+
+        threadQueue[vId] = t
+        sleep(0.1)
+
         vId += 1
+    while len(threadQueue) > 0:
+        try:
+            for t in threadQueue:
+                t.join()
+        except:
+            ...
 
 
 def _Wrapper(link, list, format):
@@ -112,7 +142,6 @@ def _Wrapper(link, list, format):
 
 
 while True:
-
     firstchoice = input(
         f"Another project by {Color.GREEN}MaybeBroken{Color.RESET}\nWelcome to the Youtube Downloader Utility!\nDownload or Convert? (D/C)   "
     )
