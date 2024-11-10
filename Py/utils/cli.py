@@ -59,4 +59,3 @@ class Control:
 
     def changeLineRight(len):
         return f"\033[{1}A\033[{len}C"
-

@@ -1,1 +1,0 @@
-egg-texture-cards texture src/textures/raw/exitButton.png texture src/textures/raw/startButton.png -o src/textures/egg/buttonTextures.egg
