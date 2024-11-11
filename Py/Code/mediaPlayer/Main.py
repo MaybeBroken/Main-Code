@@ -76,6 +76,19 @@ def degToRad(degrees):
     return degrees * (pi / 180.0)
 
 
+def divide(num, divisor) -> list[2]:
+    result = 0
+    remainder = 0
+    while num >= divisor:
+        num -= divisor
+        result += 1
+    remainder = num
+    return [
+        result if len(str(result)) > 1 else f"0{result}",
+        remainder if len(str(remainder)) > 1 else f"0{remainder}",
+    ]
+
+
 wantIntro = False
 
 
@@ -93,7 +106,6 @@ class Main(ShowBase):
             # ...
             self.setupWorld()
             self.setupControls()
-            Thread(target=self.update, daemon=True).start()
 
     def intro(self):
         self.setBackgroundColor(0, 0, 0, 1)
@@ -122,7 +134,8 @@ class Main(ShowBase):
     def update(self):
         while True:
             t.sleep(0.25)
-            try:
+            if not self.paused:
+
                 if (
                     self.songList[self.songIndex]["object"].status() == 1
                     and self.songList[self.songIndex]["played"] == 0
@@ -143,50 +156,38 @@ class Main(ShowBase):
                     self.songList[self.songIndex]["played"] = 0
                     self.nextSong()
                 self.progressText.setText(
-                    str(int(self.songList[self.songIndex]["object"].get_time()))
+                    str(
+                        divide(
+                            int(self.songList[self.songIndex]["object"].get_time()), 60
+                        )[0]
+                    )
+                    + ":"
+                    + str(
+                        divide(
+                            int(self.songList[self.songIndex]["object"].get_time()), 60
+                        )[1]
+                    )
                     + " / "
-                    + str(int(self.songList[self.songIndex]["object"].length()))
+                    + str(
+                        divide(
+                            int(self.songList[self.songIndex]["object"].length()), 60
+                        )[0]
+                    )
+                    + ":"
+                    + str(
+                        divide(
+                            int(self.songList[self.songIndex]["object"].length()), 60
+                        )[1]
+                    )
                 )
-            except:
-                None
 
     def setupControls(self):
-        self.lastMouseX = 0
-        self.lastMouseY = 0
-        self.keyMap = {
-            "forward": False,
-            "backward": False,
-            "left": False,
-            "right": False,
-            "up": False,
-            "down": False,
-            "primary": False,
-            "secondary": False,
-        }
-
-        self.accept("escape", self.doNothing)
-        self.accept("mouse1", self.doNothing)
-        self.accept("mouse1-up", self.doNothing)
-        self.accept("mouse3", self.doNothing)
-        self.accept("w", self.updateKeyMap, ["forward", True])
-        self.accept("w-up", self.updateKeyMap, ["forward", False])
-        self.accept("a", self.updateKeyMap, ["left", True])
-        self.accept("a-up", self.updateKeyMap, ["left", False])
-        self.accept("s", self.updateKeyMap, ["backward", True])
-        self.accept("s-up", self.updateKeyMap, ["backward", False])
-        self.accept("d", self.updateKeyMap, ["right", True])
-        self.accept("d-up", self.updateKeyMap, ["right", False])
-        self.accept("space", self.updateKeyMap, ["up", True])
-        self.accept("space-up", self.updateKeyMap, ["up", False])
-        self.accept("lshift", self.updateKeyMap, ["down", True])
-        self.accept("lshift-up", self.updateKeyMap, ["down", False])
-        self.accept("wheel_up", self.doNothing)
-        self.accept("wheel_down", self.doNothing)
+        self.accept("space", self.togglePlay)
         self.accept("q", sys.exit)
-        # self.accept("arrow_up", self.updateValues, [True])
-        # self.accept("arrow_down", self.updateValues, [False, True])
         self.accept("arrow_left", self.prevSong)
         self.accept("arrow_right", self.nextSong)
+        self.paused = False
+        self.currentTime = 0
 
     def updateKeyMap(self, key, value):
         self.keyMap[key] = value
@@ -195,34 +196,52 @@ class Main(ShowBase):
         return None
 
     def nextSong(self):
-        if self.songIndex - 1 >= 0:
-            self.songList[self.songIndex - 1]["nodePath"].setPos(10)
-        self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0.5)
-        self.songList[self.songIndex]["nodePath"].setScale(0.8)
-        self.songList[self.songIndex]["object"].stop()
-        self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
-        self.songIndex += 1
-        self.songList[self.songIndex]["nodePath"].show()
-        self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
-        self.songList[self.songIndex]["nodePath"].setScale(1)
-        self.songList[self.songIndex]["object"].play()
-        self.songList[self.songIndex]["played"] = 1
-        self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
+        if len(self.songList) > 0 and not self.paused:
+            if self.songIndex - 1 >= 0:
+                self.songList[self.songIndex - 1]["nodePath"].setPos(10)
+                self.songList[self.songIndex - 1]["nodePath"].hide()
+            self.songList[self.songIndex]["nodePath"].show()
+            self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0.5)
+            self.songList[self.songIndex]["nodePath"].setScale(0.8)
+            self.songList[self.songIndex]["object"].stop()
+            self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
+            self.songIndex += 1
+            self.songList[self.songIndex]["nodePath"].show()
+            self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
+            self.songList[self.songIndex]["nodePath"].setScale(1)
+            self.songList[self.songIndex]["object"].play()
+            self.songList[self.songIndex]["played"] = 1
+            self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
+            self.songList[self.songIndex + 1]["nodePath"].show()
 
     def prevSong(self):
-        if self.songIndex - 2 >= 0:
-            self.songList[self.songIndex - 2]["nodePath"].setPos(0, 0, 0.5)
-        self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, -0.5)
-        self.songList[self.songIndex]["nodePath"].setScale(0.8)
-        self.songList[self.songIndex]["object"].stop()
-        self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
-        self.songIndex -= 1
-        self.songList[self.songIndex]["nodePath"].show()
-        self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
-        self.songList[self.songIndex]["nodePath"].setScale(1)
-        self.songList[self.songIndex]["object"].play()
-        self.songList[self.songIndex]["played"] = 1
-        self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
+        if len(self.songList) > 0 and not self.paused:
+            if self.songIndex - 2 >= 0:
+                self.songList[self.songIndex - 2]["nodePath"].setPos(0, 0, 0.5)
+                self.songList[self.songIndex - 2]["nodePath"].show()
+            self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, -0.5)
+            self.songList[self.songIndex]["nodePath"].setScale(0.8)
+            self.songList[self.songIndex]["object"].stop()
+            self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
+            self.songList[self.songIndex + 1]["nodePath"].hide()
+            self.songIndex -= 1
+            self.songList[self.songIndex]["nodePath"].show()
+            self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
+            self.songList[self.songIndex]["nodePath"].setScale(1)
+            self.songList[self.songIndex]["object"].play()
+            self.songList[self.songIndex]["played"] = 1
+            self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
+
+    def togglePlay(self):
+        if len(self.songList) > 0:
+            if self.songList[self.songIndex]["object"].status() == 2:
+                self.currentTime = self.songList[self.songIndex]["object"].getTime()
+                self.songList[self.songIndex]["object"].stop()
+                self.paused = True
+            elif self.songList[self.songIndex]["object"].status() == 1:
+                self.songList[self.songIndex]["object"].set_time(self.currentTime)
+                self.songList[self.songIndex]["object"].play()
+                self.paused = False
 
     def setupWorld(self):
 
@@ -320,10 +339,13 @@ class Main(ShowBase):
                 pos=(0, 0),
             )
             self.songList[songId]["nodePath"] = songPanel
-            # songPanel.hide()
+            songPanel.hide()
         self.songList.reverse()
         self.songList[0]["nodePath"].setPos(0, 0, 0)
         self.songList[0]["nodePath"].setScale(1)
+        self.songList[self.songIndex]["nodePath"].show()
+        self.songList[self.songIndex + 1]["nodePath"].show()
+        Thread(target=self.update, daemon=True).start()
 
     def registerFolder(self):
         oldLength = len(self.songList)
