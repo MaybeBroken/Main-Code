@@ -13,8 +13,18 @@ except:
 from time import sleep
 from threading import Thread
 import requests
+import base64
 
 # https://music.youtube.com/playlist?list=PLt-QnSFN9Gjr1tX9ZFo3OF2gP0ixtfTVt&si=l93C0ueisIcC2V84
+
+
+def url2filename(url):
+    url = url.encode("UTF-8")
+    return base64.urlsafe_b64encode(url).decode("UTF-8")
+
+
+def filename2url(f):
+    return base64.urlsafe_b64decode(f).decode("UTF-8")
 
 
 class Color:
@@ -35,7 +45,7 @@ class Color:
     RESET = "\033[0m"
 
 
-outputPath = "./youtubeDownloader/"
+outputPath = ".\\youtubeDownloader\\"
 threadQueue = {}
 
 
@@ -45,6 +55,7 @@ def get(url: str, dest_folder: str, dest_name: str):
     filename = dest_name
     file_path = os.path.join(dest_folder, filename)
     r = requests.get(url, stream=True)
+    open(file_path, "xt")
     if r.ok:
         with open(file_path, "wb") as f:
             for chunk in r.iter_content(chunk_size=1024 * 8):
@@ -52,7 +63,7 @@ def get(url: str, dest_folder: str, dest_name: str):
                     f.write(chunk)
                     f.flush()
                     os.fsync(f.fileno())
-    else:  # HTTP status code 4XX/5XX
+    else:
         print("img download failed: status code {}\n{}".format(r.status_code, r.text))
     return file_path
 
@@ -71,39 +82,41 @@ def downloadSong(link, format):
 def downloadPlaylist(link, format):
     pl = Playlist(link)
     global outputPath
-    outputPath += pl.title + f" - {format}/"
-    imgPath = outputPath + "img/"
+    outputPath += pl.title + f" - {format}\\"
+    imgPath = outputPath + "img\\"
     vId = 0
     for yt in pl.videos:
 
         def _th(format, outputPath, imgPath, yt, vId):
             if format == "mp3":
                 ys = yt.streams.get_audio_only()
-                songName = ys.default_filename.replace("/", "-")
-                if not os.path.exists(outputPath + f"/{vId} | {songName}"):
+                songName = ys.default_filename.replace("\\", "-")
+                songName = songName.replace("|", "-")
+                if not os.path.exists(outputPath + f"\\{vId} - {songName}"):
                     songPath = ys.download(
                         outputPath,
                         filename=f"{vId} | {songName}",
                         mp3=False,
                     )
+                    print(f"Finished download of {songName}")
                     get(
-                        yt.thumbnail_url,
-                        imgPath,
-                        f"{vId} | {songName}".replace(".m4a", ".png"),
+                        url=yt.thumbnail_url,
+                        dest_folder=imgPath,
+                        dest_name=f"{vId} - {songName}".replace(".m4a", ".png"),
                     )
                     song = music_tag.load_file(songPath)
                     with open(
-                        f"{imgPath}/{vId} | {songName}".replace(".m4a", ".png"),
+                        f"{imgPath}\\{vId} - {songName}".replace(".m4a", ".png"),
                         "rb",
                     ) as imgFile:
                         song["artwork"] = imgFile.read()
                     song.save()
-                    print(f"Finished download of {songName}")
+                    print(f"Applied art to {songName}")
                 else:
                     print(f"Found cached version of {songName}")
             else:
                 ys = yt.streams.filter(progressive=True)[-1]
-                songName = ys.default_filename.replace("/", "-")
+                songName = ys.default_filename.replace("\\", "-")
                 songPath = ys.download(outputPath, filename=f"{vId} | {songName}")
                 print(f"Finished download of {songName}")
 
@@ -120,7 +133,6 @@ def downloadPlaylist(link, format):
             ),
         ).start()
 
-
         threadQueue[vId] = t
         sleep(0.1)
 
@@ -129,6 +141,7 @@ def downloadPlaylist(link, format):
         try:
             for t in threadQueue:
                 t.join()
+                del threadQueue[vId]
         except:
             ...
 
@@ -143,7 +156,7 @@ def _Wrapper(link, list, format):
 
 while True:
     firstchoice = input(
-        f"Another project by {Color.GREEN}MaybeBroken{Color.RESET}\nWelcome to the Youtube Downloader Utility!\nDownload or Convert? (D/C)   "
+        f"Another project by {Color.GREEN}MaybeBroken{Color.RESET}\nWelcome to the Youtube Downloader Utility!\nDownload or Convert? (D\\C)   "
     )
     if firstchoice == "d" or firstchoice == "D":
         format = input("\nWhich format? mp(3/4):  ").lower()
