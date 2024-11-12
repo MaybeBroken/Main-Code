@@ -14,6 +14,8 @@ from time import sleep
 from threading import Thread
 import requests
 
+# https://music.youtube.com/playlist?list=PLt-QnSFN9Gjr1tX9ZFo3OF2gP0ixtfTVt&si=l93C0ueisIcC2V84
+
 
 class Color:
     GREEN = "\033[92m"
@@ -63,6 +65,7 @@ def downloadSong(link, format):
     else:
         ys = yt.streams.get_highest_resolution()
         ys.download(outputPath)
+        print("finished")
 
 
 def downloadPlaylist(link, format):
@@ -74,40 +77,37 @@ def downloadPlaylist(link, format):
     for yt in pl.videos:
 
         def _th(format, outputPath, imgPath, yt, vId):
-            try:
-                if format == "mp3":
-                    ys = yt.streams.get_audio_only()
-                    songName = ys.default_filename.replace("/", "-")
-                    if not os.path.exists(outputPath + f"/{vId} | {songName}"):
-                        songPath = ys.download(
-                            outputPath,
-                            filename=f"{vId} | {songName}",
-                            mp3=False,
-                        )
-                        get(
-                            yt.thumbnail_url,
-                            imgPath,
-                            f"{vId} | {songName}".replace(".m4a", ".png"),
-                        )
-                        song = music_tag.load_file(songPath)
-                        with open(
-                            f"{imgPath}/{vId} | {songName}".replace(".m4a", ".png"),
-                            "rb",
-                        ) as imgFile:
-                            song["artwork"] = imgFile.read()
-                        song.save()
-                        print(f"Finished download of {songName}")
-                    else:
-                        print(f"Found cached version of {songName}")
-                else:
-                    songName = ys.default_filename.replace("/", "-")
-                    ys = yt.streams.get_highest_resolution()
-                    songPath = ys.download(outputPath, filename=f"{vId} | {songName}")
+            if format == "mp3":
+                ys = yt.streams.get_audio_only()
+                songName = ys.default_filename.replace("/", "-")
+                if not os.path.exists(outputPath + f"/{vId} | {songName}"):
+                    songPath = ys.download(
+                        outputPath,
+                        filename=f"{vId} | {songName}",
+                        mp3=False,
+                    )
+                    get(
+                        yt.thumbnail_url,
+                        imgPath,
+                        f"{vId} | {songName}".replace(".m4a", ".png"),
+                    )
+                    song = music_tag.load_file(songPath)
+                    with open(
+                        f"{imgPath}/{vId} | {songName}".replace(".m4a", ".png"),
+                        "rb",
+                    ) as imgFile:
+                        song["artwork"] = imgFile.read()
+                    song.save()
                     print(f"Finished download of {songName}")
-            except:
-                ...
-            finally:
-                del threadQueue[vId]
+                else:
+                    print(f"Found cached version of {songName}")
+            else:
+                ys = yt.streams.filter(progressive=True)[-1]
+                songName = ys.default_filename.replace("/", "-")
+                songPath = ys.download(outputPath, filename=f"{vId} | {songName}")
+                print(f"Finished download of {songName}")
+
+            del threadQueue[vId]
 
         t = Thread(
             target=_th,
@@ -124,12 +124,6 @@ def downloadPlaylist(link, format):
         sleep(0.1)
 
         vId += 1
-    while len(threadQueue) > 0:
-        try:
-            for t in threadQueue:
-                t.join()
-        except:
-            ...
 
 
 def _Wrapper(link, list, format):
@@ -160,9 +154,7 @@ while True:
         if secondChoice == "s" or secondChoice == "S":
             url = input(f"\nyt song Url:\n-->  ")
             if url == "" or url == None or len(url) < 20:
-                url = (
-                    "https://music.youtube.com/watch?v=aZti2SC6MFY&si=WtZlNftPk1Im5N1q"
-                )
+                url = "https://www.youtube.com/watch?v=IICGZ7YOafs"
             print("\n")
             _Wrapper(url, False, format)
     if firstchoice == "c" or firstchoice == "C":

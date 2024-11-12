@@ -108,7 +108,6 @@ class Main(ShowBase):
             # do setup tasks
             # ...
             self.setupWorld()
-            self.setupControls()
 
     def intro(self):
         self.setBackgroundColor(0, 0, 0, 1)
@@ -127,7 +126,6 @@ class Main(ShowBase):
                 # do setup tasks
                 # ...
                 self.setupWorld()
-                self.setupControls()
                 # end of setup tasks
             else:
                 return task.cont
@@ -405,6 +403,7 @@ class Main(ShowBase):
         self.backgroundImage.setBin("background", 0)
         self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
         self.pathObject.removeNode()
+        self.setupControls()
         Thread(target=self.update, daemon=True).start()
 
     def registerFolder(self):
