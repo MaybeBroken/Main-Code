@@ -6,5 +6,5 @@ camZ = None
 camH = None
 camP = None
 camR = None
-winMode = "win"
+winMode = "full-win"
 resolution = [600, 800]

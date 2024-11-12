@@ -79,13 +79,28 @@ def degToRad(degrees):
     return degrees * (pi / 180.0)
 
 
+wantIntro = False
+
+
 class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
-        self.intro()
+        self.setBackgroundColor(0, 0, 0, 1)
+        self.toggleWireframe()
+        if wantIntro:
+            self.intro()
+        else:
+            self.backfaceCullingOn()
+            self.disableMouse()
+
+            # do setup tasks
+            # ...
+            self.setupWorld()
+            self.setupControls()
+            # end of setup tasks
+            self.taskMgr.add(self.update, "update")
 
     def intro(self):
-        self.setBackgroundColor(0, 0, 0, 1)
         movie = self.loader.loadTexture("src/movies/intro.mp4")
         image = OnscreenImage(movie, scale=1, parent=self.aspect2d)
         movie.play()
@@ -223,7 +238,7 @@ class Main(ShowBase):
         self.accept("wheel_down", self.wireframeOff)
         self.accept("q", sys.exit)
         self.accept("h", self.camera.lookAt, extraArgs=[self.box2])
-        self.accept("r", self.jump)
+        self.accept("t", self.jump)
 
     def jump(self):
         physicsMgr.addVectorForce("box2", [0, 0, 1])
@@ -246,10 +261,13 @@ class Main(ShowBase):
         self.box2.reparentTo(self.render)
         self.box2.setPos(15, 15, 0)
 
-        physicsMgr.registerObject_Core(self.box2, "box2")
+        self.box1.setColor(0, 1, 1, 1)
+        self.box2.setColor(0, 1, 1, 1)
 
-        physicsMgr.registerColliderPlane(self.box1, -14, "box1", "rebound", "z")
-        physicsMgr.registerColliderPlane(self.box1, -14, "box1", "rebound", "x")
+        physicsMgr.registerObject_Sphere(self.box2, "box2", radius=1)
+
+        physicsMgr.registerColliderPlane(self.box1, -15, "box1", "rebound", "z")
+        physicsMgr.registerColliderPlane(self.box1, -15, "box1", "rebound", "x")
 
     def fadeOutGuiElement_ThreadedOnly(
         self, element, timeToFade, execBeforeOrAfter, target, args=()
