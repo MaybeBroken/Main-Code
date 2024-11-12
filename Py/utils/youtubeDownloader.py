@@ -120,10 +120,17 @@ def downloadPlaylist(link, format):
             ),
         ).start()
 
+
         threadQueue[vId] = t
         sleep(0.1)
 
         vId += 1
+    while len(threadQueue) > 0:
+        try:
+            for t in threadQueue:
+                t.join()
+        except:
+            ...
 
 
 def _Wrapper(link, list, format):
