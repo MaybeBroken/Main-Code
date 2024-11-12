@@ -1,0 +1,13 @@
+salespitch=
+textures=
+rigged-models=squarrow-model 
+name=Squarrow
+license=CCA 2.0
+other-files=squarrow.mb 
+id=squarrow
+date=2004-12-13
+keywords=Miscellaneous
+animations=squarrow-anim 
+modeler=Seth Shain
+painter=Aldric Saucier
+animator=Seth Shain

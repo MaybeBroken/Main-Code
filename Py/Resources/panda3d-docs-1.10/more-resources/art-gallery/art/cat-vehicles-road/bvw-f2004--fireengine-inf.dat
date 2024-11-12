@@ -1,0 +1,12 @@
+salespitch=
+textures=fireengine.png 
+solid-models=fireengine 
+name=Fire Engine
+license=CCA 2.0
+other-files=fireengine.mb 
+id=fireengine
+date=2004-12-13
+keywords=Vehicle
+modeler=Amber Samdahl
+painter=Seth Casana
+animator=

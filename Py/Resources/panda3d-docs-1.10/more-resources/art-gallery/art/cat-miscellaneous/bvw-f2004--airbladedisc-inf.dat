@@ -1,0 +1,12 @@
+salespitch=
+textures=cap.jpg topbase.jpg orb.jpg basebottom.jpg blade.jpg 
+solid-models=airblade 
+name=Airblade Disc
+license=CCA 2.0
+other-files=final-disk.mb 
+id=airbladedisc
+date=2003-12-03
+keywords=disk, airblade
+modeler=Jeff Styers
+painter=Reagan Heller
+animator=

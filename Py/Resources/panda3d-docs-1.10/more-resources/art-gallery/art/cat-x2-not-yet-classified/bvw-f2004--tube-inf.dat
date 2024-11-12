@@ -1,0 +1,12 @@
+salespitch=
+textures=tube.png 
+solid-models=tube 
+name=Tube
+license=CCA 2.0
+other-files=
+id=tube
+date=2004-12-13
+keywords=Miscellaneous
+modeler=TJ Jackson
+painter=TJ Jackson
+animator=

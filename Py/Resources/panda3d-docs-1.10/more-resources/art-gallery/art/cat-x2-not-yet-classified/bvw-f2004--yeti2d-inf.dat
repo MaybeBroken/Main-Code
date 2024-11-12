@@ -1,0 +1,12 @@
+salespitch=
+textures=yeti.png 
+solid-models=yeti 
+name=Yeti 2D
+license=CCA 2.0
+other-files=yeti.mb 
+id=yeti2d
+date=2004-12-13
+keywords=Animal
+modeler=Amber Samdahl
+painter=Amber Samdahl
+animator=

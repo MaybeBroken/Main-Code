@@ -1,0 +1,12 @@
+salespitch=
+textures=monster3.png 
+name=Enemy Ship 2
+license=CCA 2.0
+other-files=monster3.mb 
+id=enemyship2
+date=2004-12-13
+animated-models=monster3-anim-idle monster3-anim-shoot 
+keywords=Space Ship
+modeler=
+painter=
+animator=

@@ -1,0 +1,14 @@
+salespitch=
+textures=person1a.png person1.png person1b.png 
+solid-models=person1a person1b person1 
+name=Stick Person 1
+license=CCA 2.0
+other-files=person1-stand.mb person1-panic.mb person1.mb person1-bind.mb 
+id=stickperson1
+date=2004-12-12
+keywords=Human
+animations=person1-panic person1-stand 
+rigged-models=person1-base 
+modeler=Shane Liesegang
+painter=Demetrius Jordan
+animator=Shane Liesegang

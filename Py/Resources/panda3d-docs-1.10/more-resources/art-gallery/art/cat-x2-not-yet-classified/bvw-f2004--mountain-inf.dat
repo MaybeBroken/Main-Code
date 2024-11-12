@@ -1,0 +1,12 @@
+salespitch=
+textures=mountaintexture.jpg 
+solid-models=mountainanimation mountainegg 
+name=Mountain
+license=CCA 2.0
+other-files=
+id=mountain
+date=2003-10-23
+keywords=mountain
+modeler=Brian Schrank
+painter=Jina Huh
+animator=Brian Schrank

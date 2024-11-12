@@ -1,0 +1,12 @@
+salespitch=
+textures=crack3.png crack1.png planet.png crack4.png crack2.png 
+solid-models=planet 
+name=Planet
+license=CCA 2.0
+other-files=planet.mb 
+id=planet
+date=2004-12-13
+keywords=Outer Space
+modeler=
+painter=
+animator=

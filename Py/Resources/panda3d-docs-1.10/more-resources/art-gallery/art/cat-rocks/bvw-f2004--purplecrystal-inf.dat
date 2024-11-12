@@ -1,0 +1,12 @@
+salespitch=
+textures=purple.png 
+solid-models=purplecrystal 
+name=Purple Crystal
+license=CCA 2.0
+other-files=purple-crystal.mb 
+id=purplecrystal
+date=2004-12-12
+keywords=Rock
+modeler=Seth Shain
+painter=James Soracco
+animator=

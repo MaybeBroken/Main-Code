@@ -1,0 +1,12 @@
+salespitch=
+textures=cave.png 
+solid-models=cave 
+name=Cave
+license=CCA 2.0
+other-files=cave.mb 
+id=cave
+date=2004-12-12
+keywords=Environment
+modeler=Seth Shain
+painter=James Soracco
+animator=

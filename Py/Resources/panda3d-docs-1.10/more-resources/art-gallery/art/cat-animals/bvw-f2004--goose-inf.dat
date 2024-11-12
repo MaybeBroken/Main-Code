@@ -1,0 +1,13 @@
+salespitch=
+textures=goose.png 
+rigged-models=goosemodelonly 
+name=Goose
+license=CCA 2.0
+other-files=
+id=goose
+date=2003-10-23
+keywords=Animal
+animations=gooseanimationonly 
+modeler=Brian Schrank
+painter=Jina Huh
+animator=Brian Schrank

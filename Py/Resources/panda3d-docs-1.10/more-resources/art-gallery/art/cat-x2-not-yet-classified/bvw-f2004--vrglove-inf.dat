@@ -1,0 +1,13 @@
+salespitch=
+textures=hand.png tenticle2.png 
+rigged-models=hand 
+name=VR Glove
+license=CCA 2.0
+other-files=hand.mb 
+id=vrglove
+date=2004-12-13
+keywords=Miscellaneous
+animations=hand-grasp 
+modeler=Jeremy Carson
+painter=Victoria Webb
+animator=Jeremy Carson

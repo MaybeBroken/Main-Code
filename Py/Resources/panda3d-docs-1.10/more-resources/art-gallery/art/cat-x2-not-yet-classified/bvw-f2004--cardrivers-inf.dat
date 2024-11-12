@@ -1,0 +1,13 @@
+salespitch=
+textures=rank.png poster.png orange-driver.png purple-driver.png platformground.png driver.png red-driver.png blue-driver.png 
+rigged-models=driverall 
+name=Car Drivers
+license=CCA 2.0
+other-files=driverall.mb 
+empty-eggs=driverall-ani 
+id=cardrivers
+date=2004-12-13
+keywords=Human
+modeler=Fangwei Lee
+painter=Demetrius Jordan
+animator=Fangwei Lee

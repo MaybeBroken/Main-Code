@@ -1,0 +1,12 @@
+salespitch=
+textures=control-panel-baked.1.png 
+solid-models=controlpanelmodel 
+name=Control Panel
+license=CCA 2.0
+other-files=control-panel2.mb 
+id=controlpanel
+date=2004-12-12
+keywords=Control Panel
+modeler=Neel Kar
+painter=Benjamin Rosales / Neel Kar
+animator=Neel Kar

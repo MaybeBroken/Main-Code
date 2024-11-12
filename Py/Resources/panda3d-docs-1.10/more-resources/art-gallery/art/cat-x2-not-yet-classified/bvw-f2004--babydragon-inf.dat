@@ -1,0 +1,13 @@
+salespitch=
+textures=
+solid-models=babydragon 
+name=Baby Dragon
+license=CCA 2.0
+other-files=babydragon.mb 
+id=babydragon
+date=2004-12-12
+animated-models=babydragonwalking 
+keywords=Animal
+modeler=Nikita Pavlov
+painter=
+animator=Nikita Pavlov

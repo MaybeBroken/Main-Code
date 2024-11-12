@@ -1,0 +1,12 @@
+salespitch=
+textures=snowman.png 
+name=SnowMan-FlipCoal
+license=CCA 2.0
+other-files=snowman-flipcoal.mb workspace.mel 
+id=snowmanflipcoal
+date=2004-12-12
+animated-models=snowman-flipcoal 
+keywords=SnowMan
+modeler=Shaun Budhram
+painter=Wi
+animator=Shaun Budhram

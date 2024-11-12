@@ -1,0 +1,12 @@
+salespitch=
+textures=crate.png 
+solid-models=crate 
+name=Crate
+license=CCA 2.0
+other-files=crate.mb 
+id=crate
+date=2004-12-13
+keywords=Box
+modeler=TJ Jackson
+painter=TJ Jackson
+animator=
