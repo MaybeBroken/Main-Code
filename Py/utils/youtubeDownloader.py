@@ -87,12 +87,11 @@ def downloadPlaylist(link, format):
                         get(
                             yt.thumbnail_url,
                             imgPath,
-                            "".join(f"{vId} | {songName}".split(".")[0] + ".png"),
+                            f"{vId} | {songName}".replace(".m4a", ".png"),
                         )
                         song = music_tag.load_file(songPath)
                         with open(
-                            imgPath
-                            + "".join(f"{vId} | {songName}".split(".")[0] + ".png"),
+                            f"{imgPath}/{vId} | {songName}".replace(".m4a", ".png"),
                             "rb",
                         ) as imgFile:
                             song["artwork"] = imgFile.read()

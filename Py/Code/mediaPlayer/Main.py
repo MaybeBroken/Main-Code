@@ -1,11 +1,14 @@
 from math import pi, sin, cos
-from random import randint
+from random import randint, shuffle
 import time as t
 import sys
 import os
 import src.scripts.vars as Wvars
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
+from pathlib import Path
+from clipboard import copy
+from PIL import Image, ImageFilter
 
 
 from panda3d.core import *
@@ -186,14 +189,40 @@ class Main(ShowBase):
         self.accept("q", sys.exit)
         self.accept("arrow_left", self.prevSong)
         self.accept("arrow_right", self.nextSong)
+        self.accept("c", self.copySong)
+        self.accept("s", self.shuffleSongs)
         self.paused = False
         self.currentTime = 0
 
-    def updateKeyMap(self, key, value):
-        self.keyMap[key] = value
+    def copySong(self):
+        copy(self.songList[self.songIndex]["path"])
 
-    def doNothing(self):
-        return None
+    def shuffleSongs(self):
+        shuffle(self.songList)
+        self.songIndex = 0
+        for item in self.songList:
+            item["nodePath"].setPos(0, self.songIndex, -0.5)
+            item["nodePath"].setScale(0.8)
+            item["object"].stop()
+            item["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
+            item["nodePath"].hide()
+        if self.songIndex - 1 >= 0:
+            self.songList[self.songIndex - 1]["nodePath"].setPos(10)
+            self.songList[self.songIndex - 1]["nodePath"].hide()
+        self.songList[self.songIndex]["nodePath"].show()
+        self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0.5)
+        self.songList[self.songIndex]["nodePath"].setScale(0.8)
+        self.songList[self.songIndex]["object"].stop()
+        self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
+        self.songIndex += 1
+        self.songList[self.songIndex]["nodePath"].show()
+        self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
+        self.songList[self.songIndex]["nodePath"].setScale(1)
+        self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
+        self.songList[self.songIndex + 1]["nodePath"].show()
+        self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
 
     def nextSong(self):
         if len(self.songList) > 0 and not self.paused:
@@ -213,6 +242,7 @@ class Main(ShowBase):
             self.songList[self.songIndex]["played"] = 1
             self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
             self.songList[self.songIndex + 1]["nodePath"].show()
+            self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
 
     def prevSong(self):
         if len(self.songList) > 0 and not self.paused:
@@ -231,6 +261,27 @@ class Main(ShowBase):
             self.songList[self.songIndex]["object"].play()
             self.songList[self.songIndex]["played"] = 1
             self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
+            self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
+
+    def setBackgroundImage(self, imageName):
+        def _th(self, imageName):
+            try:
+                image = Image.open(imageName)
+                image = image.filter(ImageFilter.GaussianBlur(4))
+                newImageName = imageName.replace(".png", " - blur.png")
+                image.save(newImageName)
+                self.backgroundImage.destroy()
+                self.backgroundImage = OnscreenImage(
+                    parent=self.guiFrame,
+                    image=self.loader.loadTexture(newImageName),
+                    scale=(1.5 * (640 / 480), 1, 1.5),
+                    pos=(0, 0, 0),
+                )
+                self.backgroundImage.setBin("background", 0)
+            except:
+                self.backgroundImage.hide()
+
+        Thread(target=_th, args=(self, imageName)).start()
 
     def togglePlay(self):
         if len(self.songList) > 0:
@@ -272,7 +323,7 @@ class Main(ShowBase):
         self.pathObject = DirectEntry(
             parent=self.guiFrame,
             scale=0.1,
-            pos=(-0.5, 0, 0.85),
+            pos=(-0.5, 0, 0),
             initialText="./utils/youtubeDownloader/good songs - mp3/",
             cursorKeys=True,
             overflow=1,
@@ -286,7 +337,7 @@ class Main(ShowBase):
             text="",
             parent=self.guiFrame,
             scale=0.1,
-            pos=(0.85, 0.9),
+            pos=(0, -0.1),
             fg=(1, 1, 1, 1),
         )
         # self.progressBar = DirectSlider(
@@ -345,6 +396,15 @@ class Main(ShowBase):
         self.songList[0]["nodePath"].setScale(1)
         self.songList[self.songIndex]["nodePath"].show()
         self.songList[self.songIndex + 1]["nodePath"].show()
+        self.backgroundImage = OnscreenImage(
+            parent=self.guiFrame,
+            image=self.loader.loadTexture(self.songList[self.songIndex]["imagePath"]),
+            scale=(1.5 * (640 / 480), 1, 1.5),
+            pos=(0, 0, 0),
+        )
+        self.backgroundImage.setBin("background", 0)
+        self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
+        self.pathObject.removeNode()
         Thread(target=self.update, daemon=True).start()
 
     def registerFolder(self):
@@ -361,13 +421,15 @@ class Main(ShowBase):
                     ...
             for song in _newDir:
                 if str(song).endswith((".m4a", ".mp3")):
+                    imgPath = song.replace("m4a", "png")
                     self.songList.append(
                         {
-                            "path": f"{path}{song}",
+                            "path": Path(f"{path}{song}").absolute(),
                             "object": self.loader.loadMusic(f"{path}{song}"),
                             "name": str(song).replace(".m4a", ""),
                             "nodePath": None,
                             "played": 0,
+                            "imagePath": f"{path}img/{imgPath}",
                         }
                     )
                 else:
