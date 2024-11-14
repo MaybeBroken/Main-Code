@@ -3,7 +3,7 @@ import os
 try:
     import music_tag
 except:
-    os.system("python3 -m pip install music_tag")
+    os.system("python3 -m pip install music-tag")
     import music_tag
 try:
     from pytubefix import YouTube, Playlist, exceptions
@@ -14,17 +14,6 @@ from time import sleep
 from threading import Thread
 import requests
 import base64
-
-# https://music.youtube.com/playlist?list=PLt-QnSFN9Gjr1tX9ZFo3OF2gP0ixtfTVt&si=l93C0ueisIcC2V84
-
-
-def url2filename(url):
-    url = url.encode("UTF-8")
-    return base64.urlsafe_b64encode(url).decode("UTF-8")
-
-
-def filename2url(f):
-    return base64.urlsafe_b64decode(f).decode("UTF-8")
 
 
 class Color:
@@ -45,8 +34,14 @@ class Color:
     RESET = "\033[0m"
 
 
-outputPath = ".\\youtubeDownloader\\"
+outputPath = os.path.join(".", "youtubeDownloader")
 threadQueue = {}
+
+
+def pathSafe(name: str):
+    for index in [["/", "-"], ["|", "-"], ["\\", "-"]]:
+        name = name.replace(index[0], index[1])
+    return name
 
 
 def get(url: str, dest_folder: str, dest_name: str):
@@ -82,17 +77,22 @@ def downloadSong(link, format):
 def downloadPlaylist(link, format):
     pl = Playlist(link)
     global outputPath
-    outputPath += pl.title + f" - {format}\\"
-    imgPath = outputPath + "img\\"
+    outputPath = os.path.join(outputPath, f"{pl.title} - {format}/")
+    imgPath = os.path.join(outputPath, "img/")
+    try:
+        os.mkdir(outputPath)
+        os.mkdir(imgPath)
+    except:
+        ...
     vId = 0
     for yt in pl.videos:
 
         def _th(format, outputPath, imgPath, yt, vId):
             if format == "mp3":
                 ys = yt.streams.get_audio_only()
-                songName = ys.default_filename.replace("\\", "-")
-                songName = songName.replace("|", "-")
-                if not os.path.exists(outputPath + f"\\{vId} - {songName}"):
+                songName = pathSafe(ys.default_filename)
+                songPath = os.path.join(outputPath, f"{vId} - {songName}")
+                if not os.path.exists(songPath):
                     songPath = ys.download(
                         outputPath,
                         filename=f"{vId} | {songName}",
@@ -106,7 +106,10 @@ def downloadPlaylist(link, format):
                     )
                     song = music_tag.load_file(songPath)
                     with open(
-                        f"{imgPath}\\{vId} - {songName}".replace(".m4a", ".png"),
+                        os.path.join(
+                            imgPath,
+                            f"{vId} - {songName}".replace(".m4a", ".png"),
+                        ),
                         "rb",
                     ) as imgFile:
                         song["artwork"] = imgFile.read()
