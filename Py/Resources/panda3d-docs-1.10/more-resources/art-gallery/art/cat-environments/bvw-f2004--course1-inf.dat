@@ -1,0 +1,12 @@
+salespitch=
+textures=dirt2-ground.png dirt2-buildings.png dirt2-walls.png 
+solid-models=course1 
+name=Course 1
+license=CCA 2.0
+other-files=dirt2.mb 
+id=course1
+date=2004-12-13
+keywords=Environment
+modeler=Fangwei Lee
+painter=Demetrius Jordan
+animator=

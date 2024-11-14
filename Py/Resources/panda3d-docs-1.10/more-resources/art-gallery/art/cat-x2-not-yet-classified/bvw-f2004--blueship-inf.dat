@@ -1,0 +1,13 @@
+salespitch=
+textures=goodpink.png good1.png goodgreen.png goodblu.png goodyelo.png 
+solid-models=redship-still blueship 
+name=Blue Ship
+license=CCA 2.0
+other-files=
+id=blueship
+date=2004-12-13
+animated-models=redship-fire 
+keywords=Space Ship
+modeler=
+painter=
+animator=

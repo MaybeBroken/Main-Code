@@ -1,0 +1,13 @@
+salespitch=
+textures=elephant.png 
+rigged-models=elephantmodel 
+name=Elephant Balloon
+license=CCA 2.0
+other-files=
+id=elephantballoon
+date=2003-10-23
+keywords=balloon, elephant
+animations=elephantanimation 
+modeler=Brian Schrank
+painter=Jina Huh
+animator=Brian Schrank

@@ -1,0 +1,13 @@
+salespitch=
+textures=bagpipe-2.png boybagpipetex.png 
+rigged-models=bagpipeboymodelonly 
+name=Bagpipe balloon
+license=CCA 2.0
+other-files=
+id=bagpipeballoon
+date=2003-10-23
+keywords=balloon, bagpipe
+animations=bagpipeboyanimationonly 
+modeler=Brian Schrank
+painter=Jina Huh
+animator=Brian Schrank

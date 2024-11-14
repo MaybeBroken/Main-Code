@@ -1,0 +1,12 @@
+salespitch=Note: the mine shaft is tileable, you can make it into a very long shaft.
+textures=shaft.png 
+solid-models=shaft 
+name=Shaft
+license=CCA 2.0
+other-files=shaft.mb 
+id=shaft
+date=2004-12-13
+keywords=Environment
+modeler=TJ Jackson
+painter=TJ Jackson
+animator=

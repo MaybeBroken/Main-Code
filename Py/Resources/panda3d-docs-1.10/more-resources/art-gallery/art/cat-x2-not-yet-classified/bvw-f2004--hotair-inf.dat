@@ -1,0 +1,13 @@
+salespitch=
+textures=hotairballoon.png 
+rigged-models=ballonmodel 
+name=Hot Air Balloon
+license=CCA 2.0
+other-files=
+id=hotair
+date=2003-10-23
+keywords=balloon
+animations=ballonanimate 
+modeler=Brian Schrank
+painter=Jina Huh
+animator=Brian Schrank

@@ -1,0 +1,12 @@
+salespitch=
+textures=cone.png lamp-tex.png 
+solid-models=lamp 
+name=Lamp
+license=CCA 2.0
+other-files=lamp.mb 
+id=lamp
+date=2004-12-13
+keywords=Miscellaneous
+modeler=Shao Zhang
+painter=Shao Zhang
+animator=

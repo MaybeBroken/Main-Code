@@ -1,0 +1,12 @@
+salespitch=
+textures=bottle.png 
+solid-models=nalgene 
+name=Nalgene
+license=CCA 2.0
+other-files=nalgene.mb 
+id=nalgene
+date=2004-12-12
+keywords=Bottle
+modeler=Victoria Webb
+painter=Tim Lander
+animator=

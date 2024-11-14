@@ -1,0 +1,12 @@
+salespitch=
+textures=lamp-desk.png 
+solid-models=lamp-desk 
+name=Desk Lamp
+license=CCA 2.0
+other-files=lamp-desk.mb 
+id=desklamp
+date=2004-12-13
+keywords=Miscellaneous
+modeler=Eric Brown
+painter=Charles Brandt
+animator=

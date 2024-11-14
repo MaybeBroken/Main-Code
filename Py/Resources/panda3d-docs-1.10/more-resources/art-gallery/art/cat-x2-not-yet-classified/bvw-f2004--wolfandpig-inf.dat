@@ -1,0 +1,13 @@
+salespitch=
+textures=wolf-texture.png pig-texture.png 
+rigged-models=wolfpigmodelonly 
+name=Wolf
+license=CCA 2.0
+other-files=
+id=wolfandpig
+date=Unknown
+keywords=
+animations=wolfpiganimationonly 
+modeler=Unknown
+painter=Unknown
+animator=Unknown

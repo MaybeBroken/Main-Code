@@ -1,0 +1,12 @@
+salespitch=
+textures=building-tex.png 
+solid-models=building 
+name=Building
+license=CCA 2.0
+other-files=building.mb 
+id=building
+date=2004-12-13
+keywords=Environment
+modeler=Shao Zhang
+painter=Shao Zhang
+animator=

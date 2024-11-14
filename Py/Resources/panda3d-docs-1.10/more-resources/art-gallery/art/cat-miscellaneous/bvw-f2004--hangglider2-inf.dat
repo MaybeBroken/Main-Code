@@ -1,0 +1,12 @@
+salespitch=
+textures=wings2.png panel4.png panel1.png glider2.png panel2.png panel5.png panel3.png 
+rigged-models=hang-glider-2 
+name=Hang Glider 2
+license=CCA 2.0
+other-files=hang-glider-2.mb 
+id=hangglider2
+date=2004-12-13
+keywords=Miscellaneous
+modeler=Nikita Pavlov
+painter=Seema Patel
+animator=

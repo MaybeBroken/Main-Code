@@ -1,0 +1,12 @@
+salespitch=
+textures=person3a.png person3c.png person3.png person3b.png 
+solid-models=person3b person3 person3a 
+name=Stick Person 3
+license=CCA 2.0
+other-files=person3.mb 
+id=stickperson3
+date=2004-12-12
+keywords=Human
+modeler=Shane Liesegang
+painter=Demetrius Jordan
+animator=

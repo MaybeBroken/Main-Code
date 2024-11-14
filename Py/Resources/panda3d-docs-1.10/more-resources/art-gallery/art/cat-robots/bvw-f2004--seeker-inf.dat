@@ -1,0 +1,12 @@
+salespitch=
+textures=seeker.png 
+solid-models=seeker 
+name=Seeker
+license=CCA 2.0
+other-files=seeker.mb 
+id=seeker
+date=2004-12-13
+keywords=Miscellaneous
+modeler=Seth Shain
+painter=TJ Jackson
+animator=

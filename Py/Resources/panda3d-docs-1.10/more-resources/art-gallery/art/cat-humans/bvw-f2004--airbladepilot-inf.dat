@@ -1,0 +1,13 @@
+salespitch=
+textures=bladepilot.jpg 
+rigged-models=pilot-model 
+name=Airblade pilot
+license=CCA 2.0
+other-files=
+id=airbladepilot
+date=2003-12-03
+keywords=airblade, man
+animations=pilot-pain pilot-crash pilot-firewindup pilot-chargeloop pilot-newidle pilot-fire pilot-discloop pilot-chargewindup pilot-charge pilot-discwinddown pilot-firewinddown pilot-discwindup pilot-idle pilot-newdeath pilot-chargeshoot 
+modeler=Jeff Styers
+painter=Reagan Heller
+animator=Jeff Styers

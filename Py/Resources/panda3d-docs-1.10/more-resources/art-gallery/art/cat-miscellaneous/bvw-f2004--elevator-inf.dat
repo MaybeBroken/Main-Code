@@ -1,0 +1,13 @@
+salespitch=
+textures=elevatorcontrols.png elevatorup.png elevator.png elevatorfloor.png elevatorone.png 
+rigged-models=elevator 
+name=Elevator
+license=CCA 2.0
+other-files=elevator.mb 
+id=elevator
+date=2004-12-13
+keywords=Miscellaneous
+animations=elevatordooropenanim 
+modeler=TJ Jackson
+painter=TJ Jackson
+animator=TJ Jackson

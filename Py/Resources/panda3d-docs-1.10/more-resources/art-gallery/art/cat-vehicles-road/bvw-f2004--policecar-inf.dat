@@ -1,0 +1,12 @@
+salespitch=
+textures=policecar.png 
+solid-models=policecar 
+name=Police Car
+license=CCA 2.0
+other-files=policecar.mb 
+id=policecar
+date=2004-12-13
+keywords=Vehicle
+modeler=Amber Samdahl
+painter=Seth Casana
+animator=
