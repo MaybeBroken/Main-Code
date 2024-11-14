@@ -1,4 +1,5 @@
 from math import pi
+import os
 
 
 def getDistance(pointA, pointB):
@@ -10,6 +11,10 @@ def getDistance(pointA, pointB):
 
 def degToRad(degrees):
     return degrees * (pi / 180.0)
+
+
+def curl(url, filepath):
+    os.system(f"curl -o {filepath} {url}")
 
 
 def divideWithRemainder(num, divisor) -> list[2]:
