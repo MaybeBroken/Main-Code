@@ -1,8 +1,8 @@
 - Peaceful
 - Minecraft
-- full-win
+- full
 - - 1680
   - 1050
 - 12
-- 58
+- 27
 - 15
