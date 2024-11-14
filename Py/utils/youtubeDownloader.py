@@ -15,6 +15,7 @@ from threading import Thread
 import requests
 import base64
 
+os.chdir(__file__.replace(__file__.split("/")[-1], ""))
 
 class Color:
     GREEN = "\033[92m"
@@ -47,7 +48,7 @@ def pathSafe(name: str):
 def get(url: str, dest_folder: str, dest_name: str):
     if not os.path.exists(dest_folder):
         os.makedirs(dest_folder)
-    filename = dest_name
+    filename = pathSafe(dest_name)
     file_path = os.path.join(dest_folder, filename)
     r = requests.get(url, stream=True)
     open(file_path, "xt")
@@ -95,7 +96,7 @@ def downloadPlaylist(link, format):
                 if not os.path.exists(songPath):
                     songPath = ys.download(
                         outputPath,
-                        filename=f"{vId} | {songName}",
+                        filename=pathSafe(f"{vId} | {songName}"),
                         mp3=False,
                     )
                     print(f"Finished download of {songName}")
@@ -146,7 +147,7 @@ def downloadPlaylist(link, format):
                 t.join()
                 del threadQueue[vId]
         except:
-            ...
+            del threadQueue[vId]
 
 
 def _Wrapper(link, list, format):

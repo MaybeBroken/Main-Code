@@ -10,6 +10,7 @@ from pathlib import Path
 from clipboard import copy
 from PIL import Image, ImageFilter
 
+os.chdir(__file__.replace(__file__.split("/")[-1], ""))
 
 from panda3d.core import *
 from panda3d.core import (
@@ -318,15 +319,13 @@ class Main(ShowBase):
         # GUI
 
         self.guiFrame = DirectFrame(parent=self.aspect2d)
-        self.pathObject = DirectEntry(
+        self.pathObject = DirectOptionMenu(
             parent=self.guiFrame,
+            items=os.listdir(os.path.join(".", "youtubeDownloader/")),
             scale=0.1,
             pos=(-0.5, 0, 0),
-            initialText="./utils/youtubeDownloader/good songs - mp3/",
-            cursorKeys=True,
-            overflow=1,
-            # focus=True,
-            focusOutCommand=self.registerFolder,
+            text_pos=(1, 0, 0.5),
+            command=self.registerFolder,
         )
 
     def registerSongs(self):
@@ -394,28 +393,33 @@ class Main(ShowBase):
         self.songList[0]["nodePath"].setScale(1)
         self.songList[self.songIndex]["nodePath"].show()
         self.songList[self.songIndex + 1]["nodePath"].show()
-        self.backgroundImage = OnscreenImage(
-            parent=self.guiFrame,
-            image=self.loader.loadTexture(self.songList[self.songIndex]["imagePath"]),
-            scale=(1.5 * (640 / 480), 1, 1.5),
-            pos=(0, 0, 0),
-        )
-        self.backgroundImage.setBin("background", 0)
+        try:
+            self.backgroundImage = OnscreenImage(
+                parent=self.guiFrame,
+                image=self.loader.loadTexture(
+                    self.songList[self.songIndex]["imagePath"]
+                ),
+                scale=(1.5 * (640 / 480), 1, 1.5),
+                pos=(0, 0, 0),
+            )
+            self.backgroundImage.setBin("background", 0)
+        except:
+            ...
         self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
         self.pathObject.removeNode()
         self.setupControls()
         Thread(target=self.update, daemon=True).start()
 
-    def registerFolder(self):
+    def registerFolder(self, path):
         oldLength = len(self.songList)
-        path = self.pathObject.get(plain=True)
+        path = os.path.join(".", "youtubeDownloader", path + "/")
         if os.path.isdir(path):
             _dir: list = os.listdir(path)
             _newDir = _dir.copy()
             for id in _dir:
                 try:
-                    id = str(id).split("|")
-                    _newDir[int(id[0])] = "|".join(id)
+                    id = str(id).split("-")
+                    _newDir[int(id[0])] = "-".join(id)
                 except:
                     ...
             for song in _newDir:
