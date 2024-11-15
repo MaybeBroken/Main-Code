@@ -53,7 +53,7 @@ threadQueue = {}
 
 
 def pathSafe(name: str):
-    for index in [["/", "-"], ["|", "-"], ["\\", "-"]]:
+    for index in [["/", "-"], ["|", "-"], ["\\", "-"], ['*', ""], ['"', ""]]:
         try:
             name = name.replace(index[0], index[1])
         except:
