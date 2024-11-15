@@ -10,7 +10,10 @@ from pathlib import Path
 from clipboard import copy
 from PIL import Image, ImageFilter
 
-os.chdir(__file__.replace(__file__.split("/")[-1], ""))
+if sys.platform == "darwin":
+    os.chdir(__file__.replace(__file__.split("/")[-1], ""))
+elif sys.platform == "win32":
+    os.chdir(__file__.replace(__file__.split("\\")[-1], ""))
 
 from panda3d.core import *
 from panda3d.core import (
