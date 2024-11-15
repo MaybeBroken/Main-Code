@@ -17,6 +17,7 @@ import base64
 
 os.chdir(__file__.replace(__file__.split("/")[-1], ""))
 
+
 class Color:
     GREEN = "\033[92m"
     LIGHT_GREEN = "\033[1;92m"
@@ -49,22 +50,27 @@ def pathSafe(name: str):
 
 
 def get(url: str, dest_folder: str, dest_name: str):
-    if not os.path.exists(dest_folder):
-        os.makedirs(dest_folder)
-    filename = pathSafe(dest_name)
-    file_path = os.path.join(dest_folder, filename)
-    r = requests.get(url, stream=True)
-    open(file_path, "xt")
-    if r.ok:
-        with open(file_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=1024 * 8):
-                if chunk:
-                    f.write(chunk)
-                    f.flush()
-                    os.fsync(f.fileno())
-    else:
-        print("img download failed: status code {}\n{}".format(r.status_code, r.text))
-    return file_path
+    try:
+        if not os.path.exists(dest_folder):
+            os.makedirs(dest_folder)
+        filename = pathSafe(dest_name)
+        file_path = os.path.join(dest_folder, filename)
+        r = requests.get(url, stream=True)
+        open(file_path, "xt")
+        if r.ok:
+            with open(file_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=1024 * 8):
+                    if chunk:
+                        f.write(chunk)
+                        f.flush()
+                        os.fsync(f.fileno())
+        else:
+            print(
+                "img download failed: status code {}\n{}".format(r.status_code, r.text)
+            )
+        return file_path
+    except FileExistsError:
+        return None
 
 
 def downloadSong(link, format):
@@ -103,22 +109,25 @@ def downloadPlaylist(link, format):
                         mp3=False,
                     )
                     print(f"Finished download of {songName}")
-                    get(
-                        url=yt.thumbnail_url,
-                        dest_folder=imgPath,
-                        dest_name=f"{vId} - {songName}".replace(".m4a", ".png"),
-                    )
-                    song = music_tag.load_file(songPath)
-                    with open(
-                        os.path.join(
-                            imgPath,
-                            f"{vId} - {songName}".replace(".m4a", ".png"),
-                        ),
-                        "rb",
-                    ) as imgFile:
-                        song["artwork"] = imgFile.read()
-                    song.save()
-                    print(f"Applied art to {songName}")
+                    if (
+                        not get(
+                            url=yt.thumbnail_url,
+                            dest_folder=imgPath,
+                            dest_name=f"{vId} - {songName}".replace(".m4a", ".png"),
+                        )
+                        == None
+                    ):
+                        song = music_tag.load_file(songPath)
+                        with open(
+                            os.path.join(
+                                imgPath,
+                                f"{vId} - {songName}".replace(".m4a", ".png"),
+                            ),
+                            "rb",
+                        ) as imgFile:
+                            song["artwork"] = imgFile.read()
+                        song.save()
+                        print(f"Applied art to {songName}")
                 else:
                     print(f"Found cached version of {songName}")
             else:
@@ -147,10 +156,14 @@ def downloadPlaylist(link, format):
     while len(threadQueue) > 0:
         try:
             for t in threadQueue:
-                t.join()
-                del threadQueue[vId]
+                if not type(t) == int:
+                    t.join()
+                    del threadQueue[vId]
         except:
-            del threadQueue[vId]
+            try:
+                del threadQueue[vId]
+            except:
+                ...
 
 
 def _Wrapper(link, list, format):
