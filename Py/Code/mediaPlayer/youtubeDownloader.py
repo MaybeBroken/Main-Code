@@ -1,4 +1,9 @@
 import os
+import sys
+from time import sleep
+from threading import Thread
+import requests
+import base64
 
 try:
     import music_tag
@@ -10,12 +15,19 @@ try:
 except:
     os.system("python3 -m pip install pytubefix")
     from pytubefix import YouTube, Playlist, exceptions
-from time import sleep
-from threading import Thread
-import requests
-import base64
 
-os.chdir(__file__.replace(__file__.split("/")[-1], ""))
+try:
+    import requests
+except:
+    os.system("python3 -m pip install requests")
+    import requests
+
+if sys.platform == "darwin":
+    pathSeparator = "/"
+elif sys.platform == "win32":
+    pathSeparator = "\\"
+
+os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
 
 
 class Color:
@@ -87,8 +99,8 @@ def downloadSong(link, format):
 def downloadPlaylist(link, format):
     pl = Playlist(link)
     global outputPath
-    outputPath = os.path.join(outputPath, f"{pl.title} - {format}/")
-    imgPath = os.path.join(outputPath, "img/")
+    outputPath = os.path.join(outputPath, f"{pl.title} - {format}{pathSeparator}")
+    imgPath = os.path.join(outputPath, f"img{pathSeparator}")
     try:
         os.mkdir(outputPath)
         os.mkdir(imgPath)
@@ -223,7 +235,7 @@ while True:
                                 )
                             )
                             os.system(
-                                f'./ffmpeg -y -v panic -i "{dirInput}" "{dirOutput}"'
+                                f'.{pathSeparator}/ffmpeg -y -v panic -i "{dirInput}" "{dirOutput}"'
                             )
                             print(f"Converted {name}")
                 # except:
