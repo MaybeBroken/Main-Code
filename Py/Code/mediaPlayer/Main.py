@@ -221,7 +221,7 @@ class Main(ShowBase):
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
         self.songList[self.songIndex + 1]["nodePath"].show()
-        self.setBackgroundImage(self.songList[self.songIndex]["imagePath"], True)
+        self.setBackgroundImage(self.songList[self.songIndex]["imagePath"], True, True)
 
     def nextSong(self):
         if len(self.songList) > 0 and not self.paused:
