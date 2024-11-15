@@ -11,9 +11,11 @@ from clipboard import copy
 from PIL import Image, ImageFilter
 
 if sys.platform == "darwin":
-    os.chdir(__file__.replace(__file__.split("/")[-1], ""))
+    pathSeparator = "/"
 elif sys.platform == "win32":
-    os.chdir(__file__.replace(__file__.split("\\")[-1], ""))
+    pathSeparator = "\\"
+
+os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
 
 from panda3d.core import *
 from panda3d.core import (
@@ -55,7 +57,7 @@ import direct.particles.Particles as part
 from direct.filter.CommonFilters import CommonFilters
 
 monitor = get_monitors()
-loadPrcFile("src/settings.prc")
+loadPrcFile(f"src{pathSeparator}settings.prc")
 if Wvars.winMode == "full-win":
     ConfigVariableString(
         "win-size", str(monitor[0].width) + " " + str(monitor[0].height)
@@ -96,45 +98,17 @@ def divide(num, divisor) -> list[2]:
     ]
 
 
-wantIntro = False
-
-
 class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
-        if wantIntro:
-            self.intro()
-        else:
-            self.setBackgroundColor(0, 0, 0, 1)
-            self.backfaceCullingOn()
-            self.disableMouse()
 
-            # do setup tasks
-            # ...
-            self.setupWorld()
-
-    def intro(self):
         self.setBackgroundColor(0, 0, 0, 1)
-        movie = self.loader.loadTexture("src/movies/intro.mp4")
-        image = OnscreenImage(movie, scale=1, parent=self.aspect2d)
-        movie.play()
-        movie.setLoopCount(1)
-        startTime = t.monotonic()
+        self.backfaceCullingOn()
+        self.disableMouse()
 
-        def finishLaunch(task):
-            if t.monotonic() - startTime > 4:
-                image.destroy()
-                self.backfaceCullingOn()
-                self.disableMouse()
-
-                # do setup tasks
-                # ...
-                self.setupWorld()
-                # end of setup tasks
-            else:
-                return task.cont
-
-        self.taskMgr.add(finishLaunch)
+        # do setup tasks
+        # ...
+        self.setupWorld()
 
     def update(self):
         while True:
@@ -351,7 +325,7 @@ class Main(ShowBase):
         self.guiFrame = DirectFrame(parent=self.aspect2d)
         self.pathObject = DirectOptionMenu(
             parent=self.guiFrame,
-            items=os.listdir(os.path.join(".", "youtubeDownloader/")),
+            items=os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")),
             scale=0.1,
             pos=(-0.5, 0, 0),
             text_pos=(1, 0, 0.5),
@@ -443,7 +417,7 @@ class Main(ShowBase):
 
     def registerFolder(self, path):
         oldLength = len(self.songList)
-        path = os.path.join(".", "youtubeDownloader", path + "/")
+        path = os.path.join(".", "youtubeDownloader", path + pathSeparator)
         if os.path.isdir(path):
             _dir: list = os.listdir(path)
             _newDir = _dir.copy()
@@ -463,7 +437,7 @@ class Main(ShowBase):
                             "name": str(song).replace(".m4a", ""),
                             "nodePath": None,
                             "played": 0,
-                            "imagePath": f"{path}img/{imgPath}",
+                            "imagePath": f"{path}img{pathSeparator}{imgPath}",
                         }
                     )
                 else:
