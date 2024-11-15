@@ -185,7 +185,7 @@ class Main(ShowBase):
 
     def setupControls(self):
         self.accept("space", self.togglePlay)
-        self.accept("q", sys.exit)
+        self.accept("o", self.setBackgroundBin)
         self.accept("arrow_left", self.prevSong)
         self.accept("arrow_right", self.nextSong)
         self.accept("c", self.copySong)
@@ -221,7 +221,7 @@ class Main(ShowBase):
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
         self.songList[self.songIndex + 1]["nodePath"].show()
-        self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
+        self.setBackgroundImage(self.songList[self.songIndex]["imagePath"], True)
 
     def nextSong(self):
         if len(self.songList) > 0 and not self.paused:
@@ -241,7 +241,9 @@ class Main(ShowBase):
             self.songList[self.songIndex]["played"] = 1
             self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
             self.songList[self.songIndex + 1]["nodePath"].show()
-            self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"], True, True
+            )
 
     def prevSong(self):
         if len(self.songList) > 0 and not self.paused:
@@ -260,15 +262,20 @@ class Main(ShowBase):
             self.songList[self.songIndex]["object"].play()
             self.songList[self.songIndex]["played"] = 1
             self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
-            self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"], True, True
+            )
 
-    def setBackgroundImage(self, imageName):
-        def _th(self, imageName):
+    def setBackgroundImage(self, imageName, blur, background):
+        def _th(self, imageName, blur, background):
             try:
-                image = Image.open(imageName)
-                image = image.filter(ImageFilter.GaussianBlur(4))
-                newImageName = imageName.replace(".png", " - blur.png")
-                image.save(newImageName)
+                if blur:
+                    image = Image.open(imageName)
+                    image = image.filter(ImageFilter.GaussianBlur(4))
+                    newImageName = imageName.replace(".png", " - blur.png")
+                    image.save(newImageName)
+                else:
+                    newImageName = imageName
                 self.backgroundImage.destroy()
                 self.backgroundImage = OnscreenImage(
                     parent=self.guiFrame,
@@ -276,11 +283,30 @@ class Main(ShowBase):
                     scale=(1.5 * (640 / 480), 1, 1.5),
                     pos=(0, 0, 0),
                 )
-                self.backgroundImage.setBin("background", 0)
+                if background:
+                    self.backgroundImage.setBin("background", 0)
+                else:
+                    # self.backgroundImage.setBin("foreground", 1000)
+                    ...
             except:
-                self.backgroundImage.hide()
+                try:
+                    self.backgroundImage.hide()
+                except:
+                    print()
 
-        Thread(target=_th, args=(self, imageName)).start()
+        Thread(target=_th, args=(self, imageName, blur, background)).start()
+
+    def setBackgroundBin(self):
+        if not self.backgroundToggle:
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"], False, False
+            )
+            self.backgroundToggle = True
+        else:
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"], True, True
+            )
+            self.backgroundToggle = False
 
     def togglePlay(self):
         if len(self.songList) > 0:
@@ -299,6 +325,7 @@ class Main(ShowBase):
 
         self.songList = []
         self.songIndex = 0
+        self.backgroundToggle = False
 
         # Shaders
 
@@ -327,6 +354,7 @@ class Main(ShowBase):
             text_pos=(1, 0, 0.5),
             command=self.registerFolder,
         )
+        self.accept("q", sys.exit)
 
     def registerSongs(self):
         self.songPanel = DirectFrame(parent=self.guiFrame, pos=(0, 0, 0))
@@ -405,7 +433,7 @@ class Main(ShowBase):
             self.backgroundImage.setBin("background", 0)
         except:
             ...
-        self.setBackgroundImage(self.songList[self.songIndex]["imagePath"])
+        self.setBackgroundImage(self.songList[self.songIndex]["imagePath"], True, True)
         self.pathObject.removeNode()
         self.setupControls()
         Thread(target=self.update, daemon=True).start()
