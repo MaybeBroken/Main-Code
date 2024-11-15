@@ -1,8 +1,12 @@
-pyyaml
-python-rtmidi
-setuptools
 panda3d
+screeninfo
+clipboard
+pyyaml
+websockets
 numpy
 opensimplex
-screeninfo
 scipy
+Pillow
+music-tag
+pytubefix
+requests
