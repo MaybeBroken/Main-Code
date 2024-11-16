@@ -417,7 +417,7 @@ class Main(ShowBase):
 
     def registerFolder(self, path):
         oldLength = len(self.songList)
-        path = os.path.join(".", "youtubeDownloader", path + pathSeparator)
+        path = os.path.join(".", "youtubeDownloader", f"{path}{pathSeparator}")
         if os.path.isdir(path):
             _dir: list = os.listdir(path)
             _newDir = _dir.copy()
@@ -441,7 +441,7 @@ class Main(ShowBase):
                         }
                     )
                 else:
-                    print(song)
+                    ...
         if len(self.songList) != oldLength:
             self.registerSongs()
 
