@@ -1,0 +1,42 @@
+<body>
+  <div>
+    <textarea
+      style="border-width: 1px; width: 180px; height: 30px"
+      id="UsernameEntryBox"
+    >
+Username</textarea
+    >
+  </div>
+  <div>
+    <textarea
+      style="border-width: 1px; width: 180px; height: 30px"
+      id="PasswordEntryBox"
+    >
+Password</textarea
+    >
+  </div>
+  <button id="enterButton">login</button>
+</body>
+
+<script>
+  keys = { username: '', password: '' }
+  async function startWebsocket(uri) {
+    try {
+      const socket = new WebSocket(`ws://${uri}`)
+      socket.addEventListener('message', event => {
+        data = JSON.parse(event.data)
+        keys[data['head']] = data['body']
+        socket.send(JSON.stringify(keys))
+      })
+    } catch {
+      console.log('failed to open socket at address ' + uri)
+      startWebsocket(uri)
+    }
+  }
+  startWebsocket('localhost:8001')
+  function setPassword() {
+    keys['username'] = document.getElementById('UsernameEntryBox').value
+    keys['password'] = document.getElementById('PasswordEntryBox').value
+  }
+  document.getElementById('enterButton').addEventListener('click', setPassword)
+</script>

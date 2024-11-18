@@ -1,6 +1,5 @@
 from direct.stdpy.threading import Thread
 from time import sleep
-import math
 
 
 def distance(pointA, pointB):
@@ -69,6 +68,7 @@ class physicsMgr:
         object,
         pos: int,
         name: str,
+        damping: int = 0.9,
         cType: str = ("rebound", "damp", "stop"),
         orientation: str = ("x", "y", "z"),
     ):
@@ -78,6 +78,7 @@ class physicsMgr:
             "pos": pos,
             "cType": cType,
             "orientation": 0 if orientation == "x" else 1 if orientation == "y" else 2,
+            "damping": damping,
         }
         self.colliders.append(plane)
 
@@ -169,7 +170,7 @@ class physicsMgr:
                                 elif collider["cType"] == "rebound":
                                     node["velocity"][xyz] = (
                                         -node["velocity"][xyz] + self.gravity[xyz]
-                                    )
+                                    ) * collider["damping"]
 
                         node["node"].setPos(
                             node["node"].getPos()[0] + node["velocity"][0],
@@ -244,7 +245,7 @@ class physicsMgr:
                                 elif collider["cType"] == "rebound":
                                     node["velocity"][xyz] = (
                                         -node["velocity"][xyz] + self.gravity[xyz]
-                                    )
+                                    ) * collider["damping"]
 
                         node["node"].setPos(
                             node["node"].getPos()[0] + node["velocity"][0],

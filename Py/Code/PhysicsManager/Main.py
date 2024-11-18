@@ -6,7 +6,7 @@ import os
 import src.scripts.vars as Wvars
 from src.scripts.physics import physicsMgr as _pm
 
-physicsMgr = _pm(drag=0.008, gravity=(0, 0, -0.034), minimum_motion_check=0.03)
+physicsMgr = _pm(drag=0.000, gravity=(0, 0, -0.034), minimum_motion_check=0.03)
 
 
 from screeninfo import get_monitors
@@ -222,7 +222,7 @@ class Main(ShowBase):
         self.accept("mouse1", self.doNothing)
         self.accept("mouse1-up", self.doNothing)
         self.accept("mouse3", self.doNothing)
-        self.accept("w", self.updateKeyMap, ["forward", True])
+        self.accept("w", physicsMgr.addVectorForce, ["box2", [0.5, 0, 0]])
         self.accept("w-up", self.updateKeyMap, ["forward", False])
         self.accept("a", self.updateKeyMap, ["left", True])
         self.accept("a-up", self.updateKeyMap, ["left", False])

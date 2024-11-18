@@ -2,7 +2,7 @@ load-display pandagl
 sync-video true
 window-title PyCraft
 fullscreen false
-show-frame-rate-meter true
+show-frame-rate-meter false
 want-pstats 1
 undecorated true
 win-size 1920 1080

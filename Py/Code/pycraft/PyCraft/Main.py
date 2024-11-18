@@ -1158,6 +1158,7 @@ class Main(ShowBase):
 
     def update(self, task):
         result = task.cont
+        self.moveLightToCam()
         if Worldvars.inMenu == True:
             if Worldvars.inInventory == False:
                 self.menuBackground.setH(self.menuBackground.getH() + 0.03)
@@ -1475,7 +1476,7 @@ class Main(ShowBase):
         self.cTrav.addCollider(self.rayNodePath, self.rayQueue)
 
         fromObject = self.camera.attachNewNode(CollisionNode("colNode"))
-        fromObject.node().addSolid(CollisionBox((-1, -1, -1), (1, 1, 1)))
+        fromObject.node().addSolid(CollisionBox((-0.8, -0.8, -0.8), (0.8, 0.8, 0.8)))
         fromObject.node().set_from_collide_mask(1)
         pusher = CollisionHandlerPusher()
         pusher.addCollider(fromObject, self.camera, self.drive.node())
