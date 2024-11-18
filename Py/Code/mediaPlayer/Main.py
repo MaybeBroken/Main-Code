@@ -164,6 +164,7 @@ class Main(ShowBase):
         self.accept("arrow_right", self.nextSong)
         self.accept("c", self.copySong)
         self.accept("s", self.shuffleSongs)
+        self.accept("shift-s", self.sortSongs)
         self.paused = False
         self.currentTime = 0
 
@@ -195,11 +196,43 @@ class Main(ShowBase):
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
         self.songList[self.songIndex + 1]["nodePath"].show()
-        self.setBackgroundImage(
-            self.songList[self.songIndex]["imagePath"],
-            self.backgroundToggle,
-            self.backgroundToggle,
-        )
+        t.sleep(0.1)
+        self.prevSong()
+
+    def sortSongs(self):
+        _songList = self.songList.copy()
+        for id in self.songList:
+            try:
+                newId = str(id["name"]).split("-")
+                _songList[int(newId[0])] = id
+            except:
+                ...
+        self.songList = _songList
+        self.songIndex = 0
+        for item in self.songList:
+            item["nodePath"].setPos(0, self.songIndex, -0.5)
+            item["nodePath"].setScale(0.8)
+            item["object"].stop()
+            item["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
+            item["nodePath"].hide()
+        if self.songIndex - 1 >= 0:
+            self.songList[self.songIndex - 1]["nodePath"].setPos(10)
+            self.songList[self.songIndex - 1]["nodePath"].hide()
+        self.songList[self.songIndex]["nodePath"].show()
+        self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0.5)
+        self.songList[self.songIndex]["nodePath"].setScale(0.8)
+        self.songList[self.songIndex]["object"].stop()
+        self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
+        self.songIndex += 1
+        self.songList[self.songIndex]["nodePath"].show()
+        self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
+        self.songList[self.songIndex]["nodePath"].setScale(1)
+        self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
+        self.songList[self.songIndex + 1]["nodePath"].show()
+        t.sleep(0.1)
+        self.prevSong()
 
     def nextSong(self):
         if len(self.songList) > 0 and not self.paused:
