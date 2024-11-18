@@ -106,6 +106,7 @@ class Main(ShowBase):
         self.disableMouse()
         # do setup tasks
         # ...
+        self.viewMode = 0
         self.setupWorld()
 
     def update(self):
@@ -167,7 +168,6 @@ class Main(ShowBase):
         self.accept("shift-s", self.sortSongs)
         self.paused = False
         self.currentTime = 0
-        self.viewMode = 0
 
     def copySong(self):
         copy(self.songList[self.songIndex]["path"])
@@ -264,7 +264,8 @@ class Main(ShowBase):
                     0.3,
                     1,
                 )
-                self.songList[self.songIndex + 1]["nodePath"].show()
+                if self.songIndex + 1 < len(self.songList):
+                    self.songList[self.songIndex + 1]["nodePath"].show()
 
             self.setBackgroundImage(
                 self.songList[self.songIndex]["imagePath"],
@@ -339,7 +340,7 @@ class Main(ShowBase):
             Thread(target=_th2, args=(self, imageName, blur, background)).start()
 
     def setBackgroundBin(self):
-        if self.viewMode==0:
+        if self.viewMode == 0:
             if self.backgroundToggle:
                 self.backgroundToggle = False
                 self.setBackgroundImage(
@@ -460,6 +461,7 @@ class Main(ShowBase):
                 parent=songPanel,
                 scale=0.1,
                 pos=(0, 0),
+                wordwrap=30,
             )
             self.songList[songId]["nodePath"] = songPanel
             songPanel.hide()
