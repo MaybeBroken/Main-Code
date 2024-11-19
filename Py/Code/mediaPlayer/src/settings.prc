@@ -1,6 +1,6 @@
 load-display pandagl
 sync-video true
-window-title PyCraft
+window-title Media Player
 fullscreen false
 show-frame-rate-meter false
 want-pstats 1

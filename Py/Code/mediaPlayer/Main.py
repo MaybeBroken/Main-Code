@@ -98,6 +98,10 @@ def divide(num, divisor) -> list[2]:
     ]
 
 
+class CHARS:
+    SEPARATOR = " | "
+
+
 class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
@@ -107,6 +111,7 @@ class Main(ShowBase):
         # do setup tasks
         # ...
         self.viewMode = 0
+        self.playlistIndex = []
         self.setupWorld()
 
     def update(self):
@@ -144,7 +149,7 @@ class Main(ShowBase):
                             int(self.songList[self.songIndex]["object"].get_time()), 60
                         )[1]
                     )
-                    + " / "
+                    + CHARS.SEPARATOR
                     + str(
                         divide(
                             int(self.songList[self.songIndex]["object"].length()), 60
@@ -252,7 +257,10 @@ class Main(ShowBase):
                 self.songList[self.songIndex]["nodePath"].setScale(0.8)
                 self.songList[self.songIndex]["object"].stop()
                 self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
-                self.songIndex += 1
+                if self.songIndex + 1 < len(self.songList):
+                    self.songIndex += 1
+                else:
+                    self.songIndex = 0
                 self.songList[self.songIndex]["nodePath"].show()
                 self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
                 self.songList[self.songIndex]["nodePath"].setScale(1)
@@ -410,16 +418,13 @@ class Main(ShowBase):
             text="",
             parent=self.guiFrame,
             scale=0.1,
-            pos=(0, -0.1),
+            pos=(0, -0.3),
             fg=(1, 1, 1, 1),
         )
-        # self.progressBar = DirectSlider(
-        #     parent=self.settingsFrame,
-        #     range=(1, 32),
-        #     pageSize=1,
+        # self.progressBar = DirectWaitBar(
+        #     parent=self.guiFrame,
         #     scale=0.15,
         #     pos=(0.25, 0, 0.485),
-        #     command=updateGuiValues,
         # )
         self.songList.reverse()
         for songId in range(len(self.songList)):
