@@ -1,3 +1,4 @@
+import json
 from math import pi, sin, cos
 from random import randint, shuffle
 import time as t
@@ -111,14 +112,15 @@ class Main(ShowBase):
         # do setup tasks
         # ...
         self.viewMode = 0
-        self.playlistIndex = []
+        self.favoritesToggle = False
+        self.favoritesList = []
+        self.rootListPath = os.path.join(".", f"youtubeDownloader{pathSeparator}")
         self.setupWorld()
 
     def update(self):
         while True:
-            t.sleep(0.25)
+            t.sleep(1)
             if not self.paused:
-
                 if (
                     self.songList[self.songIndex]["object"].status() == 1
                     and self.songList[self.songIndex]["played"] == 0
@@ -171,11 +173,100 @@ class Main(ShowBase):
         self.accept("c", self.copySong)
         self.accept("s", self.shuffleSongs)
         self.accept("shift-s", self.sortSongs)
+        self.accept("f", self.toggleSongFavorite)
+        self.accept("shift-f", self.toggleFavorites)
         self.paused = False
         self.currentTime = 0
 
     def copySong(self):
         copy(self.songList[self.songIndex]["path"])
+
+    def toggleSongFavorite(self):
+        favoritesList: list = []
+        with open(self.rootListPath + "index", "tr") as listFile:
+            try:
+                favoritesList = json.JSONDecoder().decode(listFile.readline())
+            except:
+                favoritesList = []
+        if not self.songList[self.songIndex]["path"] in favoritesList:
+            favoritesList.append(self.songList[self.songIndex]["path"])
+            with open(self.rootListPath + "index", "tw") as listFile:
+                listFile.write(json.JSONEncoder().encode(favoritesList))
+
+    def toggleFavorites(self):
+        if not self.favoritesToggle:
+            self.favoritesToggle = True
+            with open(self.rootListPath + "index", "rt") as listFile:
+                try:
+                    self.favoritesList = json.JSONDecoder().decode(listFile.readline())
+                except:
+                    self.favoritesList = []
+            for song in self.songList:
+                song["nodePath"].destroy()
+                del song
+            self.songList = []
+            for song in self.favoritesList:
+                if str(song).endswith((".m4a", ".mp3")):
+                    imgPath = song.replace("m4a", "png")
+                    self.songList.append(
+                        {
+                            "path": Path(f"{self.rootListPath}{song}"),
+                            "object": self.loader.loadMusic(
+                                f"{self.rootListPath}{song}"
+                            ),
+                            "name": str(song).replace(".m4a", ""),
+                            "nodePath": None,
+                            "played": 0,
+                            "imagePath": f"{self.rootListPath}img{pathSeparator}{imgPath}",
+                        }
+                    )
+                else:
+                    ...
+            for songId in range(len(self.songList)):
+                songPanel = DirectFrame(
+                    parent=self.songPanel,
+                    frameSize=(-2, 2, -0.2, 0.2),
+                    pos=(0, 0, -0.5),
+                    scale=0.8,
+                    frameColor=(0, 0, 0.6, 1),
+                )
+                songName = OnscreenText(
+                    text=self.songList[songId]["name"],
+                    parent=songPanel,
+                    scale=0.1,
+                    pos=(0, 0),
+                    wordwrap=30,
+                )
+                self.songList[songId]["nodePath"] = songPanel
+                songPanel.hide()
+            self.songList.reverse()
+            self.songList[self.songIndex]["nodePath"].setPos(0, 0, 0)
+            self.songList[self.songIndex]["nodePath"].setScale(1)
+            self.songList[self.songIndex]["nodePath"].show()
+            self.songList[self.songIndex]["object"].play()
+            try:
+                self.songList[self.songIndex + 1]["nodePath"].show()
+            except:
+                ...
+            try:
+                self.backgroundImage = OnscreenImage(
+                    parent=self.guiFrame,
+                    image=self.loader.loadTexture(
+                        self.songList[self.songIndex]["imagePath"]
+                    ),
+                    scale=(1.5 * (640 / 480), 1, 1.5),
+                    pos=(0, 0, 0),
+                )
+                self.backgroundImage.setBin("background", 0)
+            except:
+                ...
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"],
+                self.backgroundToggle,
+                self.backgroundToggle,
+            )
+        else:
+            self.favoritesToggle = False
 
     def shuffleSongs(self):
         shuffle(self.songList)
@@ -474,7 +565,10 @@ class Main(ShowBase):
         self.songList[0]["nodePath"].setPos(0, 0, 0)
         self.songList[0]["nodePath"].setScale(1)
         self.songList[self.songIndex]["nodePath"].show()
-        self.songList[self.songIndex + 1]["nodePath"].show()
+        try:
+            self.songList[self.songIndex + 1]["nodePath"].show()
+        except:
+            ...
         try:
             self.backgroundImage = OnscreenImage(
                 parent=self.guiFrame,
@@ -499,6 +593,13 @@ class Main(ShowBase):
     def registerFolder(self, path):
         oldLength = len(self.songList)
         path = os.path.join(".", "youtubeDownloader", f"{path}{pathSeparator}")
+        self.rootListPath = path
+        try:
+            with open(self.rootListPath + "index", "rt"):
+                ...
+        except:
+            with open(self.rootListPath + "index", "xt"):
+                ...
         if os.path.isdir(path):
             _dir: list = os.listdir(path)
             _newDir = _dir.copy()
@@ -513,7 +614,7 @@ class Main(ShowBase):
                     imgPath = song.replace("m4a", "png")
                     self.songList.append(
                         {
-                            "path": Path(f"{path}{song}").absolute(),
+                            "path": f"{path}{song}",
                             "object": self.loader.loadMusic(f"{path}{song}"),
                             "name": str(song).replace(".m4a", ""),
                             "nodePath": None,

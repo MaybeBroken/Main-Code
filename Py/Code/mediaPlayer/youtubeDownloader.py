@@ -48,7 +48,7 @@ class Color:
     RESET = "\033[0m"
 
 
-outputPath = os.path.join(".", "youtubeDownloader")
+rootPath = os.path.join(".", "youtubeDownloader")
 threadQueue = {}
 
 
@@ -99,7 +99,7 @@ def downloadSong(link, format):
 def downloadPlaylist(link, format):
     pl = Playlist(link)
     global outputPath
-    outputPath = os.path.join(outputPath, f"{pl.title} - {format}{pathSeparator}")
+    outputPath = os.path.join(rootPath, f"{pl.title} - {format}{pathSeparator}")
     imgPath = os.path.join(outputPath, f"img{pathSeparator}")
     try:
         os.mkdir(outputPath)
