@@ -1,8 +1,16 @@
+import sys
+import os
+
+if sys.platform == "darwin":
+    pathSeparator = "/"
+elif sys.platform == "win32":
+    pathSeparator = "\\"
+
+os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
+
 from math import pi, sin, cos
 from random import randint
 import time as t
-import sys
-import os
 import src.scripts.vars as Wvars
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase

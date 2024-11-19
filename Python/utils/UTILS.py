@@ -17,8 +17,7 @@ def curl(url, filepath):
     os.system(f"curl -o {filepath} {url}")
 
 
-def randomText(len):...
-    
+def randomText(len): ...
 
 
 def divideWithRemainder(num, divisor) -> list[2]:
