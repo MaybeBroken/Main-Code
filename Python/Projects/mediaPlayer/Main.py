@@ -342,8 +342,8 @@ class Main(ShowBase):
                 if self.songIndex - 1 >= 0:
                     LerpPosInterval(
                         self.songList[self.songIndex - 1]["nodePath"],
-                        1,
-                        Point3(0, self.songIndex, 3),
+                        0.75,
+                        Point3(0, self.songIndex, 2),
                         other=self.songPanel,
                         blendType="easeInOut",
                     ).start()
@@ -395,9 +395,13 @@ class Main(ShowBase):
                 if self.songIndex - 2 >= 0:
                     self.songList[self.songIndex - 2]["nodePath"].setPos(0, 0, 0.5)
                     self.songList[self.songIndex - 2]["nodePath"].show()
-                self.songList[self.songIndex]["nodePath"].setPos(
-                    0, self.songIndex, -0.5
-                )
+                LerpPosInterval(
+                    self.songList[self.songIndex]["nodePath"],
+                    0.25,
+                    Point3(0, self.songIndex, -0.5),
+                    other=self.songPanel,
+                    blendType="easeInOut",
+                ).start()
                 self.songList[self.songIndex]["nodePath"].setScale(0.8)
                 self.songList[self.songIndex]["object"].stop()
                 self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
@@ -405,7 +409,13 @@ class Main(ShowBase):
                     self.songList[self.songIndex + 1]["nodePath"].hide()
                 self.songIndex -= 1
                 self.songList[self.songIndex]["nodePath"].show()
-                self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
+                LerpPosInterval(
+                    self.songList[self.songIndex]["nodePath"],
+                    0.25,
+                    Point3(0, self.songIndex, 0),
+                    other=self.songPanel,
+                    blendType="easeInOut",
+                ).start()
                 self.songList[self.songIndex]["nodePath"].setScale(1)
                 self.songList[self.songIndex]["object"].play()
                 self.songList[self.songIndex]["played"] = 1
@@ -651,9 +661,16 @@ class Main(ShowBase):
                     ...
         self.registerSongs()
 
-    def fadeOutGuiElement_ThreadedOnly(
-        self, element, timeToFade, execBeforeOrAfter, target, args=()
-    ):
+
+def fadeOutGuiElement(
+    element,
+    timeToFade=100,
+    daemon=True,
+    execBeforeOrAfter: None = None,
+    target: None = None,
+    args=(),
+):
+    def _internalThread():
         if execBeforeOrAfter == "Before":
             target(*args)
 
@@ -668,9 +685,18 @@ class Main(ShowBase):
         if execBeforeOrAfter == "After":
             target(*args)
 
-    def fadeInGuiElement_ThreadedOnly(
-        self, element, timeToFade, execBeforeOrAfter, target, args=()
-    ):
+    return Thread(target=_internalThread, daemon=daemon).start()
+
+
+def fadeInGuiElement(
+    element,
+    timeToFade=100,
+    daemon=True,
+    execBeforeOrAfter: None = None,
+    target: None = None,
+    args=(),
+):
+    def _internalThread():
         if execBeforeOrAfter == "Before":
             target(*args)
 
@@ -681,6 +707,38 @@ class Main(ShowBase):
             t.sleep(0.01)
         if execBeforeOrAfter == "After":
             target(*args)
+
+    return Thread(target=_internalThread, daemon=daemon).start()
+
+
+def notify(message: str, pos=(0.8, 0, -0.5), scale=0.75):
+    global appGuiFrame
+
+    def fade(none):
+        timeToFade = 20
+        newMessage.setTransparency(True)
+
+        def _internalThread():
+            for i in range(timeToFade):
+                val = 1 - (1 / timeToFade) * (i + 1)
+                newMessage.setAlphaScale(val)
+                t.sleep(0.01)
+            newMessage.destroy()
+            # newMessage.cleanup()
+
+        Thread(target=_internalThread).start()
+
+    newMessage = OkDialog(
+        parent=appGuiFrame,
+        text=message,
+        pos=pos,
+        scale=scale,
+        frameColor=(0.5, 0.5, 0.5, 0.25),
+        text_fg=(1, 1, 1, 1),
+        command=fade,
+        pad=[0.02, 0.02, 0.02, 0.02],
+    )
+    return newMessage
 
 
 app = Main()
