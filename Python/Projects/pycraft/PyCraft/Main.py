@@ -26,8 +26,6 @@ from panda3d.core import (
     loadPrcFile,
     ConfigVariableString,
     AudioSound,
-)
-from panda3d.core import (
     WindowProperties,
     NodePath,
     TextNode,
@@ -38,8 +36,6 @@ from panda3d.core import (
     PointLight,
     Point3,
     OccluderNode,
-)
-from panda3d.core import (
     CollisionTraverser,
     CollisionNode,
     CollisionBox,
@@ -84,9 +80,11 @@ elif Worldvars.winMode == "full":
     ConfigVariableString("undecorated", "true").setValue("true")
 
 elif Worldvars.winMode == "full-1":
-    ConfigVariableString('win-size', str(monitor[0].width) +' ' +str(monitor[0].height)).setValue(str(monitor[0].width) +' ' +str(monitor[0].height))
+    ConfigVariableString(
+        "win-size", str(monitor[0].width) + " " + str(monitor[0].height)
+    ).setValue(str(monitor[0].width) + " " + str(monitor[0].height))
     ConfigVariableString("fullscreen", "true").setValue("true")
-    ConfigVariableString('undecorated', 'true').setValue('true')
+    ConfigVariableString("undecorated", "true").setValue("true")
 
 elif Worldvars.winMode == "win":
     ConfigVariableString(
@@ -344,7 +342,7 @@ class Main(ShowBase):
 
     def GSettingBack(self):
         self.GraphicsSettingsScreen.destroy()
-        Worldvars.inMenu = False
+        # Worldvars.inMenu = False
         self.settings()
 
     def changeWindowMode(self):
@@ -420,7 +418,7 @@ class Main(ShowBase):
             text_font=self.font,
             text_scale=0.2,
             text_pos=(0, 0.15),
-            text_fg=(0, 0, 0, 1),
+            text_fg=(1, 1, 1, 1),
             pageSize=1,
             command=self.changeRenderDist,
         )
@@ -435,7 +433,7 @@ class Main(ShowBase):
             text_font=self.font,
             text_scale=0.2,
             text_pos=(0, 0.15),
-            text_fg=(0, 0, 0, 1),
+            text_fg=(1, 1, 1, 1),
             pageSize=1,
             command=self.changeAudioVolume,
         )
@@ -536,7 +534,7 @@ class Main(ShowBase):
             text_font=self.font,
             text_scale=0.2,
             text_pos=(0, 0.15),
-            text_fg=(0, 0, 0, 1),
+            text_fg=(1, 1, 1, 1),
             pageSize=1,
             command=self.changeRenderDist,
         )
@@ -551,7 +549,7 @@ class Main(ShowBase):
             text_font=self.font,
             text_scale=0.2,
             text_pos=(0, 0.15),
-            text_fg=(0, 0, 0, 1),
+            text_fg=(1, 1, 1, 1),
             pageSize=1,
             command=self.changeAudioVolume,
         )
@@ -930,6 +928,7 @@ class Main(ShowBase):
         self.menu()
 
     def menu(self):
+        self.mouseHidden = False
         Worldvars.inMenu = True
         self.titleMenu = DirectFrame(frameColor=(1, 1, 1, 0))
         title = DirectLabel(
@@ -1061,7 +1060,7 @@ class Main(ShowBase):
         exit("Code Not Finished:/")
 
     def escape(self):
-        if Worldvars.hp > 0:
+        if Worldvars.hp > 0 and not Worldvars.inMenu:
             self.releaseMouse()
             Worldvars.inMenu = True
             self.escapeScreen = DirectFrame(frameSize=(0, 0, 0, 0))
@@ -1162,7 +1161,7 @@ class Main(ShowBase):
         if Worldvars.inMenu == True:
             if Worldvars.inInventory == False:
                 self.menuBackground.setH(self.menuBackground.getH() + 0.03)
-        elif Worldvars.inInventory == False:
+        elif Worldvars.inInventory == False and not Worldvars.inMenu:
             thread.Thread(target=self.updateItemsWorld, name="updateItemsWorld").start()
 
             playerMoveSpeed = Worldvars.speed / 10
@@ -1229,49 +1228,65 @@ class Main(ShowBase):
                 md = self.win.getPointer(0)
                 mouseX = md.getX()
                 mouseY = md.getY()
+                if self.mouseHidden:
 
-                if int(monitor[0].width / 2) - mouseX >= int(monitor[0].width / 4):
-                    self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
-                    self.lastMouseX = int(monitor[0].width / 2)
-                elif int(monitor[0].width / 2) - mouseX <= -int(monitor[0].width / 4):
-                    self.win.movePointer(0, x=int(monitor[0].width / 2), y=int(mouseY))
-                    self.lastMouseX = int(monitor[0].width / 2)
-                elif int(monitor[0].height / 2) - mouseY >= int(monitor[0].height / 4):
-                    self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
-                    self.lastMouseY = int(monitor[0].height / 2)
-                elif int(monitor[0].height / 2) - mouseY <= -int(monitor[0].height / 4):
-                    self.win.movePointer(0, x=int(mouseX), y=int(monitor[0].height / 2))
-                    self.lastMouseY = int(monitor[0].height / 2)
+                    if int(monitor[0].width / 2) - mouseX >= int(monitor[0].width / 4):
+                        self.win.movePointer(
+                            0, x=int(monitor[0].width / 2), y=int(mouseY)
+                        )
+                        self.lastMouseX = int(monitor[0].width / 2)
+                    elif int(monitor[0].width / 2) - mouseX <= -int(
+                        monitor[0].width / 4
+                    ):
+                        self.win.movePointer(
+                            0, x=int(monitor[0].width / 2), y=int(mouseY)
+                        )
+                        self.lastMouseX = int(monitor[0].width / 2)
+                    elif int(monitor[0].height / 2) - mouseY >= int(
+                        monitor[0].height / 4
+                    ):
+                        self.win.movePointer(
+                            0, x=int(mouseX), y=int(monitor[0].height / 2)
+                        )
+                        self.lastMouseY = int(monitor[0].height / 2)
+                    elif int(monitor[0].height / 2) - mouseY <= -int(
+                        monitor[0].height / 4
+                    ):
+                        self.win.movePointer(
+                            0, x=int(mouseX), y=int(monitor[0].height / 2)
+                        )
+                        self.lastMouseY = int(monitor[0].height / 2)
 
-                elif self.cameraSwingActivated:
+                    elif self.cameraSwingActivated:
 
-                    mouseChangeX = mouseX - self.lastMouseX
-                    mouseChangeY = mouseY - self.lastMouseY
+                        mouseChangeX = mouseX - self.lastMouseX
+                        mouseChangeY = mouseY - self.lastMouseY
 
-                    self.cameraSwingFactor = Worldvars.swingSpeed / 10
+                        self.cameraSwingFactor = Worldvars.swingSpeed / 10
 
-                    currentH = self.camera.getH()
-                    currentP = self.camera.getP()
-                    currentR = self.camera.getR()
+                        currentH = self.camera.getH()
+                        currentP = self.camera.getP()
+                        currentR = self.camera.getR()
 
-                    Worldvars.camH = currentH
-                    Worldvars.camP = currentP
-                    Worldvars.camR = currentR
+                        Worldvars.camH = currentH
+                        Worldvars.camP = currentP
+                        Worldvars.camR = currentR
 
-                    self.camera.setHpr(
-                        currentH - mouseChangeX * dt * self.cameraSwingFactor,
-                        min(
-                            90,
-                            max(
-                                -90,
-                                currentP - mouseChangeY * dt * self.cameraSwingFactor,
+                        self.camera.setHpr(
+                            currentH - mouseChangeX * dt * self.cameraSwingFactor,
+                            min(
+                                90,
+                                max(
+                                    -90,
+                                    currentP
+                                    - mouseChangeY * dt * self.cameraSwingFactor,
+                                ),
                             ),
-                        ),
-                        0,
-                    )
+                            0,
+                        )
 
-                    self.lastMouseX = mouseX
-                    self.lastMouseY = mouseY
+                        self.lastMouseX = mouseX
+                        self.lastMouseY = mouseY
         if Worldvars.inInventory == True:
             md = self.win.getPointer(0)
             self.lastMouseX = md.getX()
@@ -1280,7 +1295,7 @@ class Main(ShowBase):
         return result
 
     def doEscape(self):
-        if Worldvars.inMenu != True:
+        if Worldvars.inMenu != True and self.mouseHidden:
             self.escape()
 
     def setupControls(self):
@@ -1323,7 +1338,7 @@ class Main(ShowBase):
         self.accept("o-up", self.wireframeOff)
 
     def handleLeftClick(self, key, value):
-        if Worldvars.inInventory == False:
+        if Worldvars.inInventory == False and self.mouseHidden:
             self.updateKeyMap(key=key, value=value)
             if self.keyMap["primary"]:
                 self.captureMouse()
@@ -1331,7 +1346,11 @@ class Main(ShowBase):
                 Worldvars.hp = Worldvars.hp - 1
 
     def toggleInventory(self):
-        if Worldvars.inInventory == False and Worldvars.inMenu != True:
+        if (
+            Worldvars.inInventory == False
+            and Worldvars.inMenu != True
+            and self.mouseHidden
+        ):
             self.openInventory()
         elif Worldvars.inInventory == True:
             self.closeInventory()
@@ -1442,8 +1461,10 @@ class Main(ShowBase):
             properties.setCursorHidden(True)
             properties.setMouseMode(WindowProperties.M_relative)
             self.win.requestProperties(properties)
+            self.mouseHidden = True
 
     def releaseMouse(self):
+        self.mouseHidden = False
         self.cameraSwingActivated = False
         properties = WindowProperties()
         properties.setCursorHidden(False)
@@ -1476,7 +1497,7 @@ class Main(ShowBase):
         self.cTrav.addCollider(self.rayNodePath, self.rayQueue)
 
         fromObject = self.camera.attachNewNode(CollisionNode("colNode"))
-        fromObject.node().addSolid(CollisionBox((-0.8, -0.8, -0.8), (0.8, 0.8, 0.8)))
+        fromObject.node().addSolid(CollisionBox((-1, -1, -1), (1, 1, 1)))
         fromObject.node().set_from_collide_mask(1)
         pusher = CollisionHandlerPusher()
         pusher.addCollider(fromObject, self.camera, self.drive.node())

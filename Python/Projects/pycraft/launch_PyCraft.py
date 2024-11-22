@@ -1,3 +1,14 @@
+import os
+import sys
+
+if sys.platform == "darwin":
+    pathSeparator = "/"
+elif sys.platform == "win32":
+    pathSeparator = "\\"
+
+os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
+
+
 import PyCraft.Main as Main
 import PyCraft.modules.vars
 
