@@ -135,12 +135,14 @@ class Main(ShowBase):
         dt = globalClock.getDt()  # type: ignore
         ret, frame = cap.read()
         if ret:
+            frame = cv2.flip(frame, 1)
             cv2.imshow("frame", frame)
         return result
 
     def setupControls(self):
         self.lastMouseX = 0
         self.lastMouseY = 0
+        self.picNum = 0
         self.keyMap = {
             "forward": False,
             "backward": False,
@@ -157,9 +159,18 @@ class Main(ShowBase):
         self.accept("mouse1-up", self.doNothing)
         self.accept("mouse3", self.doNothing)
         self.accept("q", sys.exit)
+        self.accept("c", self.photo)
 
     def doNothing(self):
         return None
+
+    def photo(self):
+        self.picNum += 1
+        ret, frame = cap.read()
+        if ret:
+            frame = cv2.flip(frame, 1)
+            self.img = OnscreenImage(frame)
+            cv2.imshow(f"frame - {self.picNum}", frame)
 
     def fadeOutGuiElement_ThreadedOnly(
         self, element, timeToFade, execBeforeOrAfter, target, args=()
