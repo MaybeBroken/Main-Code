@@ -917,7 +917,9 @@ class Main(ShowBase):
             TextNode=TextNode,
             aspect2d=self.aspect2d,
         )
-        thread.Thread(target=self.renderBlocks, name="renderBlocks").start()
+        thread.Thread(
+            target=self.renderBlocks, name="renderBlocks", daemon=True
+        ).start()
         self.taskMgr.add(self.selectBlockOverlay, "blockSelectorOverlay")
         self.menuBackground.hide()
         self.render.prepareScene(self.win.getGsg())
@@ -1695,7 +1697,7 @@ class Main(ShowBase):
 
     def renderBlocks(self):
         while True:
-            t.sleep(1 / 25)
+            # t.sleep(1)
             for node in self.blockRenderNode.getChildren():
                 # get all nodes within render distance
                 if node.getDistance(self.camera) <= Worldvars.renderDist:
@@ -1703,6 +1705,33 @@ class Main(ShowBase):
                 else:
                     # hide nodes out of render distance
                     node.hide()
+            # camPosX = int(self.camera.getX())
+            # camPosY = int(self.camera.getY())
+            # for index1 in range(
+            #     round(camPosX - (Worldvars.renderDist / 2)),
+            #     round(camPosX + (Worldvars.renderDist / 2)),
+            # ):
+            #     for index2 in range(
+            #         round(camPosY - (Worldvars.renderDist / 2)),
+            #         round(camPosY + (Worldvars.renderDist / 2)),
+            #     ):
+            #         index3 = gen.terrainGen.makeNoiseMap(
+            #             gen.terrainGen,
+            #             index1 / Worldvars.dens,
+            #             index2 / Worldvars.dens,
+            #             Worldvars.dens,
+            #             Worldvars.seed,
+            #         )
+            #         for blockType in utils.items:
+            #             if [
+            #                 index1,
+            #                 index2,
+            #                 index3,
+            #                 blockType,
+            #             ] in Worldvars.allBlocks:
+            #                 self.createNewBlock(
+            #                     index1 * 2, index2 * 2, index3 * 2, "stone"
+            #                 )
 
     def selectBlockOverlay(self, task):
         t.sleep(0.01)

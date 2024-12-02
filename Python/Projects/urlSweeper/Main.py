@@ -11,4 +11,4 @@ system(
 
 # websocat -v -E -t ws-l:127.0.0.1:1234 broadcast:mirror:
 # american-heritage.instructure.com amazon.com youtube.com google.com cloudflare.com dns.google.com 8.8.8.8 gmail.com tesla.com
-# bbot -t apple.com -om websocket -c dns.search_distance=100 scope.report_distance=100 modules.websocket.url=ws://127.0.0.1:1234
+# bbot -t american-heritage.instructure.com -om websocket -c dns.search_distance=100 scope.report_distance=100 modules.websocket.url=ws://127.0.0.1:1234
