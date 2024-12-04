@@ -1,0 +1,317 @@
+import sys
+import os
+import shutil
+
+if sys.platform == "darwin":
+    pathSeparator = "/"
+elif sys.platform == "win32":
+    pathSeparator = "\\"
+
+os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
+
+from math import pi, sin, cos
+from random import randint
+import time as t
+import src.scripts.vars as Wvars
+from screeninfo import get_monitors
+from direct.showbase.ShowBase import ShowBase
+from panda3d.core import *
+from panda3d.core import (
+    TransparencyAttrib,
+    Texture,
+    DirectionalLight,
+    AmbientLight,
+    loadPrcFile,
+    ConfigVariableString,
+    AudioSound,
+    WindowProperties,
+    NodePath,
+    TextNode,
+    CullFaceAttrib,
+    Spotlight,
+    PerspectiveLens,
+    SphereLight,
+    PointLight,
+    Point3,
+    OccluderNode,
+    CollisionTraverser,
+    CollisionNode,
+    CollisionBox,
+    CollisionSphere,
+    CollisionRay,
+    CollisionHandlerQueue,
+    Vec3,
+    CollisionHandlerPusher,
+)
+from direct.gui.OnscreenImage import OnscreenImage
+import direct.stdpy.threading as thread
+import direct.stdpy.file as panda_fMgr
+from direct.gui.DirectGui import *
+import direct.particles.Particles as part
+
+monitor = get_monitors()
+loadPrcFile("src/settings.prc")
+if Wvars.winMode == "full-win":
+    ConfigVariableString(
+        "win-size", str(monitor[0].width) + " " + str(monitor[0].height)
+    ).setValue(str(monitor[0].width) + " " + str(monitor[0].height))
+    ConfigVariableString("fullscreen", "false").setValue("false")
+    ConfigVariableString("undecorated", "true").setValue("true")
+
+if Wvars.winMode == "full":
+    ConfigVariableString(
+        "win-size", str(Wvars.resolution[0]) + " " + str(Wvars.resolution[1])
+    ).setValue(str(Wvars.resolution[0]) + " " + str(Wvars.resolution[1]))
+    ConfigVariableString("fullscreen", "true").setValue("true")
+    ConfigVariableString("undecorated", "true").setValue("true")
+
+if Wvars.winMode == "win":
+    ConfigVariableString(
+        "win-size",
+        str(int(monitor[0].width / 2)) + " " + str(int(monitor[0].height / 2)),
+    ).setValue(
+        str(int(monitor[0].width / 2) + 80) + " " + str(int(monitor[0].height / 2))
+    )
+    ConfigVariableString("fullscreen", "false").setValue("false")
+    ConfigVariableString("undecorated", "false").setValue("false")
+
+
+def degToRad(degrees):
+    return degrees * (pi / 180.0)
+
+
+class baseElement:
+    name: str
+    pos: tuple[3] | tuple[2]
+    scale: tuple[3] | tuple[2]
+    parent: NodePath
+    color: tuple[4]
+    image: NodePath
+    frameSize: tuple[4]
+    _type: DirectFrame
+
+
+class buttonElement(baseElement):
+    command: None
+    geom: NodePath
+
+
+class Main(ShowBase):
+    def __init__(self):
+        ShowBase.__init__(self)
+        self.intro()
+
+    def intro(self):
+        self.setBackgroundColor(0, 0, 0, 1)
+        movie = self.loader.loadTexture("src/movies/intro.mp4")
+        image = OnscreenImage(movie, scale=1, parent=self.aspect2d)
+        movie.play()
+        movie.setLoopCount(1)
+        startTime = t.monotonic()
+
+        def finishLaunch(task):
+            if t.monotonic() - startTime > 0:
+                image.destroy()
+                self.backfaceCullingOn()
+                self.disableMouse()
+
+                # do setup tasks
+                # ...
+                self.setupWorld()
+                self.setupControls()
+                # end of setup tasks
+                self.taskMgr.add(self.update, "update")
+            else:
+                return task.cont
+
+        self.taskMgr.add(finishLaunch)
+
+    def update(self, task):
+        result = task.cont
+        if len(self.elements) > 0:
+            try:
+
+                self.mouse_x = self.mouseWatcherNode.getMouseX()
+                self.mouse_y = self.mouseWatcherNode.getMouseY()
+
+                if self.moving and self.selectedObject[0] != None:
+                    self.selectedObject[0].setPos(
+                        self.selectedObject[0].getX()
+                        + (self.mouse_x - self.lastmouse_x),
+                        0,
+                        self.selectedObject[0].getY()
+                        + (self.mouse_y + self.lastmouse_y) / 2,
+                    )
+                    self.elements[self.selectedObject[1]].pos = self.selectedObject[
+                        0
+                    ].getPos()
+                    self.elements[self.selectedObject[1]].scale = self.selectedObject[
+                        0
+                    ].getScale()
+
+                self.lastmouse_x = self.mouseWatcherNode.getMouseX()
+                self.lastmouse_y = self.mouseWatcherNode.getMouseY()
+            except AssertionError:
+                ...
+        return result
+
+    def setupControls(self):
+        self.moving = False
+        self.rotating = False
+        self.scaling = False
+        self.x = True
+        self.y = True
+        self.mouse_x = True
+        self.mouse_y = True
+        self.selectedObject = [None, None]
+
+        self.accept("q", sys.exit)
+        self.accept("shift-s", self.saveFile)
+        self.accept("s", self.setMode, extraArgs=["scale"])
+        self.accept("g", self.setMode, extraArgs=["move"])
+        self.accept("r", self.setMode, extraArgs=["rotate"])
+        self.accept("enter", self.setMode, extraArgs=["exit"])
+        self.accept("mouse1", self.setMode, extraArgs=["exit"])
+
+    def setMode(self, mode):
+        if mode == "move":
+            self.moving = True
+            self.rotating = False
+            self.scaling = False
+        elif mode == "scale":
+            self.moving = False
+            self.rotating = False
+            self.scaling = True
+        elif mode == "rotate":
+            self.moving = False
+            self.rotating = True
+            self.scaling = False
+        elif mode == "exit":
+            self.moving = False
+            self.rotating = False
+            self.scaling = False
+        self.lastmouse_x = self.mouseWatcherNode.getMouseX()
+        self.lastmouse_y = self.mouseWatcherNode.getMouseY()
+
+    def doNothing(self):
+        return None
+
+    def addButton(self):
+        newElement = buttonElement()
+        newElement.parent = "self.aspect2d"
+        newElement.pos = (0, 0, 0)
+        newElement.scale = 0.09
+        newElement.color = (0.5, 0.5, 0.5, 1)
+        newElement.frameSize = None
+        newElement.image = "src/textures/button1.png"
+        newElement.geom = None
+        newElement.name = f"obj{len(self.elements)}"
+        newElement._type = "DirectButton"
+
+        newButton = DirectButton(
+            parent=self.aspect2d,
+            pos=newElement.pos,
+            scale=newElement.scale,
+            color=newElement.color,
+            geom=newElement.geom,
+            image=self.loader.loadTexture(newElement.image),
+            frameSize=newElement.frameSize,
+        )
+
+        self.selectedObject = [newButton, newElement.name]
+        self.elements[newElement.name] = newElement
+
+    def setupWorld(self):
+        self.elements: dict[baseElement] = {}
+        self.appFrame = DirectFrame(
+            parent=self.aspect2d,
+            frameSize=(-1, 1, -0.8, 1),
+            frameColor=(0.1, 0.1, 0.1, 1),
+        )
+        self.elementBarFrame = DirectFrame(
+            parent=self.aspect2d,
+            frameSize=(-1, 1, -1, -0.795),
+            frameColor=(0.5, 0.5, 0.5, 1),
+        )
+        self.menuFrame = DirectFrame(
+            parent=self.aspect2d,
+            frameSize=(-1.75, -1.05, -1, 1),
+            frameColor=(0.3, 0.3, 0.3, 1),
+        )
+        self.elementOptionFrame = DirectFrame(
+            parent=self.aspect2d,
+            frameSize=(1.05, 1.75, -1, 1),
+            frameColor=(0.3, 0.3, 0.3, 1),
+        )
+        self.addButton = DirectButton(
+            parent=self.elementBarFrame,
+            scale=0.09,
+            pos=(-0.9, 1, -0.9),
+            geom=None,
+            image=self.loader.loadTexture("src/textures/button1.png"),
+            command=self.addButton,
+        )
+
+    def packObject(self, obj: baseElement) -> str:
+        shutil.copy(
+            obj.image, obj.image.replace("src/textures/", f"presets/01/textures/")
+        )
+        return f"""
+        self.{obj.name} = {obj._type}(
+            parent={obj.parent},
+            pos={obj.pos},
+            scale={obj.scale},
+            color={obj.color},
+            image=self.loader.loadTexture("{obj.image.replace("src/textures/", f"01/textures/")}"),
+        )
+"""
+
+    def saveFile(self):
+
+        baseText = [
+            f"""from direct.gui.DirectGui import *
+from panda3d.core import (
+    LVecBase3f,
+    LPoint3f,
+    LVecBase4f,
+    LPoint4f,
+)
+
+
+class frame:
+    def build(self):
+"""
+        ]
+        try:
+            os.mkdir("presets/01/")
+        except:
+            ...
+        try:
+            os.mkdir("presets/01/textures/")
+        except:
+            ...
+        if len(self.elements) == 0:
+            baseText.append("       ...")
+        else:
+            for element in self.elements:
+                baseText.append(self.packObject(self.elements[element]))
+        baseText.append(
+            """
+
+if __name__ == "__main__":
+    from direct.showbase.ShowBase import ShowBase
+
+    base = ShowBase()
+    base.setBackgroundColor(0, 0, 0, 1)
+    base.accept("q", exit)
+    frame.build(base)
+    base.run()
+"""
+        )
+        baseText = "".join(baseText)
+        with open("presets/01.py", "wt") as pyFile:
+            pyFile.writelines(baseText)
+
+
+app = Main()
+app.run()

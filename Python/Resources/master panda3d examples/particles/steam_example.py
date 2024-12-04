@@ -19,6 +19,14 @@ from direct.particles.ParticleEffect import ParticleEffect
 from direct.particles.ForceGroup import ForceGroup
 from direct.gui.OnscreenText import OnscreenText
 import sys
+import os
+
+if sys.platform == "darwin":
+    pathSeparator = "/"
+elif sys.platform == "win32":
+    pathSeparator = "\\"
+
+os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
 
 HELP_TEXT = """
 1: Load Steam
@@ -30,6 +38,7 @@ HELP_TEXT = """
 ESC: Quit
 """
 
+
 class ParticleDemo(ShowBase):
 
     def __init__(self):
@@ -39,22 +48,55 @@ class ParticleDemo(ShowBase):
         self.title = OnscreenText(
             text="Panda3D: Tutorial - Particles",
             parent=base.a2dBottomCenter,
-            style=1, fg=(1, 1, 1, 1), pos=(0, 0.1), scale=.08)
+            style=1,
+            fg=(1, 1, 1, 1),
+            pos=(0, 0.1),
+            scale=0.08,
+        )
         self.escapeEvent = OnscreenText(
-            text=HELP_TEXT, parent=base.a2dTopLeft,
-            style=1, fg=(1, 1, 1, 1), pos=(0.06, -0.06),
-            align=TextNode.ALeft, scale=.05)
+            text=HELP_TEXT,
+            parent=base.a2dTopLeft,
+            style=1,
+            fg=(1, 1, 1, 1),
+            pos=(0.06, -0.06),
+            align=TextNode.ALeft,
+            scale=0.05,
+        )
 
         # More standard initialization
-        self.accept('escape', sys.exit)
-        self.accept('1', self.loadParticleConfig, ['Py/master panda3d examples/particles/steam.ptf'])
-        self.accept('2', self.loadParticleConfig, ['Py/master panda3d examples/particles/dust.ptf'])
-        self.accept('3', self.loadParticleConfig, ['Py/master panda3d examples/particles/fountain.ptf'])
-        self.accept('4', self.loadParticleConfig, ['Py/master panda3d examples/particles/smoke.ptf'])
-        self.accept('5', self.loadParticleConfig, ['Py/master panda3d examples/particles/smokering.ptf'])
-        self.accept('6', self.loadParticleConfig, ['Py/master panda3d examples/particles/fireish.ptf'])
+        self.accept("escape", sys.exit)
+        self.accept(
+            "1",
+            self.loadParticleConfig,
+            ["Python/Resources/master panda3d examples/particles/steam.ptf"],
+        )
+        self.accept(
+            "2",
+            self.loadParticleConfig,
+            ["Python/Resources/master panda3d examples/particles/dust.ptf"],
+        )
+        self.accept(
+            "3",
+            self.loadParticleConfig,
+            ["Python/Resources/master panda3d examples/particles/fountain.ptf"],
+        )
+        self.accept(
+            "4",
+            self.loadParticleConfig,
+            ["Python/Resources/master panda3d examples/particles/smoke.ptf"],
+        )
+        self.accept(
+            "5",
+            self.loadParticleConfig,
+            ["Python/Resources/master panda3d examples/particles/smokering.ptf"],
+        )
+        self.accept(
+            "6",
+            self.loadParticleConfig,
+            ["Python/Resources/master panda3d examples/particles/fireish.ptf"],
+        )
 
-        self.accept('escape', sys.exit)
+        self.accept("escape", sys.exit)
         base.disableMouse()
         base.camera.setPos(0, -20, 2)
         base.camLens.setFov(25)
@@ -67,7 +109,9 @@ class ParticleDemo(ShowBase):
         self.t.reparentTo(render)
         self.setupLights()
         self.p = ParticleEffect()
-        self.loadParticleConfig('Py/master panda3d examples/particles/steam.ptf')
+        self.loadParticleConfig(
+            "Python/Resources/master panda3d examples/particles/steam.ptf"
+        )
 
     def loadParticleConfig(self, filename):
         # Start of the code from steam.ptf
@@ -82,13 +126,14 @@ class ParticleDemo(ShowBase):
     # Setup lighting
     def setupLights(self):
         ambientLight = AmbientLight("ambientLight")
-        ambientLight.setColor((.4, .4, .35, 1))
+        ambientLight.setColor((0.4, 0.4, 0.35, 1))
         directionalLight = DirectionalLight("directionalLight")
         directionalLight.setDirection(LVector3(0, 8, -2.5))
         directionalLight.setColor((0.9, 0.8, 0.9, 1))
         # Set lighting on teapot so steam doesn't get affected
         self.t.setLight(self.t.attachNewNode(directionalLight))
         self.t.setLight(self.t.attachNewNode(ambientLight))
+
 
 demo = ParticleDemo()
 demo.run()
