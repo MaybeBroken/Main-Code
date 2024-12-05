@@ -98,7 +98,7 @@ def divide(num, divisor) -> list[2]:
 
 
 class CHARS:
-    SEPARATOR = " | "
+    SEPARATOR = "  -->  "
 
 
 class Main(ShowBase):
@@ -115,9 +115,43 @@ class Main(ShowBase):
         self.rootListPath = os.path.join(".", f"youtubeDownloader{pathSeparator}")
         self.setupWorld()
 
+    def syncProgress(self):
+        while True:
+            t.sleep(0.1)
+            progressText = (
+                str(
+                    divide(
+                        int(self.songList[self.songIndex]["object"].get_time()),
+                        60,
+                    )[0]
+                )
+                + ":"
+                + str(
+                    divide(
+                        int(self.songList[self.songIndex]["object"].get_time()),
+                        60,
+                    )[1]
+                )
+                + CHARS.SEPARATOR
+                + str(
+                    divide(
+                        int(self.songList[self.songIndex]["object"].length()),
+                        60,
+                    )[0]
+                )
+                + ":"
+                + str(
+                    divide(
+                        int(self.songList[self.songIndex]["object"].length()),
+                        60,
+                    )[1]
+                )
+            )
+            self.progressText.setText(progressText)
+
     def update(self):
         while True:
-            t.sleep(1)
+            t.sleep(0.5)
             try:
                 if not self.paused:
                     if (
@@ -138,35 +172,6 @@ class Main(ShowBase):
                     ):
                         self.songList[self.songIndex]["played"] = 0
                         self.nextSong()
-                    self.progressText.setText(
-                        str(
-                            divide(
-                                int(self.songList[self.songIndex]["object"].get_time()),
-                                60,
-                            )[0]
-                        )
-                        + ":"
-                        + str(
-                            divide(
-                                int(self.songList[self.songIndex]["object"].get_time()),
-                                60,
-                            )[1]
-                        )
-                        + CHARS.SEPARATOR
-                        + str(
-                            divide(
-                                int(self.songList[self.songIndex]["object"].length()),
-                                60,
-                            )[0]
-                        )
-                        + ":"
-                        + str(
-                            divide(
-                                int(self.songList[self.songIndex]["object"].length()),
-                                60,
-                            )[1]
-                        )
-                    )
             except:
                 ...
 
@@ -215,54 +220,72 @@ class Main(ShowBase):
 
     def toggleSongFavorite(self):
         favoritesList: list = []
+        favoritesNum = 0
         with open(self.rootListPath + "index", "tr") as listFile:
             try:
                 favoritesList = json.JSONDecoder().decode(listFile.readline())
             except:
                 favoritesList = []
+        favoritesNum = len(favoritesList)
         if not self.songList[self.songIndex]["path"] in favoritesList:
             favoritesList.append(self.songList[self.songIndex]["path"])
-            try:
-                os.mkdir(
-                    self.songList[self.songIndex]["path"]
-                    .replace(
-                        self.songList[self.songIndex]["path"].split(pathSeparator)[-2],
-                        f"{self.songList[self.songIndex]["path"].split(pathSeparator)[-2]}{pathSeparator}favorites",
-                    )
-                    .replace(
-                        self.songList[self.songIndex]["path"].split(pathSeparator)[-1],
-                        "",
-                    ),
-                )
-                os.mkdir(
-                    self.songList[self.songIndex]["imagePath"]
-                    .replace(
-                        self.songList[self.songIndex]["imagePath"].split(pathSeparator)[
-                            -3
-                        ],
-                        f"{self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-3]}{pathSeparator}favorites",
-                    )
-                    .replace(
-                        self.songList[self.songIndex]["imagePath"].split(pathSeparator)[
-                            -1
-                        ],
-                        "",
-                    ),
-                )
-            except:
-                ...
+            # try:
+            #     os.mkdir(
+            #         self.songList[self.songIndex]["path"]
+            #         .replace(
+            #             self.songList[self.songIndex]["path"].split(pathSeparator)[-2],
+            #             f"{self.songList[self.songIndex]["path"].split(pathSeparator)[-2]}{pathSeparator}favorites",
+            #         )
+            #         .replace(
+            #             self.songList[self.songIndex]["path"].split(pathSeparator)[-1],
+            #             "",
+            #         ),
+            #     )
+            #     os.mkdir(
+            #         self.songList[self.songIndex]["imagePath"]
+            #         .replace(
+            #             self.songList[self.songIndex]["imagePath"].split(pathSeparator)[
+            #                 -3
+            #             ],
+            #             f"{self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-3]}{pathSeparator}favorites",
+            #         )
+            #         .replace(
+            #             self.songList[self.songIndex]["imagePath"].split(pathSeparator)[
+            #                 -1
+            #             ],
+            #             "",
+            #         ),
+            #     )
+            # except:
+            #     ...
+            print(self.songList[self.songIndex]["path"])
             shutil.copy(
                 self.songList[self.songIndex]["path"],
-                self.songList[self.songIndex]["path"].replace(
-                    self.songList[self.songIndex]["path"].split(pathSeparator)[-2],
-                    "favorites",
+                self.songList[self.songIndex]["path"]
+                .replace(
+                    self.songList[self.songIndex]["path"].split(pathSeparator)[-3],
+                    f"{self.songList[self.songIndex]["path"].split(pathSeparator)[-3]}{pathSeparator}favorites",
+                )
+                .replace(
+                    self.songList[self.songIndex]["path"]
+                    .replace(
+                        self.songList[self.songIndex]["path"].split(pathSeparator)[-3],
+                        f"{self.songList[self.songIndex]["path"].split(pathSeparator)[-3]}{pathSeparator}favorites",
+                    )
+                    .split(pathSeparator)[-1],
+                    f"{favoritesNum} - {self.songList[self.songIndex]["path"].split(pathSeparator)[-1].split(" - ", 1)[1]}",
                 ),
             )
             shutil.copy(
                 self.songList[self.songIndex]["imagePath"],
-                self.songList[self.songIndex]["imagePath"].replace(
+                self.songList[self.songIndex]["imagePath"]
+                .replace(
                     self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-3],
-                    "favorites",
+                    f"{self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-3]}{pathSeparator}favorites",
+                )
+                .replace(
+                    self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-1],
+                    f"{favoritesNum} - {self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-1].split(" - ", 1)[1]}",
                 ),
             )
             with open(self.rootListPath + "index", "tw") as listFile:
@@ -618,6 +641,7 @@ class Main(ShowBase):
         self.pathObject.removeNode()
         self.setupControls()
         Thread(target=self.update, daemon=True).start()
+        Thread(target=self.syncProgress, daemon=True).start()
 
     def registerFolder(self, path):
         oldLength = len(self.songList)

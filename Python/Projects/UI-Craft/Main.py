@@ -1,3 +1,4 @@
+from operator import not_
 import sys
 import os
 import shutil
@@ -44,7 +45,7 @@ from panda3d.core import (
     CollisionHandlerPusher,
 )
 from direct.gui.OnscreenImage import OnscreenImage
-import direct.stdpy.threading as thread
+from direct.stdpy.threading import Thread
 import direct.stdpy.file as panda_fMgr
 from direct.gui.DirectGui import *
 import direct.particles.Particles as part
@@ -74,6 +75,9 @@ if Wvars.winMode == "win":
     )
     ConfigVariableString("fullscreen", "false").setValue("false")
     ConfigVariableString("undecorated", "false").setValue("false")
+
+
+xAspect = (int(monitor[0].width / 2) + 80) / int(monitor[0].height / 2)
 
 
 def degToRad(degrees):
@@ -128,26 +132,50 @@ class Main(ShowBase):
 
     def update(self, task):
         result = task.cont
-        if len(self.elements) > 0:
+        if len(self.elements) > 0 and (self.moving or self.rotating or self.scaling):
             try:
 
-                self.mouse_x = self.mouseWatcherNode.getMouseX()
-                self.mouse_y = self.mouseWatcherNode.getMouseY()
+                self.mouse_x = (
+                    self.mouseWatcherNode.getMouseX() * xAspect
+                ) - self.xOffset
+                self.mouse_y = self.mouseWatcherNode.getMouseY() - self.yOffset
 
                 if self.moving and self.selectedObject[0] != None:
                     self.selectedObject[0].setPos(
-                        self.selectedObject[0].getX()
-                        + (self.mouse_x - self.lastmouse_x),
-                        0,
-                        self.selectedObject[0].getY()
-                        + (self.mouse_y + self.lastmouse_y) / 2,
+                        round(self.mouse_x, 2), 0, round(self.mouse_y, 2)
                     )
-                    self.elements[self.selectedObject[1]].pos = self.selectedObject[
-                        0
-                    ].getPos()
-                    self.elements[self.selectedObject[1]].scale = self.selectedObject[
-                        0
-                    ].getScale()
+                elif self.scaling and self.selectedObject[0] != None:
+                    if self.x and not self.y and not self.z:
+                        self.selectedObject[0].setScale(
+                            self.mouse_x,
+                            0,
+                            self.selectedObject[0].getScale()[2],
+                        )
+                    elif self.y and not self.x and not self.z:
+                        self.selectedObject[0].setScale(
+                            self.selectedObject[0].getScale()[0],
+                            0,
+                            self.mouse_y,
+                        )
+                    elif self.y and self.x and not self.z:
+                        self.selectedObject[0].setScale(
+                            self.mouse_x,
+                            0,
+                            self.mouse_y,
+                        )
+                    elif self.z and not self.x and not self.y:
+                        self.selectedObject[0].setScale(
+                            self.mouse_x,
+                            0,
+                            self.mouse_x,
+                        )
+
+                self.elements[self.selectedObject[1]].pos = self.selectedObject[
+                    0
+                ].getPos()
+                self.elements[self.selectedObject[1]].scale = self.selectedObject[
+                    0
+                ].getScale()
 
                 self.lastmouse_x = self.mouseWatcherNode.getMouseX()
                 self.lastmouse_y = self.mouseWatcherNode.getMouseY()
@@ -161,9 +189,12 @@ class Main(ShowBase):
         self.scaling = False
         self.x = True
         self.y = True
+        self.z = False
         self.mouse_x = True
         self.mouse_y = True
         self.selectedObject = [None, None]
+        self.xOffset = 0
+        self.yOffset = 0
 
         self.accept("q", sys.exit)
         self.accept("shift-s", self.saveFile)
@@ -172,6 +203,37 @@ class Main(ShowBase):
         self.accept("r", self.setMode, extraArgs=["rotate"])
         self.accept("enter", self.setMode, extraArgs=["exit"])
         self.accept("mouse1", self.setMode, extraArgs=["exit"])
+        self.accept(
+            "shift-d",
+            self.duplicate,
+        )
+        self.accept("x", self.setMode, extraArgs=["x"])
+        self.accept("y", self.setMode, extraArgs=["y"])
+        self.accept("z", self.setMode, extraArgs=["z"])
+        self.accept(
+            "v",
+            self.spawnWindow,
+        )
+
+    def spawnWindow(self):
+        Thread(
+            target=os.system,
+            args=["python3 presets/01.py"],
+            daemon=True,
+        ).start()
+
+    def delete(self):
+        self.selectedObject[0].destroy()
+        for element in self.elements.copy():
+            if element == self.selectedObject[1]:
+                del self.elements[element]
+
+    def selectObjFromButton(self, button):
+        self.selectedObject = [self.elements[button + "-obj"], button]
+        if not self.moving and not self.rotating and not self.scaling:
+            self.setMode("move")
+        elif self.moving or self.scaling or self.rotating:
+            self.setMode("exit")
 
     def setMode(self, mode):
         if mode == "move":
@@ -182,6 +244,9 @@ class Main(ShowBase):
             self.moving = False
             self.rotating = False
             self.scaling = True
+            self.x = False
+            self.y = False
+            self.z = True
         elif mode == "rotate":
             self.moving = False
             self.rotating = True
@@ -190,18 +255,77 @@ class Main(ShowBase):
             self.moving = False
             self.rotating = False
             self.scaling = False
-        self.lastmouse_x = self.mouseWatcherNode.getMouseX()
-        self.lastmouse_y = self.mouseWatcherNode.getMouseY()
+        elif mode == "x":
+            if self.moving or self.rotating or self.scaling:
+                self.x = True
+                self.y = False
+                self.z = False
+            else:
+                self.delete()
+        elif mode == "y":
+            self.x = False
+            self.y = True
+            self.z = False
+        elif mode == "z":
+            self.x = False
+            self.y = False
+            self.z = True
+        if mode != "x" and mode != "y" and mode != "z":
+            try:
+                self.xOffset = (self.mouseWatcherNode.getMouseX() * xAspect) - (
+                    self.selectedObject[0].getScale()[0]
+                    if mode == "scale"
+                    else self.selectedObject[0].getPos()[0] if mode == "move" else 0
+                )
+                self.yOffset = self.mouseWatcherNode.getMouseY() - (
+                    self.selectedObject[0].getScale()[2]
+                    if mode == "scale"
+                    else self.selectedObject[0].getPos()[2] if mode == "move" else 0
+                )
+            except AssertionError:
+                ...
 
     def doNothing(self):
         return None
+
+    def duplicate(self):
+        newElement = buttonElement()
+        newElement.parent = "self.aspect2d"
+        newElement.pos = self.selectedObject[0].getPos()
+        newElement.scale = self.selectedObject[0].getScale()
+        newElement.color = (1, 1, 1, 1)
+        newElement.frameSize = None
+        newElement.image = str(self.selectedObject[0].cget("image").getFilename())
+        newElement.geom = None
+        newElement.name = f"obj{len(self.elements)}"
+        newElement._type = "DirectButton"
+
+        newButton = DirectButton(
+            parent=self.aspect2d,
+            pos=newElement.pos,
+            scale=newElement.scale,
+            color=newElement.color,
+            geom=newElement.geom,
+            image=self.loader.loadTexture(newElement.image),
+            relief=None,
+            frameColor=newElement.color,
+            frameSize=newElement.frameSize,
+            command=self.selectObjFromButton,
+            extraArgs=[newElement.name],
+        )
+
+        self.selectedObject = [newButton, newElement.name]
+        self.elements[newElement.name] = newElement
+        self.elements[newElement.name + "-obj"] = newButton
+
+        self.setMode("move")
 
     def addButton(self):
         newElement = buttonElement()
         newElement.parent = "self.aspect2d"
         newElement.pos = (0, 0, 0)
         newElement.scale = 0.09
-        newElement.color = (0.5, 0.5, 0.5, 1)
+        newElement.color = (1, 1, 1, 1)
         newElement.frameSize = None
         newElement.image = "src/textures/button1.png"
         newElement.geom = None
@@ -215,14 +339,19 @@ class Main(ShowBase):
             color=newElement.color,
             geom=newElement.geom,
             image=self.loader.loadTexture(newElement.image),
+            relief=None,
+            frameColor=newElement.color,
             frameSize=newElement.frameSize,
+            command=self.selectObjFromButton,
+            extraArgs=[newElement.name],
         )
 
         self.selectedObject = [newButton, newElement.name]
         self.elements[newElement.name] = newElement
+        self.elements[newElement.name + "-obj"] = newButton
 
     def setupWorld(self):
-        self.elements: dict[baseElement] = {}
+        self.elements: dict[baseElement, DirectButton] = {}
         self.appFrame = DirectFrame(
             parent=self.aspect2d,
             frameSize=(-1, 1, -0.8, 1),
@@ -243,13 +372,14 @@ class Main(ShowBase):
             frameSize=(1.05, 1.75, -1, 1),
             frameColor=(0.3, 0.3, 0.3, 1),
         )
-        self.addButton = DirectButton(
+        self.addNewButton = DirectButton(
             parent=self.elementBarFrame,
             scale=0.09,
             pos=(-0.9, 1, -0.9),
             geom=None,
             image=self.loader.loadTexture("src/textures/button1.png"),
             command=self.addButton,
+            relief=None,
         )
 
     def packObject(self, obj: baseElement) -> str:
@@ -262,6 +392,8 @@ class Main(ShowBase):
             pos={obj.pos},
             scale={obj.scale},
             color={obj.color},
+            relief=None,
+            geom=None,
             image=self.loader.loadTexture("{obj.image.replace("src/textures/", f"01/textures/")}"),
         )
 """
@@ -280,6 +412,7 @@ from panda3d.core import (
 
 class frame:
     def build(self):
+        ...
 """
         ]
         try:
@@ -290,10 +423,8 @@ class frame:
             os.mkdir("presets/01/textures/")
         except:
             ...
-        if len(self.elements) == 0:
-            baseText.append("       ...")
-        else:
-            for element in self.elements:
+        for element in self.elements:
+            if element.count("-obj") == 0:
                 baseText.append(self.packObject(self.elements[element]))
         baseText.append(
             """

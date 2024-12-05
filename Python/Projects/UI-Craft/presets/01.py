@@ -9,14 +9,7 @@ from panda3d.core import (
 
 class frame:
     def build(self):
-
-        self.obj0 = DirectButton(
-            parent=self.aspect2d,
-            pos=LPoint3f(-0.8575747, 0, 0.84041666),
-            scale=LVecBase3f(0.09, 0.09, 0.09),
-            color=(0.5, 0.5, 0.5, 1),
-            image=self.loader.loadTexture("01/textures/button1.png"),
-        )
+        ...
 
 
 if __name__ == "__main__":

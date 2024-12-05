@@ -83,6 +83,8 @@ def get(url: str, dest_folder: str, dest_name: str):
         return file_path
     except FileExistsError:
         return None
+    except:
+        get(url, dest_folder, dest_name)
 
 
 def downloadSong(link, format):
@@ -99,7 +101,9 @@ def downloadSong(link, format):
 def downloadPlaylist(link, format):
     pl = Playlist(link)
     global outputPath
-    outputPath = os.path.join(rootPath, f"{pathSafe(pl.title)} - {format}{pathSeparator}")
+    outputPath = os.path.join(
+        rootPath, f"{pathSafe(pl.title)} - {format}{pathSeparator}"
+    )
     imgPath = os.path.join(outputPath, f"img{pathSeparator}")
     try:
         os.mkdir(outputPath)
