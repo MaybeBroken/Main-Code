@@ -80,6 +80,18 @@ if Wvars.winMode == "win":
 xAspect = (int(monitor[0].width / 2) + 80) / int(monitor[0].height / 2)
 
 
+def toggle(boolVar):
+    if boolVar == True:
+        boolVar = False
+        return False
+    elif boolVar == False:
+        boolVar = True
+        return True
+    else:
+        # raise TypeError(boolVar)
+        ...
+
+
 def degToRad(degrees):
     return degrees * (pi / 180.0)
 
@@ -98,6 +110,10 @@ class baseElement:
 class buttonElement(baseElement):
     command: None
     geom: NodePath
+
+
+class frameElement(baseElement):
+    frameColor: tuple[4]
 
 
 class Main(ShowBase):
@@ -169,6 +185,8 @@ class Main(ShowBase):
                             0,
                             self.mouse_x,
                         )
+                self.xIndicator.setZ(self.selectedObject[0].getZ())
+                self.yIndicator.setX(self.selectedObject[0].getX())
 
                 self.elements[self.selectedObject[1]].pos = self.selectedObject[
                     0
@@ -223,10 +241,16 @@ class Main(ShowBase):
         ).start()
 
     def delete(self):
-        self.selectedObject[0].destroy()
-        for element in self.elements.copy():
-            if element == self.selectedObject[1]:
-                del self.elements[element]
+        if self.selectedObject[0] != None:
+            self.selectedObject[0].destroy()
+            self.selectedObject = [None, None]
+            for element in self.elements.copy():
+                if element == self.selectedObject[1]:
+                    if len(self.elements) - 2 > 0 and element.endswith("-obj"):
+                        self.selectObjFromName(
+                            f'obj{int(element.split("obj")[1])-2}-obj'
+                        )
+                    del self.elements[element]
 
     def selectObjFromButton(self, button):
         self.selectedObject = [self.elements[button + "-obj"], button]
@@ -235,89 +259,142 @@ class Main(ShowBase):
         elif self.moving or self.scaling or self.rotating:
             self.setMode("exit")
 
+    def selectObjFromName(self, name):
+        self.selectedObject = [self.elements[name], name]
+
     def setMode(self, mode):
-        if mode == "move":
-            self.moving = True
-            self.rotating = False
-            self.scaling = False
-        elif mode == "scale":
-            self.moving = False
-            self.rotating = False
-            self.scaling = True
-            self.x = False
-            self.y = False
-            self.z = True
-        elif mode == "rotate":
-            self.moving = False
-            self.rotating = True
-            self.scaling = False
-        elif mode == "exit":
-            self.moving = False
-            self.rotating = False
-            self.scaling = False
-        elif mode == "x":
-            if self.moving or self.rotating or self.scaling:
-                self.x = True
+        if not self.selectedObject[0] == None:
+            if mode == "move":
+                self.moving = True
+                self.rotating = False
+                self.scaling = False
+                self.x = False
                 self.y = False
                 self.z = False
+                self.setMode("z")
+            elif mode == "scale":
+                self.moving = False
+                self.rotating = False
+                self.scaling = True
+                self.x = False
+                self.y = False
+                self.z = False
+                self.setMode("z")
+            elif mode == "rotate":
+                self.moving = False
+                self.rotating = True
+                self.scaling = False
+            elif mode == "exit":
+                self.moving = False
+                self.rotating = False
+                self.scaling = False
+                self.x = False
+                self.y = False
+                self.z = False
+            elif mode == "x":
+                if self.moving or self.rotating or self.scaling:
+                    self.x = toggle(self.y)
+                    self.y = False
+                    self.z = False
+                else:
+                    self.delete()
+            elif mode == "y":
+                self.x = False
+                self.y = toggle(self.y)
+                self.z = False
+            elif mode == "z":
+                self.x = False
+                self.y = False
+                self.z = True
+
+            if self.x or self.z:
+                self.xIndicator.show()
             else:
-                self.delete()
-        elif mode == "y":
-            self.x = False
-            self.y = True
-            self.z = False
-        elif mode == "z":
-            self.x = False
-            self.y = False
-            self.z = True
-        if mode != "x" and mode != "y" and mode != "z":
-            try:
-                self.xOffset = (self.mouseWatcherNode.getMouseX() * xAspect) - (
-                    self.selectedObject[0].getScale()[0]
-                    if mode == "scale"
-                    else self.selectedObject[0].getPos()[0] if mode == "move" else 0
-                )
-                self.yOffset = self.mouseWatcherNode.getMouseY() - (
-                    self.selectedObject[0].getScale()[2]
-                    if mode == "scale"
-                    else self.selectedObject[0].getPos()[2] if mode == "move" else 0
-                )
-            except AssertionError:
-                ...
+                self.xIndicator.hide()
+            if self.y or self.z:
+                self.yIndicator.show()
+            else:
+                self.yIndicator.hide()
+            if (
+                mode != "x"
+                and mode != "y"
+                and mode != "z"
+                and mode != "exit"
+                and self.selectedObject[0] != None
+            ):
+                try:
+                    self.xOffset = (self.mouseWatcherNode.getMouseX() * xAspect) - (
+                        self.selectedObject[0].getScale()[0]
+                        if mode == "scale"
+                        else self.selectedObject[0].getPos()[0] if mode == "move" else 0
+                    )
+                    self.yOffset = self.mouseWatcherNode.getMouseY() - (
+                        self.selectedObject[0].getScale()[2]
+                        if mode == "scale"
+                        else self.selectedObject[0].getPos()[2] if mode == "move" else 0
+                    )
+                except AssertionError:
+                    ...
 
     def doNothing(self):
         return None
 
     def duplicate(self):
-        newElement = buttonElement()
-        newElement.parent = "self.aspect2d"
-        newElement.pos = self.selectedObject[0].getPos()
-        newElement.scale = self.selectedObject[0].getScale()
-        newElement.color = (1, 1, 1, 1)
-        newElement.frameSize = None
-        newElement.image = str(self.selectedObject[0].cget("image").getFilename())
-        newElement.geom = None
-        newElement.name = f"obj{len(self.elements)}"
-        newElement._type = "DirectButton"
-
-        newButton = DirectButton(
-            parent=self.aspect2d,
-            pos=newElement.pos,
-            scale=newElement.scale,
-            color=newElement.color,
-            geom=newElement.geom,
-            image=self.loader.loadTexture(newElement.image),
-            relief=None,
-            frameColor=newElement.color,
-            frameSize=newElement.frameSize,
-            command=self.selectObjFromButton,
-            extraArgs=[newElement.name],
-        )
-
-        self.selectedObject = [newButton, newElement.name]
-        self.elements[newElement.name] = newElement
-        self.elements[newElement.name + "-obj"] = newButton
-
+        if self.elements[self.selectedObject[1]]._type == "DirectButton":
+            newElement = buttonElement()
+            newElement.parent = "self.aspect2d"
+            newElement.pos = self.selectedObject[0].getPos()
+            newElement.scale = self.selectedObject[0].getScale()
+            newElement.color = (1, 1, 1, 1)
+            newElement.frameSize = None
+            newElement.image = str(self.selectedObject[0].cget("image").getFilename())
+            newElement.geom = None
+            newElement.name = f"obj{len(self.elements)}"
+            newElement._type = "DirectButton"
+            newButton = DirectButton(
+                parent=self.aspect2d,
+                pos=newElement.pos,
+                scale=newElement.scale,
+                color=newElement.color,
+                geom=newElement.geom,
+                image=self.loader.loadTexture(newElement.image),
+                relief=None,
+                frameColor=newElement.color,
+                frameSize=newElement.frameSize,
+                command=self.selectObjFromButton,
+                extraArgs=[newElement.name],
+            )
+            self.selectedObject = [newButton, newElement.name]
+            self.elements[newElement.name] = newElement
+            self.elements[newElement.name + "-obj"] = newButton
+        elif self.elements[self.selectedObject[1]]._type == "DirectFrame":
+            newElement = frameElement()
+            newElement.parent = "self.aspect2d"
+            newElement.pos = self.selectedObject[0].getPos()
+            newElement.scale = self.selectedObject[0].getScale()
+            newElement.color = (1, 1, 1, 1)
+            newElement.frameSize = self.selectedObject[0].cget("frameSize")
+            newElement.frameColor = self.selectedObject[0].cget("frameColor")
+            newElement.image = str(self.selectedObject[0].cget("image").getFilename())
+            newElement.name = f"obj{len(self.elements)}"
+            newElement._type = "DirectFrame"
+            newFrame = DirectFrame(
+                parent=self.aspect2d,
+                pos=newElement.pos,
+                scale=newElement.scale,
+                color=newElement.color,
+                frameColor=newElement.frameColor,
+                image=(
+                    self.loader.loadTexture(newElement.image)
+                    if newElement.image != None
+                    else None
+                ),
+                relief=None,
+                frameSize=newElement.frameSize,
+            )
+            self.selectedObject = [newFrame, newElement.name]
+            self.elements[newElement.name] = newElement
+            self.elements[newElement.name + "-obj"] = newFrame
         self.setMode("move")
 
     def addButton(self):
@@ -350,6 +427,37 @@ class Main(ShowBase):
         self.elements[newElement.name] = newElement
         self.elements[newElement.name + "-obj"] = newButton
 
+    def addFrame(self):
+        newElement = frameElement()
+        newElement.parent = "self.aspect2d"
+        newElement.pos = (0, 0, 0)
+        newElement.scale = 0.09
+        newElement.frameColor = (0.5, 0.5, 0.5, 1)
+        newElement.color = (1, 1, 1, 1)
+        newElement.frameSize = (-0.1, 0.1, -0.1, 0.1)
+        newElement.image = "src/textures/frame2.png"
+        newElement.name = f"obj{len(self.elements)}"
+        newElement._type = "DirectFrame"
+
+        newFrame = DirectFrame(
+            parent=self.aspect2d,
+            pos=newElement.pos,
+            scale=newElement.scale,
+            color=newElement.color,
+            frameColor=newElement.frameColor,
+            image=(
+                self.loader.loadTexture(newElement.image)
+                if newElement.image != None
+                else None
+            ),
+            relief=None,
+            frameSize=newElement.frameSize,
+        )
+
+        self.selectedObject = [newFrame, newElement.name]
+        self.elements[newElement.name] = newElement
+        self.elements[newElement.name + "-obj"] = newFrame
+
     def setupWorld(self):
         self.elements: dict[baseElement, DirectButton] = {}
         self.appFrame = DirectFrame(
@@ -372,10 +480,29 @@ class Main(ShowBase):
             frameSize=(1.05, 1.75, -1, 1),
             frameColor=(0.3, 0.3, 0.3, 1),
         )
+        self.xIndicator = OnscreenImage(
+            image=self.loader.loadTexture("src/textures/x.png"),
+            scale=Vec3(3, 1, 0.0025),
+        )
+        self.yIndicator = OnscreenImage(
+            image=self.loader.loadTexture("src/textures/y.png"),
+            scale=Vec3(0.0025, 1, 3),
+        )
+        self.xIndicator.hide()
+        self.yIndicator.hide()
+        self.addNewFrame = DirectButton(
+            parent=self.elementBarFrame,
+            pos=(-0.9, 1, -0.9),
+            scale=(0.09, 0.09, 0.09),
+            geom=None,
+            image=self.loader.loadTexture("src/textures/frame1.png"),
+            command=self.addFrame,
+            relief=None,
+        )
         self.addNewButton = DirectButton(
             parent=self.elementBarFrame,
+            pos=(-0.7, 0, -0.9),
             scale=0.09,
-            pos=(-0.9, 1, -0.9),
             geom=None,
             image=self.loader.loadTexture("src/textures/button1.png"),
             command=self.addButton,

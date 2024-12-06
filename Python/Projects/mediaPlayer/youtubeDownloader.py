@@ -182,6 +182,10 @@ def downloadPlaylist(link, format):
                 ...
 
 
+def downloadArtist(link, format):
+    link
+
+
 def _Wrapper(link, list, format):
     if list:
         downloadPlaylist(link, format)
@@ -200,7 +204,7 @@ while True:
             format = "mp3"
         if format == "4":
             format = "mp4"
-        secondChoice = input("\nIs this a song or a playlist? (S/P)  ")
+        secondChoice = input("\nIs this a song, playlist, or artist? (S/P/A)  ")
         if secondChoice == "p" or secondChoice == "P":
             url = input(f"\nyt Playlist Url:\n-->  ")
             if url == "" or url == None or len(url) < 20:
