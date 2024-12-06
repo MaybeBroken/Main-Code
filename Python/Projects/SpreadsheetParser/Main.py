@@ -1,9 +1,16 @@
-from os import system, mkdir
+from os import system, mkdir, chdir
+import sys
 
 try:
     import openpyxl as ex
 except:
     system("python3 -m pip install openpyxl")
+
+if sys.platform == "darwin":
+    pathSeparator = "/"
+elif sys.platform == "win32":
+    pathSeparator = "\\"
+chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
 
 
 class CLI:
@@ -148,9 +155,7 @@ def grade():
             )
             for err in errors:
                 print(f"{err}")
-        print(
-            f"{CLI.RESET}\n{sName} had {CLI.RED}{len(dings)}{CLI.RESET} errors:\n"
-        )
+        print(f"{CLI.RESET}\n{sName} had {CLI.RED}{len(dings)}{CLI.RESET} errors:\n")
         for ding in dings:
             print(
                 f"{CLI.RESET}Cell {CLI.BOLD}{ding[0]}{CLI.RESET}, Teacher: {CLI.GREEN}{ding[1]}{CLI.RESET}, Student: {CLI.RED}{ding[2]}{CLI.RESET}"
@@ -171,7 +176,7 @@ while True:
         sName = input(f"{CLI.RESET}| Student's name: {CLI.INVERT}")
         sFile = input(f"{CLI.RESET}| Student's doc url (must be public): {CLI.INVERT}")
         CLI.resetline()
-        sFile = parseUrl(sFile, f"studentFiles/{sName}.xlsx")
+        sFile = parseUrl(sFile, f"studentFiles{pathSeparator}{sName}.xlsx")
         students.append({"name": sName, "file": sFile})
         print(f"{CLI.RESET}\n| Added {CLI.GREEN}{sName}{CLI.RESET} to grading list\n")
     if msg == "grade all files" or msg == "grade":

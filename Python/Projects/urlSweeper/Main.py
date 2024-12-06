@@ -20,76 +20,109 @@ elif sys.platform == "win32":
     pathSeparator = "\\"
 
 os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
-
-os.chdir("./html/")
-
-urlList = []
-pathList = []
+os.chdir("./html/src/")
+rootPath = os.path.abspath(os.curdir)
 
 
-def openLink(link: str, path1: str):
+def openLink(link: str, path1: str, depth: int):
     # if link in urlList:
     #     return "link in url"
     # if os.path.abspath(path1) in pathList:
     #     return "path in pathlist"
-    os.chdir(path1)
-    print(os.path.abspath(path1))
+    os.chdir(rootPath)
+    try:
+        os.chdir(path1)
+    except FileNotFoundError:
+        if path1.count("/") > 1:
+            newPath = ""
+            for folder in path1.split("/"):
+                newPath = newPath + "/" + folder
+                if newPath[0] == "/":
+                    newPath = newPath.replace("/", "", 1)
+                try:
+                    os.mkdir(newPath)
+                except FileExistsError:
+                    ...
+                except OSError:
+                    return
+        else:
+            try:
+                os.mkdir(url)
+            except FileExistsError:
+                ...
+            except OSError:
+                return
+    try:
+        if link[-1] == "/" or link.endswith((".org", ".com", ".net")):
+            os.system(f"curl -s -o index.html {link}")
+        else:
+            os.system(f"curl -s -o {link.split("/")[-1]} {link}")
+        print(f"downloaded host {link}") if len(link) < 150 else ...
+    except:
+        print(f"failed to download host {link}") if len(link) < 150 else ...
+        return
+
     if link[-1] == "/":
-        os.system(f"curl -o index.html {link}")
-    else:
-        os.system(f"curl -o {link.split("/")[-1]} {link}")
-    pathList.append(os.path.abspath(path1))
-    urlList.append(link)
-    if link[-1] == "/":
-        with open(f"index.html") as index:
-            content = index.readlines()
-            content = "\n".join(content)
-            content = content.split("href=")
-            for block in content:
-                url: str = block.split('"')[1]
-                if not url == "en":
-                    link = url
-                    path = "src"
-                    if url[0] == "/" and url.count(link) == 0:
-                        if link.endswith("/"):
-                            link = link.rstrip("/")
-                            url = link + url
+        try:
+            with open(f"index.html") as index:
+                try:
+                    content = index.readlines()
+                    content = "\n".join(content)
+                    content = content.split('"https://')
+                    num = 0
+                    links: list[str] = {}
+                    for chunk in content:
+                        if num == 0:
+                            num = 1
                         else:
-                            url = link + url
-                    if url.count(link) > 0:
-                        path += "".join(url.split(link)[-1])
-                    else:
-                        if path.count(link) == 0:
-                            path = path + link.replace("https://", "/")
-                        print(path)
-                        print(link)
-                        print(url)
-                    masterUrl = url
-                    if masterUrl.count("?") > 0:
-                        masterUrl = masterUrl.split("?")[0]
-                    if path.count("?") > 0:
-                        path = path.split("?")[0]
-                    if path[-1] != "/" and len(path) > 1:
-                        path += "/"
-                    path = path.replace("//", "/")
-                    if path.count("/") >= 2:
-                        newPath = ""
-                        for folder in path.split("/"):
-                            newPath = newPath + "/" + folder
-                            if newPath[0] == "/":
-                                newPath = newPath.replace("/", "", 1)
+                            chunk = chunk.split('"')
+                            if chunk[0] != link.removeprefix("https://").removeprefix(
+                                "http://"
+                            ):
+                                url = chunk[0]
+                                if url.count("?") > 0:
+                                    url = url.split("?")[0]
+                                if url.count("/{w}x{h}") > 0:
+                                    url = url.split("/{w}x{h}")[0]
+                                if (
+                                    not url.endswith((".org", ".com", ".net"))
+                                    and url[-1] != "/"
+                                ):
+                                    url = url + "/"
+                                links[url] = chunk[0]
+                    os.chdir(rootPath)
+                    for url in links:
+                        if url.count("/") > 1:
+                            newPath = ""
+                            for folder in url.split("/"):
+                                newPath = newPath + "/" + folder
+                                if newPath[0] == "/":
+                                    newPath = newPath.replace("/", "", 1)
+                                try:
+                                    os.mkdir(newPath)
+                                except FileExistsError:
+                                    ...
+                                except OSError:
+                                    return
+                        else:
                             try:
-                                os.mkdir(newPath)
+                                os.mkdir(url)
                             except FileExistsError:
                                 ...
-                        os.chdir(newPath)
-                    else:
-                        try:
-                            os.mkdir(path)
-                            os.chdir(path)
-                        except FileExistsError:
-                            ...
-                    print(openLink(masterUrl, os.path.abspath(os.curdir)))
+                            except OSError:
+                                return
+                        if depth <= 0:
+                            # Thread(
+                            #     target=openLink,
+                            #     args=[f"https://{url}", url, depth + 1],
+                            # ).start()
+                            openLink(f"https://{url}", url, depth + 1)
+                except UnicodeDecodeError:
+                    ...
+        except FileNotFoundError:
+            ...
 
 
-print(openLink(input("url to scan: "), "."))
+openLink(input("url to scan: "), ".", -int(input("depth to scan: ")))
+
+# https://8.8.8.8/

@@ -166,7 +166,7 @@ def downloadPlaylist(link, format):
         ).start()
 
         threadQueue[vId] = t
-        sleep(0.1)
+        sleep(0.05)
 
         vId += 1
     while len(threadQueue) > 0:

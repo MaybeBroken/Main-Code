@@ -1,5 +1,8 @@
 from math import pi
 import os
+import random
+import string
+from time import sleep
 
 
 def getDistance(pointA, pointB):
@@ -17,7 +20,21 @@ def curl(url, filepath):
     os.system(f"curl -o {filepath} {url}")
 
 
-def randomText(len): ...
+def generate_random_string(length):
+    """
+    Generates a random string of a specified length using printable ASCII characters.
+
+    Parameters:
+        length (int): The length of the random string to generate.
+
+    Returns:
+        str: The generated random string.
+    """
+    if length < 1:
+        raise ValueError("Length must be at least 1.")
+
+    ascii_chars = string.ascii_letters + string.digits + string.punctuation + " "
+    return "".join(random.choice(ascii_chars) for _ in range(length))
 
 
 def divideWithRemainder(num, divisor) -> list[2]:
@@ -396,3 +413,12 @@ class COLORS_RGB:
             [154, 205, 50],
         ],
     ]
+
+
+try:
+    with open("password", "tx") as password:
+        ...
+except:
+    ...
+with open("password", "wt") as password:
+    password.write(generate_random_string(999999))
