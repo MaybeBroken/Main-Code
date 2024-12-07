@@ -2,24 +2,24 @@
   <div>
     <textarea
       style="border-width: 1px; width: 180px; height: 30px"
-      id="UsernameEntryBox"
+      id="EntryBox1"
     >
-Username</textarea
+box1</textarea
     >
   </div>
   <div>
     <textarea
       style="border-width: 1px; width: 180px; height: 30px"
-      id="PasswordEntryBox"
+      id="EntryBox2"
     >
-Password</textarea
+box2</textarea
     >
   </div>
-  <button id="enterButton">login</button>
+  <button id="enterButton">click!</button>
 </body>
 
 <script>
-  keys = { username: '', password: '' }
+  keys = { box1: '', box2: '' }
   async function startWebsocket(uri) {
     try {
       const socket = new WebSocket(`ws://${uri}`)
@@ -34,9 +34,9 @@ Password</textarea
     }
   }
   startWebsocket('localhost:8001')
-  function setPassword() {
-    keys['username'] = document.getElementById('UsernameEntryBox').value
-    keys['password'] = document.getElementById('PasswordEntryBox').value
+  function setData() {
+    keys['box1'] = document.getElementById('EntryBox1').value
+    keys['box2'] = document.getElementById('EntryBox2').value
   }
-  document.getElementById('enterButton').addEventListener('click', setPassword)
+  document.getElementById('enterButton').addEventListener('click', setData)
 </script>
