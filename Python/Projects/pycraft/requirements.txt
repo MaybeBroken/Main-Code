@@ -1,6 +1,0 @@
-numpy
-opensimplex
-pyyaml
-screeninfo
-scipy
-panda3d~=1.10.14

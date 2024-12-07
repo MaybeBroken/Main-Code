@@ -1,8 +1,0 @@
-- Peaceful
-- Minecraft
-- full
-- - 1680
-  - 1050
-- 12
-- 15
-- 15
