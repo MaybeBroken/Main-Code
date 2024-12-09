@@ -89,7 +89,7 @@ class CLI:
         WHITE = "\033[1;97m"
         INVERT = "\033[;7m"
         RESET = "\033[0m"
-        ALL = [
+        LIST = [
             GREEN,
             LIGHT_GREEN,
             RED,
@@ -106,6 +106,23 @@ class CLI:
             INVERT,
             RESET,
         ]
+        DICT = {
+            GREEN,
+            LIGHT_GREEN,
+            RED,
+            YELLOW,
+            BLUE,
+            MAGENTA,
+            BOLD,
+            CYAN,
+            LIGHT_CYAN,
+            LIGHT_GREY,
+            DARK_GREY,
+            BLACK,
+            WHITE,
+            INVERT,
+            RESET,
+        }
 
 
 class COLORS_RGB:
@@ -413,12 +430,3 @@ class COLORS_RGB:
             [154, 205, 50],
         ],
     ]
-
-
-try:
-    with open("password", "tx") as password:
-        ...
-except:
-    ...
-with open("password", "wt") as password:
-    password.write(generate_random_string(999999))

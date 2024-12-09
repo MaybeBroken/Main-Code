@@ -197,35 +197,7 @@ class Main(ShowBase):
     def setupControls(self):
         self.lastMouseX = 0
         self.lastMouseY = 0
-        self.keyMap = {
-            "forward": False,
-            "backward": False,
-            "left": False,
-            "right": False,
-            "up": False,
-            "down": False,
-            "primary": False,
-            "secondary": False,
-        }
-
-        self.accept("escape", self.doNothing)
-        self.accept("mouse1", self.doNothing)
-        self.accept("mouse1-up", self.doNothing)
-        self.accept("mouse3", self.doNothing)
-        self.accept("w", self.updateKeyMap, ["forward", True])
-        self.accept("w-up", self.updateKeyMap, ["forward", False])
-        self.accept("a", self.updateKeyMap, ["left", True])
-        self.accept("a-up", self.updateKeyMap, ["left", False])
-        self.accept("s", self.updateKeyMap, ["backward", True])
-        self.accept("s-up", self.updateKeyMap, ["backward", False])
-        self.accept("d", self.updateKeyMap, ["right", True])
-        self.accept("d-up", self.updateKeyMap, ["right", False])
-        self.accept("space", self.updateKeyMap, ["up", True])
-        self.accept("space-up", self.updateKeyMap, ["up", False])
-        self.accept("lshift", self.updateKeyMap, ["down", True])
-        self.accept("lshift-up", self.updateKeyMap, ["down", False])
-        self.accept("wheel_up", self.wireframeOn)
-        self.accept("wheel_down", self.wireframeOff)
+        self.keyMap = {}
         self.accept("q", sys.exit)
 
     def updateKeyMap(self, key, value):
@@ -235,37 +207,6 @@ class Main(ShowBase):
         return None
 
     def setupWorld(self): ...
-
-    def fadeOutGuiElement_ThreadedOnly(
-        self, element, timeToFade, execBeforeOrAfter, target, args=()
-    ):
-        if execBeforeOrAfter == "Before":
-            target(*args)
-
-        for i in range(timeToFade):
-            val = 1 - (1 / timeToFade) * (i + 1)
-            try:
-                element.setAlphaScale(val)
-            except:
-                None
-            t.sleep(0.01)
-        element.hide()
-        if execBeforeOrAfter == "After":
-            target(*args)
-
-    def fadeInGuiElement_ThreadedOnly(
-        self, element, timeToFade, execBeforeOrAfter, target, args=()
-    ):
-        if execBeforeOrAfter == "Before":
-            target(*args)
-
-        element.show()
-        for i in range(timeToFade):
-            val = abs(0 - (1 / timeToFade) * (i + 1))
-            element.setAlphaScale(val)
-            t.sleep(0.01)
-        if execBeforeOrAfter == "After":
-            target(*args)
 
 
 app = Main()
