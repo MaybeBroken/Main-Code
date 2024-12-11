@@ -58,4 +58,6 @@ def generateDefsDirectory(pyObj, name) -> classObj:
         pyFile.writelines(baseText)
 
 
-generateDefsDirectory(None, "sys")
+# Make sure to put a custom class into the pyObj input
+
+generateDefsDirectory(pyObj=None, name="className")
