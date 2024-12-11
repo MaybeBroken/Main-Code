@@ -9,18 +9,16 @@ elif sys.platform == "win32":
 os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
 
 
-class classObj: ...
-
-
-def generateDefsDirectory(pyObj, name) -> classObj:
+def generateDefsDirectory(pyObj, name):
     baseText = [""""""]
 
     def _inFunc(obj, id, level):
-        baseText.append(
-            f"""{"    "*level}class {id}:
-{"    "*level}    ...
+        if not level == 0:
+            baseText.append(
+                f"""{"    "*(level-1)}class {id}:
+{"    "*(level-1)}    ...
 """
-        )
+            )
         for item in dir(obj):
             if not item.count("__") > 0:
 
@@ -33,31 +31,49 @@ def generateDefsDirectory(pyObj, name) -> classObj:
                         "dict",
                         "list",
                     ]:
-                        baseText.append(
-                            f"""{"    "*level}    {item}:{getattr(obj, item).__class__.__name__} = None
+                        if level == 0:
+                            baseText.append(
+                                f"""{"    "*level}{item}:{getattr(obj, item).__class__.__name__} = None
 """
-                        )
+                            )
+                        else:
+                            baseText.append(
+                                f"""{"    "*(level-1)}    {item}:{getattr(obj, item).__class__.__name__} = None
+"""
+                            )
                     elif getattr(obj, item).__class__.__name__ in [
                         "builtin_function_or_method",
                         "method_descriptor",
                     ]:
-                        baseText.append(
-                            f"""{"    "*level}    def {item}(): ...
+                        if level == 0:
+                            baseText.append(
+                                f"""{"    "*level}def {item}{str(getattr(obj, item).__text_signature__).replace("$", "") if not getattr(obj, item).__text_signature__ == None else "()"}: ...
 """
-                        )
+                            )
+                        else:
+                            baseText.append(
+                                f"""{"    "*(level-1)}    def {item}{str(getattr(obj, item).__text_signature__).replace("$", "") if not getattr(obj, item).__text_signature__ == None else "()"}: ...
+"""
+                            )
                     else:
-                        baseText.append(
-                            f"""{"    "*level}    {item} = None
+                        if level == 0:
+                            baseText.append(
+                                f"""{"    "*level}{item} = None
 """
-                        )
+                            )
+                        else:
+                            baseText.append(
+                                f"""{"    "*(level-1)}    {item} = None
+"""
+                            )
 
     _inFunc(pyObj, name, 0)
 
     baseText = "".join(baseText)
-    with open("GENFRAME.py", "wt") as pyFile:
+    with open(f"gen{pathSeparator}{name}.py", "wt") as pyFile:
         pyFile.writelines(baseText)
 
 
 # Make sure to put a custom class into the pyObj input
 
-generateDefsDirectory(pyObj=None, name="className")
+generateDefsDirectory(pyObj=None, name="none")
