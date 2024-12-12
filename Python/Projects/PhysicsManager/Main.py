@@ -12,37 +12,12 @@ physicsMgr = _pm(drag=0.000, gravity=(0, 0, -0.034), minimum_motion_check=0.03)
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import *
-from panda3d.core import (
-    TransparencyAttrib,
-    Texture,
-    DirectionalLight,
-    AmbientLight,
-    loadPrcFile,
-    ConfigVariableString,
-    AudioSound,
-)
-from panda3d.core import (
-    WindowProperties,
-    NodePath,
-    TextNode,
-    CullFaceAttrib,
-    Spotlight,
-    PerspectiveLens,
-    SphereLight,
-    PointLight,
-    Point3,
-    OccluderNode,
-)
-from panda3d.core import (
-    CollisionTraverser,
-    CollisionNode,
-    CollisionBox,
-    CollisionSphere,
-    CollisionRay,
-    CollisionHandlerQueue,
-    Vec3,
-    CollisionHandlerPusher,
-)
+from panda3d.fx import *
+
+if 1 == 2:
+    from src.__class__.fx import *
+    from src.__class__.core import *
+
 from direct.gui.OnscreenImage import OnscreenImage
 import direct.stdpy.threading as thread
 import direct.stdpy.file as panda_fMgr
@@ -112,6 +87,7 @@ class Main(ShowBase):
                 image.destroy()
                 self.backfaceCullingOn()
                 self.disableMouse()
+                self.camera.setLens(FisheyeLens(64))
 
                 # do setup tasks
                 # ...
