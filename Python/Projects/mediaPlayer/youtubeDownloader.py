@@ -4,6 +4,7 @@ from time import sleep
 from threading import Thread
 import requests
 import base64
+import urllib
 
 try:
     import music_tag
@@ -99,87 +100,112 @@ def downloadSong(link, format):
 
 
 def downloadPlaylist(link, format):
-    pl = Playlist(link)
-    global outputPath
-    outputPath = os.path.join(
-        rootPath, f"{pathSafe(pl.title)} - {format}{pathSeparator}"
-    )
-    imgPath = os.path.join(outputPath, f"img{pathSeparator}")
     try:
-        os.mkdir(outputPath)
-        os.mkdir(imgPath)
-    except:
-        ...
-    vId = 0
-    for yt in pl.videos:
-
-        def _th(format, outputPath, imgPath, yt, vId):
-            if format == "mp3":
-                ys = yt.streams.get_audio_only()
-                songName = pathSafe(ys.default_filename)
-                songPath = os.path.join(outputPath, f"{vId} - {songName}")
-                if not os.path.exists(songPath):
-                    songPath = ys.download(
-                        outputPath,
-                        filename=pathSafe(f"{vId} | {songName}"),
-                        mp3=False,
-                    )
-                    print(f"Finished download of {songName}")
-                    if (
-                        not get(
-                            url=yt.thumbnail_url,
-                            dest_folder=imgPath,
-                            dest_name=f"{vId} - {songName}".replace(".m4a", ".png"),
-                        )
-                        == None
-                    ):
-                        song = music_tag.load_file(songPath)
-                        with open(
-                            os.path.join(
-                                imgPath,
-                                f"{vId} - {songName}".replace(".m4a", ".png"),
-                            ),
-                            "rb",
-                        ) as imgFile:
-                            song["artwork"] = imgFile.read()
-                        song.save()
-                        print(f"Applied art to {songName}")
-                else:
-                    print(f"Found cached version of {songName}")
-            else:
-                ys = yt.streams.filter(progressive=True)[-1]
-                songName = ys.default_filename.replace("\\", "-")
-                songPath = ys.download(outputPath, filename=f"{vId} | {songName}")
-                print(f"Finished download of {songName}")
-
-            del threadQueue[vId]
-
-        t = Thread(
-            target=_th,
-            args=(
-                format,
-                outputPath,
-                imgPath,
-                yt,
-                vId,
-            ),
-        ).start()
-
-        threadQueue[vId] = t
-        sleep(0.05)
-
-        vId += 1
-    while len(threadQueue) > 0:
+        pl = Playlist(link)
+        global outputPath
+        outputPath = os.path.join(
+            rootPath, f"{pathSafe(pl.title)} - {format}{pathSeparator}"
+        )
+        imgPath = os.path.join(outputPath, f"img{pathSeparator}")
         try:
-            for t in threadQueue:
-                if not type(t) == int:
-                    t.join()
-                    del threadQueue[vId]
+            os.mkdir(outputPath)
+            os.mkdir(imgPath)
         except:
+            ...
+        vId = 0
+        for yt in pl.videos:
+
+            def _th(format, outputPath, imgPath, yt, vId, times):
+                try:
+                    if format == "mp3":
+                        ys = yt.streams.get_audio_only()
+                        songName = pathSafe(ys.default_filename)
+                        songPath = os.path.join(outputPath, f"{vId} - {songName}")
+                        if not os.path.exists(songPath):
+                            songPath = ys.download(
+                                outputPath,
+                                filename=pathSafe(f"{vId} | {songName}"),
+                                mp3=False,
+                            )
+                            print(
+                                f"{Color.GREEN}Finished download of {Color.CYAN}{songName}{Color.RESET}"
+                            )
+                            if (
+                                not get(
+                                    url=yt.thumbnail_url,
+                                    dest_folder=imgPath,
+                                    dest_name=f"{vId} - {songName}".replace(
+                                        ".m4a", ".png"
+                                    ),
+                                )
+                                == None
+                            ):
+                                song = music_tag.load_file(songPath)
+                                with open(
+                                    os.path.join(
+                                        imgPath,
+                                        f"{vId} - {songName}".replace(".m4a", ".png"),
+                                    ),
+                                    "rb",
+                                ) as imgFile:
+                                    song["artwork"] = imgFile.read()
+                                song.save()
+                                print(
+                                    f"{Color.LIGHT_GREEN}Applied art to {Color.LIGHT_CYAN}{songName}{Color.RESET}"
+                                )
+                        else:
+                            print(
+                                f"{Color.YELLOW}Found cached version of {Color.BLUE}{songName}{Color.RESET}"
+                            )
+                    else:
+                        ys = yt.streams.filter(progressive=True)[-1]
+                        songName = ys.default_filename.replace("\\", "-")
+                        songPath = ys.download(
+                            outputPath, filename=f"{vId} | {songName}"
+                        )
+                        print(f"Finished download of {songName}")
+
+                    del threadQueue[vId]
+                except:
+                    if times < 5:
+                        print(
+                            f"{Color.YELLOW}failed to download {Color.WHITE}{yt}{Color.YELLOW}, retrying{Color.RESET}"
+                        )
+                        _th(format, outputPath, imgPath, yt, vId, times=times + 1)
+                    else:
+                        print(
+                            f"{Color.RED}failed to download {Color.WHITE}{yt}{Color.RESET}"
+                        )
+
+            t = Thread(
+                target=_th,
+                args=(
+                    format,
+                    outputPath,
+                    imgPath,
+                    yt,
+                    vId,
+                    0,
+                ),
+            ).start()
+
+            threadQueue[vId] = t
+            sleep(0.05)
+
+            vId += 1
+        while len(threadQueue) > 0:
             try:
-                del threadQueue[vId]
+                for t in threadQueue:
+                    if not type(t) == int:
+                        t.join()
+                        del threadQueue[vId]
             except:
-                ...
+                try:
+                    del threadQueue[vId]
+                except:
+                    ...
+    except urllib.error.URLError:
+        print(f"{Color.RED} Failed to fetch playlist information{Color.RESET}")
 
 
 def downloadArtist(link, format):
