@@ -1,13 +1,8 @@
 import sys
 import os
 import keyboard
-import asyncio
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
-
-from winsdk.windows.media.control import (
-    GlobalSystemMediaTransportControlsSessionManager as MediaManager,
-)
 
 if sys.platform == "darwin":
     pathSeparator = "/"
@@ -16,7 +11,7 @@ elif sys.platform == "win32":
 
 os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
 
-from math import pi, sin, cos
+from math import e, pi, sin, cos
 from random import randint
 import time as t
 import src.scripts.vars as Wvars
@@ -26,6 +21,7 @@ from panda3d.core import *
 from panda3d.core import (
     loadPrcFile,
     ConfigVariableString,
+    TextNode,
 )
 from direct.stdpy.threading import Thread
 from direct.gui.DirectGui import *
@@ -86,21 +82,14 @@ class Main(ShowBase):
         self.backfaceCullingOn()
         self.disableMouse()
 
-        # do setup tasksD
+        # do setup tasks
         # ...
         self.setupWorld()
-        self.setupControls()
         # end of setup tasks
         self.taskMgr.add(self.update, "update")
 
     def update(self, task):
         return task.cont
-
-    def setupControls(self):
-        self.lastMouseX = 0
-        self.lastMouseY = 0
-        self.keyMap = {}
-        self.accept("q", sys.exit)
 
     def updateKeyMap(self, key, value):
         self.keyMap[key] = value
@@ -133,7 +122,7 @@ class Main(ShowBase):
             frameSize=(-1.1, 2, -1, 1),
             pos=(0.25, 0, 0),
         )
-        self.keyBindsList = []
+        self.keyBindsDict = {}
         self.newKeyBindButton = DirectButton(
             parent=self.guiFrame,
             scale=0.1,
@@ -147,16 +136,39 @@ class Main(ShowBase):
             ),
             pos=(correctAspectRatio(-0.75), 0, -0.9),
             command=self.newKeyBind,
-            extraArgs=[" blank ", self.doNothing],
+            extraArgs=[
+                "blank",
+                {
+                    "func": self.doNothing,
+                    "args": [],
+                    "hotkey": "",
+                    "commandType": None,
+                    "nameObj": None,
+                    "hotkeyObj": None,
+                    "commandTypeObj": None,
+                },
+            ],
         )
 
-    def deleteKeyBind(self, keyBind):
-        self.keyBindsList.remove(keyBind)
+    def deleteKeyBind(self, key):
+        if key in self.keyBindsDict:
+            del self.keyBindsDict[key]
         self.updateKeyBindList()
+        for childNode in self.editorWindow.getChildren():
+            try:
+                childNode.destroy()
+            except:
+                childNode.removeNode()
 
     def newKeyBind(self, key, func):
-        self.keyBindsList.append([key, func])
+        unique_key = key
+        counter = 1
+        while unique_key in self.keyBindsDict:
+            unique_key = f"{key} {counter}"
+            counter += 1
+        self.keyBindsDict[unique_key] = func
         self.updateKeyBindList()
+        self.openEditorPage(unique_key)
 
     def updateKeyBindList(self):
         for childNode in self.keyBindsListFrame.getChildren():
@@ -164,14 +176,15 @@ class Main(ShowBase):
                 childNode.destroy()
             except:
                 childNode.removeNode()
-        for i in range(len(self.keyBindsList)):
+        for i, (key, dict) in enumerate(self.keyBindsDict.items()):
             DirectLabel(
                 parent=self.keyBindsListFrame,
-                text=self.keyBindsList[i][0],
+                text=key,
                 text_scale=0.08,
                 text_fg=(1, 1, 1, 1),
                 frameColor=(0, 0, 0, 0),
-                pos=(-0.3, 0, 0.9 - i * 0.2),
+                pos=(0.2, 0, 0.9 - i * 0.2),
+                text_align=TextNode.ARight,
             )
             DirectButton(
                 parent=self.keyBindsListFrame,
@@ -187,7 +200,7 @@ class Main(ShowBase):
                 ),
                 pos=(0.4, 0, (0.9 - i * 0.2) - 0.05),
                 command=self.deleteKeyBind,
-                extraArgs=[self.keyBindsList[i]],
+                extraArgs=[key],
             )
             DirectButton(
                 parent=self.keyBindsListFrame,
@@ -203,16 +216,107 @@ class Main(ShowBase):
                 ),
                 pos=(0.4, 0, (0.975 - i * 0.2) - 0.05),
                 command=self.openEditorPage,
-                extraArgs=[self.keyBindsList[i]],
+                extraArgs=[key],
             )
 
-    def openEditorPage(self, page):
+    def changeKeyBindName(self, key):
+        if key in self.keyBindsDict:
+            newName = self.keyBindsDict[key]["nameObj"].get()
+            self.keyBindsDict[newName] = self.keyBindsDict.pop(key)
+            self.updateKeyBindList()
+            self.openEditorPage(newName)
+
+    def changeHotkey(self, key):
+        self.keyBindsDict[key]["hotkey"] = keyboard.read_hotkey()
+        self.keyBindsDict[key]["hotkeyObj"]["text"] = self.keyBindsDict[key]["hotkey"]
+        self.openEditorPage(key)
+
+    def openEditorPage(self, key):
         for childNode in self.editorWindow.getChildren():
             try:
                 childNode.destroy()
             except:
                 childNode.removeNode()
-        
+        self.keyBindsDict[key]["nameObj"] = DirectEntry(
+            parent=self.editorWindow,
+            scale=0.075,
+            pos=(-1, 0, 0.9),
+            initialText=key,
+            focusOutCommand=self.changeKeyBindName,
+            focusOutExtraArgs=[key],
+        )
+        self.keyBindCommandWindow = DirectFrame(
+            parent=self.editorWindow,
+            frameColor=(0.2, 0.2, 0.2, 1),
+            frameSize=(-0.5, 1.4, -0.6, 0.8),
+            pos=(0, 0, -0.2),
+        )
+        self.keyBindsDict[key]["hotkeyObj"] = DirectButton(
+            parent=self.editorWindow,
+            scale=0.15,
+            text=(
+                self.keyBindsDict[key]["hotkey"]
+                if "hotkey" in self.keyBindsDict[key]
+                else "None"
+            ),
+            pos=(-0.5, 0, 0.7),
+            command=self.changeHotkey,
+            extraArgs=[key],
+        )
+        self.keyBindsDict[key]["commandTypeObj"] = DirectOptionMenu(
+            parent=self.editorWindow,
+            scale=0.075,
+            items=["Command", "Script", "Trigger"],
+            initialitem=0,
+            pos=(-1, 0, 0.5),
+            command=self.changeKeybindCommandType,
+            extraArgs=[key],
+        )
+        self.bindButton = DirectButton(
+            parent=self.editorWindow,
+            scale=0.1,
+            text="Bind",
+            pos=(-1, 0, -0.9),
+            command=self.bind,
+            extraArgs=[key],
+        )
+        self.refreshKeybindCommandWindow(key)
+
+    def bind(self, key):
+        try:
+            keyboard.add_hotkey(
+                self.keyBindsDict[key]["hotkey"],
+                self.keyBindsDict[key]["func"],
+                args=self.keyBindsDict[key]["args"],
+            )
+        except:
+            pass
+
+    def changeKeybindCommandType(self, index, key):
+        self.keyBindsDict[key]["commandType"] = index
+        self.openEditorPage(key)
+
+    def refreshKeybindCommandWindow(self, key):
+        for childNode in self.keyBindCommandWindow.getChildren():
+            try:
+                childNode.destroy()
+            except:
+                childNode.removeNode()
+        if self.keyBindsDict[key]["commandType"] == "Command":
+            self.keyBindsDict[key]["func"] = DirectOptionMenu(
+                parent=self.keyBindCommandWindow,
+                scale=0.075,
+                items=["preset1", "preset2", "preset3"],
+                initialitem=0,
+                pos=(-0.4, 0, 0.5),
+            )
+        elif self.keyBindsDict[key]["commandType"] == "Script":
+            self.keyBindsDict[key]["func"] = DirectEntry(
+                parent=self.keyBindCommandWindow,
+                scale=0.075,
+                pos=(0, 0, 0.5),
+                numLines=1,
+            )
 
 
 app = Main()
