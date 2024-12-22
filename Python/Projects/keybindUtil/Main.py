@@ -140,6 +140,7 @@ class Main(ShowBase):
                 "blank",
                 {
                     "func": self.doNothing,
+                    "funcObj": None,
                     "args": [],
                     "hotkey": "",
                     "commandType": None,
@@ -276,21 +277,27 @@ class Main(ShowBase):
             parent=self.editorWindow,
             scale=0.1,
             text="Bind",
-            pos=(-1, 0, -0.9),
+            pos=(-0.8, 0, -0.9),
             command=self.bind,
             extraArgs=[key],
         )
         self.refreshKeybindCommandWindow(key)
 
     def bind(self, key):
-        try:
-            keyboard.add_hotkey(
-                self.keyBindsDict[key]["hotkey"],
-                self.keyBindsDict[key]["func"],
-                args=self.keyBindsDict[key]["args"],
-            )
-        except:
-            pass
+        if self.keyBindsDict[key]["commandType"] == "Script":
+            self.keyBindsDict[key]["func"] = lambda: Thread(
+                target=os.system,
+                args=["python3 " + self.keyBindsDict[key]["args"]],
+            ).start()
+        keyboard.add_hotkey(
+            self.keyBindsDict[key]["hotkey"],
+            self.keyBindsDict[key]["func"],
+        )
+
+    def setArgs(self, key):
+        self.keyBindsDict[key]["args"] = (
+            self.keyBindsDict[key]["funcObj"].get().replace("\\n", "\n")
+        )
 
     def changeKeybindCommandType(self, index, key):
         self.keyBindsDict[key]["commandType"] = index
@@ -303,7 +310,7 @@ class Main(ShowBase):
             except:
                 childNode.removeNode()
         if self.keyBindsDict[key]["commandType"] == "Command":
-            self.keyBindsDict[key]["func"] = DirectOptionMenu(
+            self.keyBindsDict[key]["funcObj"] = DirectOptionMenu(
                 parent=self.keyBindCommandWindow,
                 scale=0.075,
                 items=["preset1", "preset2", "preset3"],
@@ -311,11 +318,16 @@ class Main(ShowBase):
                 pos=(-0.4, 0, 0.5),
             )
         elif self.keyBindsDict[key]["commandType"] == "Script":
-            self.keyBindsDict[key]["func"] = DirectEntry(
+            self.keyBindsDict[key]["funcObj"] = DirectEntry(
                 parent=self.keyBindCommandWindow,
                 scale=0.075,
-                pos=(0, 0, 0.5),
-                numLines=1,
+                pos=(-0.25, 0, 0.5),
+                numLines=8,
+                width=20,
+                focusOutCommand=self.setArgs,
+                focusOutExtraArgs=[key],
+                focus=True,
+                overflow=True,
             )
 
 
