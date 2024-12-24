@@ -87,7 +87,7 @@ class Main(ShowBase):
 
         # do setup tasks
         # ...
-        physicsMgr.enable(physicsMgr)
+        physicsMgr.enable(physicsMgr, gravity=[0, 0, 0], drag=0.0001, minimum_motion_check=0.0001)
         self.setupControls()
         self.loadModels()
         self.buildWindow()
@@ -246,16 +246,16 @@ class Main(ShowBase):
         for index1 in range(-9, 10):
             for index2 in range(-9, 10):
                 self.actors.append(
-                    {
-                        "node":OnscreenGeom(
+                    [
+                        OnscreenGeom(
                             geom=self.pointerGeom,
                             scale=0.025,
                             pos=(index1 / 10, 0.01, index2 / 10),
                             parent=self.winFrame,
                             color=(1, 3 / (index2 + 10), 3 / (index1 + 10), 1),
                         ),
-                        "name":f"{index1} {index2}"
-                    }
+                        f"{index1} {index2}",
+                    ]
                 )
         for node in self.actors:
             physicsMgr.registerObject(
