@@ -44,7 +44,7 @@ root.configure(bg="white")  # Set the background color to white
 
 screen_width = win32api.GetSystemMetrics(0)
 screen_height = win32api.GetSystemMetrics(1)
-root.geometry(f"{screen_width}x{screen_height}")
+root.geometry(f"{screen_width}x{screen_height}-4-4")
 
 # Create a tiny tab in the corner
 tab = tk.Button(root, text="", bg="SystemButtonFace", width=1, height=2)
@@ -57,41 +57,68 @@ button_frame.pack_forget()  # Hide the button frame initially
 
 # Dictionary to store the registered windows
 registered_windows = {}
+button_count = 0
 
 
 # Function to register or bring the window to the foreground
 def handle_button_click(button_name, button):
     if button_name in registered_windows:
         win32gui.SetForegroundWindow(registered_windows[button_name])
+        toggle_buttons()
     else:
-        time.sleep(2)
-        hwnd = win32gui.GetForegroundWindow()
-        registered_windows[button_name] = hwnd
-        window_text = win32gui.GetWindowText(hwnd)
-        button.config(text=window_text)
+        hwnd1 = win32gui.GetForegroundWindow()
+        while True:
+            hwnd = win32gui.GetForegroundWindow()
+            if hwnd != hwnd1:
+                registered_windows[button_name] = hwnd
+                window_text = win32gui.GetWindowText(hwnd)
+                button.config(text=window_text)
+                break
+            else:
+                pass
+            time.sleep(0.1)
 
 
-window1Button = tk.Button(
-    button_frame,
-    text="Window 1",
-    bg="SystemButtonFace",
-    command=lambda: handle_button_click("Window 1", window1Button),
+# Function to delete a button
+def _delete_button(button_name, button_frame):
+    button_frame.destroy()
+    if button_name in registered_windows:
+        del registered_windows[button_name]
+
+
+# Function to add a new button
+def add_button():
+    global button_count
+    button_count += 1
+    button_name = f"Window {button_count}"
+
+    new_button_frame = tk.Frame(button_frame, bg="white")
+    new_button_frame.pack(side=tk.LEFT, fill=tk.X)
+
+    new_button = tk.Button(
+        new_button_frame,
+        text=button_name,
+        bg="SystemButtonFace",
+        command=lambda: threading.Thread(
+            target=handle_button_click, args=(button_name, new_button)
+        ).start(),
+    )
+    new_button.pack(side=tk.LEFT)
+
+    delete_button = tk.Button(
+        new_button_frame,
+        text="X",
+        bg="#FF9999",  # Slightly redder color
+        command=lambda: _delete_button(button_name, new_button_frame),
+    )
+    delete_button.pack(side=tk.LEFT)
+
+
+# Initial button to add new buttons
+add_button_button = tk.Button(
+    button_frame, text="Add Window", bg="SystemButtonFace", command=add_button
 )
-window1Button.pack(side=tk.LEFT)
-window2Button = tk.Button(
-    button_frame,
-    text="Window 2",
-    bg="SystemButtonFace",
-    command=lambda: handle_button_click("Window 2", window2Button),
-)
-window2Button.pack(side=tk.LEFT)
-window3Button = tk.Button(
-    button_frame,
-    text="Window 3",
-    bg="SystemButtonFace",
-    command=lambda: handle_button_click("Window 3", window3Button),
-)
-window3Button.pack(side=tk.LEFT)
+add_button_button.pack(side=tk.RIGHT, fill=tk.X)
 
 
 # Function to show/hide the button frame
