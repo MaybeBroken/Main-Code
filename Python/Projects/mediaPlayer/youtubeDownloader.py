@@ -88,6 +88,9 @@ def get(url: str, dest_folder: str, dest_name: str):
         get(url, dest_folder, dest_name)
 
 
+failedSongs = []
+
+
 def downloadSong(link, format):
     yt = YouTube(link)
     if format == "mp3":
@@ -176,6 +179,7 @@ def downloadPlaylist(link, format) -> None:
                         print(
                             f"{Color.RED}failed to download {Color.WHITE}{yt}{Color.RESET}"
                         )
+                        failedSongs.append(yt)
 
             t = Thread(
                 target=_th,
@@ -204,6 +208,15 @@ def downloadPlaylist(link, format) -> None:
                     del threadQueue[vId]
                 except:
                     ...
+        if len(failedSongs) > 0:
+            print(
+                f"{Color.RED}Failed to download {Color.YELLOW}{len(failedSongs)}{Color.RED} songs{Color.RESET}"
+            )
+            retry = input(
+                f"{Color.YELLOW}Retry to fetch failed songs? (Y/N){Color.RESET}  "
+            ).lower()
+            if retry == "y":
+                downloadPlaylist(link, format)
     except urllib.error.URLError:
         print(f"{Color.RED} Failed to fetch playlist information{Color.RESET}")
 
