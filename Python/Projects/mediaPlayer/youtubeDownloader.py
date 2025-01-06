@@ -99,7 +99,7 @@ def downloadSong(link, format):
         print("finished")
 
 
-def downloadPlaylist(link, format):
+def downloadPlaylist(link, format) -> None:
     try:
         pl = Playlist(link)
         global outputPath
