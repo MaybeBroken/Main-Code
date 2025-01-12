@@ -1,27 +1,24 @@
+import io
 import os
 import sys
 from time import sleep
 from threading import Thread
 import requests
-import base64
 import urllib
+import music_tag
+from pytubefix import YouTube, Playlist, exceptions
+import requests
+from panda3d.core import *
+from panda3d.core import (
+    TextNode,
+    NodePath,
+    loadPrcFileData,
+)
+from direct.showbase.ShowBase import ShowBase
+from direct.gui.DirectGui import *
+from json import loads, dumps
+from tkinter.filedialog import askdirectory
 
-try:
-    import music_tag
-except:
-    os.system("python3 -m pip install music-tag")
-    import music_tag
-try:
-    from pytubefix import YouTube, Playlist, exceptions
-except:
-    os.system("python3 -m pip install pytubefix")
-    from pytubefix import YouTube, Playlist, exceptions
-
-try:
-    import requests
-except:
-    os.system("python3 -m pip install requests")
-    import requests
 
 if sys.platform == "darwin":
     pathSeparator = "/"
@@ -62,7 +59,7 @@ def pathSafe(name: str):
     return name
 
 
-def get(url: str, dest_folder: str, dest_name: str):
+def get_cover_image(url: str, dest_folder: str, dest_name: str):
     try:
         if not os.path.exists(dest_folder):
             os.makedirs(dest_folder)
@@ -85,192 +82,171 @@ def get(url: str, dest_folder: str, dest_name: str):
     except FileExistsError:
         return None
     except:
-        get(url, dest_folder, dest_name)
+        get_cover_image(url, dest_folder, dest_name)
 
 
-def downloadSong(link, format):
-    yt = YouTube(link)
-    if format == "mp3":
-        ys = yt.streams.get_audio_only()
-        ys.download(outputPath, mp3=True)
-    else:
-        ys = yt.streams.get_highest_resolution()
-        ys.download(outputPath)
-        print("finished")
-
-
-def downloadPlaylist(link, format) -> None:
-    try:
-        pl = Playlist(link)
-        global outputPath
-        outputPath = os.path.join(
-            rootPath, f"{pathSafe(pl.title)} - {format}{pathSeparator}"
-        )
-        imgPath = os.path.join(outputPath, f"img{pathSeparator}")
+def load():
+    default_config = {
+        "config_prc": "window-title YouTube Downloader\nwin-size 720 720\nundecorated true\n",
+        "output_folder": "\\No Folder Selected",
+    }
+    settingUp = True
+    while settingUp:
         try:
-            os.mkdir(outputPath)
-            os.mkdir(imgPath)
-        except:
-            ...
-        vId = 0
-        for yt in pl.videos:
-
-            def _th(format, outputPath, imgPath, yt, vId, times):
-                try:
-                    if format == "mp3":
-                        ys = yt.streams.get_audio_only()
-                        songName = pathSafe(ys.default_filename)
-                        songPath = os.path.join(outputPath, f"{vId} - {songName}")
-                        if not os.path.exists(songPath):
-                            songPath = ys.download(
-                                outputPath,
-                                filename=pathSafe(f"{vId} | {songName}"),
-                                mp3=False,
-                            )
-                            print(
-                                f"{Color.GREEN}Finished download of {Color.CYAN}{songName}{Color.RESET}"
-                            )
-                            if (
-                                not get(
-                                    url=yt.thumbnail_url,
-                                    dest_folder=imgPath,
-                                    dest_name=f"{vId} - {songName}".replace(
-                                        ".m4a", ".png"
-                                    ),
-                                )
-                                == None
-                            ):
-                                song = music_tag.load_file(songPath)
-                                with open(
-                                    os.path.join(
-                                        imgPath,
-                                        f"{vId} - {songName}".replace(".m4a", ".png"),
-                                    ),
-                                    "rb",
-                                ) as imgFile:
-                                    song["artwork"] = imgFile.read()
-                                song.save()
-                                print(
-                                    f"{Color.LIGHT_GREEN}Applied art to {Color.LIGHT_CYAN}{songName}{Color.RESET}"
-                                )
-                        else:
-                            print(
-                                f"{Color.YELLOW}Found cached version of {Color.BLUE}{songName}{Color.RESET}"
-                            )
-                    else:
-                        ys = yt.streams.filter(progressive=True)[-1]
-                        songName = ys.default_filename.replace("\\", "-")
-                        songPath = ys.download(
-                            outputPath, filename=f"{vId} | {songName}"
-                        )
-                        print(f"Finished download of {songName}")
-
-                    del threadQueue[vId]
-                except:
-                    if times < 5:
-                        print(
-                            f"{Color.YELLOW}failed to download {Color.WHITE}{yt}{Color.YELLOW}, retrying{Color.RESET}"
-                        )
-                        _th(format, outputPath, imgPath, yt, vId, times=times + 1)
-                    else:
-                        print(
-                            f"{Color.RED}failed to download {Color.WHITE}{yt}{Color.RESET}"
-                        )
-
-            t = Thread(
-                target=_th,
-                args=(
-                    format,
-                    outputPath,
-                    imgPath,
-                    yt,
-                    vId,
-                    0,
-                ),
-            ).start()
-
-            threadQueue[vId] = t
-            sleep(0.05)
-
-            vId += 1
-        while len(threadQueue) > 0:
+            open("config.json", "r")
+        except FileNotFoundError:
+            with open("config.json", "w") as f:
+                f.write(dumps(default_config, indent=4))
+                pass
+        with open("config.json", "r") as f:
             try:
-                for t in threadQueue:
-                    if not type(t) == int:
-                        t.join()
-                        del threadQueue[vId]
-            except:
-                try:
-                    del threadQueue[vId]
-                except:
-                    ...
-    except urllib.error.URLError:
-        print(f"{Color.RED} Failed to fetch playlist information{Color.RESET}")
+                config = loads(f.read())
+            except ValueError:
+                with open("config.json", "w") as f:
+                    f.write(dumps(default_config, indent=4))
+                pass
+            except io.UnsupportedOperation:
+                print(
+                    "config.json is corrupted, please delete it and restart the program"
+                )
+                settingUp = False
+                pass
+
+            loadPrcFileData(
+                "",
+                config["config_prc"],
+            )
+            settingUp = False
+            return config
 
 
-def downloadArtist(link, format):
-    link
+def save(config):
+    with open("config.json", "w") as f:
+        f.write(dumps(config, indent=4))
 
 
-def _Wrapper(link, list, format):
-    if list:
-        downloadPlaylist(link, format)
-    if not list:
-        downloadSong(link, format)
-    print("\n\n\n*********\nFinished\n*********\n")
+class YouTubeDownloader(ShowBase):
+    def __init__(self):
+        self.jsonConfig = load()
+        ShowBase.__init__(self)
+        self.setBackgroundColor(0, 0, 0)
+        self.disableMouse()
+        self.accept("escape", sys.exit)
+        self.accept("q", sys.exit)
+        self.setupVars()
+        self.startUi()
+
+    def setupVars(self):
+        self.outputFolder = self.jsonConfig["output_folder"]
+
+    def startUi(self):
+        self.guiFrame = DirectFrame(
+            frameSize=(-1, 1, -1, 1), frameColor=(0.2, 0.2, 0.2, 1)
+        )
+        self.titleText = DirectLabel(
+            text="goofy ahh youtube downloader dont ask for help",
+            scale=0.1,
+            text_scale=0.6,
+            frameColor=(0.2, 0.2, 0.2, 1),
+            pos=(0, 0, 0.9),
+            relief=DGG.FLAT,
+            text_align=TextNode.ACenter,
+        )
+        self.setOutputFolderButton = DirectButton(
+            text="Change Output Folder",
+            scale=0.1,
+            text_scale=0.6,
+            frameColor=(0.8, 0.8, 0.8, 1),
+            pos=(-0.65, 0, 0.8),
+            relief=DGG.RIDGE,
+            command=self.setOutputFolder,
+        )
+        self.outputFolderLabel = DirectLabel(
+            text="Output Folder: " + self.outputFolder.split(pathSeparator)[-1],
+            scale=0.1,
+            text_scale=0.6,
+            frameColor=(0.6, 0.6, 0.6, 1),
+            pos=(-0.3, 0, 0.8),
+            relief=DGG.FLAT,
+            text_align=TextNode.ALeft,
+        )
+        self.exitButton = DirectButton(
+            text="X",
+            scale=0.2,
+            text_scale=0.6,
+            frameColor=(0.2, 0.2, 0.2, 1),
+            pos=(0.9, 0, 0.85),
+            relief=DGG.FLAT,
+            command=self.userExit,
+        )
+        self.linkInput = DirectEntry(
+            scale=0.1,
+            text_scale=0.6,
+            frameColor=(0.4, 0.4, 0.4, 1),
+            pos=(0, 0, 0.7),
+            relief=DGG.FLAT,
+            text_align=TextNode.ALeft,
+            command=self.doLinkInput,
+        )
+        self.copyLinkFromClipboardButton = DirectButton(
+            text="Copy Link From Clipboard",
+            scale=0.1,
+            text_scale=0.6,
+            frameColor=(0.8, 0.8, 0.8, 1),
+            pos=(0, 0, 0.6),
+            relief=DGG.RIDGE,
+            command=self.copyLinkFromClipboard,
+        )
+        self.exitFunc = self.close
+
+    doneLinkInput = False
+
+    def close(self):
+        save(self.jsonConfig)
+        print("Exiting...")
+
+    def doLinkInput(self, text):
+        if text != "":
+            if self.doneLinkInput:
+                ...
+            else:
+                self.linkTypeButton = DirectOptionMenu(
+                    scale=0.1,
+                    text_scale=0.6,
+                    frameColor=(0.8, 0.8, 0.8, 1),
+                    pos=(0, 0, 0.5),
+                    relief=DGG.RIDGE,
+                    items=["", "Video", "Song", "Playlist", "Artist"],
+                )
+                self.downloadButton = DirectButton(
+                    text="Download",
+                    scale=0.1,
+                    text_scale=0.6,
+                    frameColor=(0.8, 0.8, 0.8, 1),
+                    pos=(0, 0, 0.4),
+                    relief=DGG.RIDGE,
+                    # command=,
+                )
+        else:
+            print("No link entered")
+
+    def copyLinkFromClipboard(self): ...
+
+    def setOutputFolder(self):
+        self.outputFolder = os.path.abspath(
+            str(askdirectory(title="Select Output Folder"))
+        )
+        self.jsonConfig["output_folder"] = self.outputFolder
+        self.outputFolderLabel.removeNode()
+        self.outputFolderLabel = DirectLabel(
+            text="Output Folder: " + self.outputFolder.split(pathSeparator)[-1],
+            scale=0.1,
+            text_scale=0.6,
+            frameColor=(0.6, 0.6, 0.6, 1),
+            pos=(-0.3, 0, 0.8),
+            relief=DGG.FLAT,
+            text_align=TextNode.ALeft,
+        )
 
 
-while True:
-    firstchoice = input(
-        f"Another project by {Color.GREEN}MaybeBroken{Color.RESET}\nWelcome to the Youtube Downloader Utility!\nDownload or Convert? (D\\C)   "
-    )
-    if firstchoice == "d" or firstchoice == "D":
-        format = input("\nWhich format? mp(3/4):  ").lower()
-        if format == "3":
-            format = "mp3"
-        if format == "4":
-            format = "mp4"
-        secondChoice = input("\nIs this a song, playlist, or artist? (S/P/A)  ")
-        if secondChoice == "p" or secondChoice == "P":
-            url = input(f"\nyt Playlist Url:\n-->  ")
-            if url == "" or url == None or len(url) < 20:
-                url = "https://music.youtube.com/playlist?list=PLt-QnSFN9Gjp2sD8DmeY1B0awsd7tmpP7&si=P8J-srN4y03OWyed"
-            print("\n")
-            _Wrapper(url, True, format)
-        if secondChoice == "s" or secondChoice == "S":
-            url = input(f"\nyt song Url:\n-->  ")
-            if url == "" or url == None or len(url) < 20:
-                url = "https://www.youtube.com/watch?v=IICGZ7YOafs"
-            print("\n")
-            _Wrapper(url, False, format)
-    if firstchoice == "c" or firstchoice == "C":
-        mpQuery = input("\nConvert all to mp3?: (Y/N)  ")
-        if mpQuery == "y" or mpQuery == "Y":
-            for i in os.listdir(outputPath):
-                if i != ".DS_Store":
-                    # try:
-                    try:
-                        os.mkdir(os.path.join(outputPath, i, "converted"))
-                    except:
-                        None
-                    path = os.listdir(os.path.join(outputPath, i))
-                    path.sort()
-                    for name in path:
-                        if name.endswith(".mp3"):
-                            dirInput = os.path.abspath(
-                                os.path.join(outputPath, i, name)
-                            )
-                            dirOutput = os.path.abspath(
-                                os.path.join(
-                                    outputPath,
-                                    i,
-                                    "converted",
-                                    name.replace(".m4a.mp3", ".wav"),
-                                )
-                            )
-                            os.system(
-                                f'.{pathSeparator}/ffmpeg -y -v panic -i "{dirInput}" "{dirOutput}"'
-                            )
-                            print(f"Converted {name}")
-                # except:
-                # print("file conversion error")
+YouTubeDownloader().run()
