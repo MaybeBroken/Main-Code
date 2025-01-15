@@ -1,0 +1,4 @@
+panda3d
+requests
+pytubefix
+clipboard
