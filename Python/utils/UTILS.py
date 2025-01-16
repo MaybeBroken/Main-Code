@@ -20,7 +20,7 @@ def curl(url, filepath):
     os.system(f"curl -o {filepath} {url}")
 
 
-def generate_random_string(length):
+def generate_random_string(length, ascii_range: list[2]):
     """
     Generates a random string of a specified length using printable ASCII characters.
 
@@ -33,8 +33,8 @@ def generate_random_string(length):
     if length < 1:
         raise ValueError("Length must be at least 1.")
 
-    ascii_chars = string.ascii_letters + string.digits + string.punctuation + " "
-    return "".join(random.choice(ascii_chars) for _ in range(length))
+    ascii_chars = [chr(i) for i in range(ascii_range[0], ascii_range[1])]
+    return r"".join(random.choice(ascii_chars) for _ in range(length))
 
 
 def divideWithRemainder(num, divisor) -> list[2]:
@@ -48,6 +48,10 @@ def divideWithRemainder(num, divisor) -> list[2]:
         result if len(str(result)) > 1 else f"0{result}",
         remainder if len(str(remainder)) > 1 else f"0{remainder}",
     ]
+
+
+def modulo(num, mod):
+    return num % mod
 
 
 class CLI:
