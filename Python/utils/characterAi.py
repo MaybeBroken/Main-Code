@@ -1,21 +1,24 @@
+from os import system
+from characterai import aiocai
+import asyncio
+
+
 def cli():
-    from characterai import aiocai
-    import asyncio
 
     async def main():
         char = input("CHAR ID: ")
         if len(char) < 1:
             char = "oRrOSTDibssHQwoKEfNtwBwgBEFDr1aKfVPXjY1d8nA"
             print("No character inputted, defaulting to new chat with Isekai Narrator")
-
         client = aiocai.Client("6af6433e59044578025d9786262aafab39f95d78")
 
         me = await client.get_me()
 
         async with await client.connect() as chat:
-            new, answer = await chat.new_chat(char, me.id)
+            new, answer = await chat.get_chat(char=char, token=me.id)
 
-            print(f"{answer.name}: {answer.text}")
+            for message in answer:
+                print(f"{message.name}: {message.text}")
 
             while True:
                 text = input("YOU: ")
