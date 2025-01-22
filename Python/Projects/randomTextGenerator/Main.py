@@ -6,7 +6,7 @@ from direct.gui.DirectGui import *
 import random
 from time import sleep
 from direct.stdpy.threading import Thread
-
+from clipboard import copy
 loadPrcFileData("", "window-title Random Text Generator\nnotify-level-text fatal\n")
 
 
@@ -99,6 +99,7 @@ class generator(ShowBase):
             self.textFrame.setText(generate_random_string(self.length, self.range))
             with open("randomText.txt", "w") as f:
                 f.write(self.textFrame.getText())
+            copy(self.textFrame.getText())
 
 
 app = generator()
