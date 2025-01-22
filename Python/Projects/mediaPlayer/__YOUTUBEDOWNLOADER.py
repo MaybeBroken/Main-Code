@@ -1,34 +1,12 @@
+from pytubefix import YouTube, Playlist, exceptions, Channel, Search
 import os
-import sys
-from time import sleep
-from threading import Thread
 import requests
-import base64
-import urllib
+from threading import Thread as _Thread
+import time
 
-try:
-    import music_tag
-except:
-    os.system("python3 -m pip install music-tag")
-    import music_tag
-try:
-    from pytubefix import YouTube, Playlist, exceptions
-except:
-    os.system("python3 -m pip install pytubefix")
-    from pytubefix import YouTube, Playlist, exceptions
-
-try:
-    import requests
-except:
-    os.system("python3 -m pip install requests")
-    import requests
-
-if sys.platform == "darwin":
-    pathSeparator = "/"
-elif sys.platform == "win32":
-    pathSeparator = "\\"
-
-os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
+os.chdir(os.path.dirname(__file__))
+os.chdir("youtubeDownloader")
+print(os.getcwd())
 
 
 class Color:
@@ -49,12 +27,21 @@ class Color:
     RESET = "\033[0m"
 
 
-rootPath = os.path.join(".", "youtubeDownloader")
-threadQueue = {}
+pathSeparator = "\\"
 
 
 def pathSafe(name: str):
-    for index in [["/", "-"], ["|", "-"], ["\\", "-"], ["*", ""], ['"', ""]]:
+    for index in [
+        ["/", "-"],
+        ["|", "-"],
+        ["\\", "-"],
+        ["*", ""],
+        ['"', ""],
+        [":", " -"],
+        ["?", ""],
+        ["<", ""],
+        [">", ""],
+    ]:
         try:
             name = name.replace(index[0], index[1])
         except:
@@ -62,7 +49,7 @@ def pathSafe(name: str):
     return name
 
 
-def get(url: str, dest_folder: str, dest_name: str):
+def get_cover_image(url: str, dest_folder: str, dest_name: str):
     try:
         if not os.path.exists(dest_folder):
             os.makedirs(dest_folder)
@@ -85,192 +72,178 @@ def get(url: str, dest_folder: str, dest_name: str):
     except FileExistsError:
         return None
     except:
-        get(url, dest_folder, dest_name)
+        get_cover_image(url, dest_folder, dest_name)
 
 
-def downloadSong(link, format):
-    yt = YouTube(link)
-    if format == "mp3":
-        ys = yt.streams.get_audio_only()
-        ys.download(outputPath, mp3=True)
-    else:
-        ys = yt.streams.get_highest_resolution()
-        ys.download(outputPath)
-        print("finished")
-
-
-def downloadPlaylist(link, format):
-    try:
-        pl = Playlist(link)
-        global outputPath
-        outputPath = os.path.join(
-            rootPath, f"{pathSafe(pl.title)} - {format}{pathSeparator}"
-        )
-        imgPath = os.path.join(outputPath, f"img{pathSeparator}")
-        try:
-            os.mkdir(outputPath)
-            os.mkdir(imgPath)
-        except:
-            ...
-        vId = 0
-        for yt in pl.videos:
-
-            def _th(format, outputPath, imgPath, yt, vId, times):
-                try:
-                    if format == "mp3":
-                        ys = yt.streams.get_audio_only()
-                        songName = pathSafe(ys.default_filename)
-                        songPath = os.path.join(outputPath, f"{vId} - {songName}")
-                        if not os.path.exists(songPath):
-                            songPath = ys.download(
-                                outputPath,
-                                filename=pathSafe(f"{vId} | {songName}"),
-                                mp3=False,
-                            )
-                            print(
-                                f"{Color.GREEN}Finished download of {Color.CYAN}{songName}{Color.RESET}"
-                            )
-                            if (
-                                not get(
-                                    url=yt.thumbnail_url,
-                                    dest_folder=imgPath,
-                                    dest_name=f"{vId} - {songName}".replace(
-                                        ".m4a", ".png"
-                                    ),
-                                )
-                                == None
-                            ):
-                                song = music_tag.load_file(songPath)
-                                with open(
-                                    os.path.join(
-                                        imgPath,
-                                        f"{vId} - {songName}".replace(".m4a", ".png"),
-                                    ),
-                                    "rb",
-                                ) as imgFile:
-                                    song["artwork"] = imgFile.read()
-                                song.save()
-                                print(
-                                    f"{Color.LIGHT_GREEN}Applied art to {Color.LIGHT_CYAN}{songName}{Color.RESET}"
-                                )
-                        else:
-                            print(
-                                f"{Color.YELLOW}Found cached version of {Color.BLUE}{songName}{Color.RESET}"
-                            )
-                    else:
-                        ys = yt.streams.filter(progressive=True)[-1]
-                        songName = ys.default_filename.replace("\\", "-")
-                        songPath = ys.download(
-                            outputPath, filename=f"{vId} | {songName}"
-                        )
-                        print(f"Finished download of {songName}")
-
-                    del threadQueue[vId]
-                except:
-                    if times < 5:
-                        print(
-                            f"{Color.YELLOW}failed to download {Color.WHITE}{yt}{Color.YELLOW}, retrying{Color.RESET}"
-                        )
-                        _th(format, outputPath, imgPath, yt, vId, times=times + 1)
-                    else:
-                        print(
-                            f"{Color.RED}failed to download {Color.WHITE}{yt}{Color.RESET}"
-                        )
-
-            t = Thread(
-                target=_th,
-                args=(
-                    format,
-                    outputPath,
-                    imgPath,
-                    yt,
-                    vId,
-                    0,
-                ),
-            ).start()
-
-            threadQueue[vId] = t
-            sleep(0.05)
-
-            vId += 1
-        while len(threadQueue) > 0:
+class CORE:
+    def downloadVideo(self, link):
+        def _th():
             try:
-                for t in threadQueue:
-                    if not type(t) == int:
-                        t.join()
-                        del threadQueue[vId]
-            except:
-                try:
-                    del threadQueue[vId]
-                except:
-                    ...
-    except urllib.error.URLError:
-        print(f"{Color.RED} Failed to fetch playlist information{Color.RESET}")
+                yt = YouTube(link)
+                ys = yt.streams.get_highest_resolution()
+                title = yt.title
+                print(f"Downloading {Color.CYAN}{title}{Color.RESET}")
+                ys.download(
+                    self.outputFolder + pathSeparator + "Videos" + pathSeparator,
+                    filename=pathSafe(title) + ".mp4",
+                )
+                print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
+            except exceptions.VideoUnavailable:
+                print(Color.RED + "Video is unavailable" + Color.RESET)
+            except exceptions.VideoPrivate:
+                print(Color.RED + "Video is private" + Color.RESET)
+            except exceptions.VideoRegionBlocked:
+                print(Color.RED + "Video is blocked in your region" + Color.RESET)
+            except Exception as e:
+                print(e)
 
+        thread = _Thread(target=_th)
+        thread.start()
 
-def downloadArtist(link, format):
-    link
+    def downloadSong(self, link):
+        def _th():
+            try:
+                yt = YouTube(link)
+                ys = yt.streams.get_audio_only()
+                title = yt.title
+                ys.download(
+                    output_path=self.outputFolder
+                    + pathSeparator
+                    + "Songs"
+                    + pathSeparator,
+                    filename=pathSafe(title) + ".m4a",
+                )
+            except exceptions.VideoUnavailable:
+                print(Color.RED + "Video is unavailable" + Color.RESET)
+            except exceptions.VideoPrivate:
+                print(Color.RED + "Video is private" + Color.RESET)
+            except exceptions.VideoRegionBlocked:
+                print(Color.RED + "Video is blocked in your region" + Color.RESET)
+            except Exception as e:
+                print(e)
+            print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
 
+        thread = _Thread(target=_th)
+        thread.start()
 
-def _Wrapper(link, list, format):
-    if list:
-        downloadPlaylist(link, format)
-    if not list:
-        downloadSong(link, format)
-    print("\n\n\n*********\nFinished\n*********\n")
+    def downloadPlaylist_V(self, link):
+        def _th():
+            pl = Playlist(url=link)
+            os.mkdir(path=pathSafe(pl.title))
+            for video in pl.videos:
+                time.sleep(0.15)
 
-
-while True:
-    firstchoice = input(
-        f"Another project by {Color.GREEN}MaybeBroken{Color.RESET}\nWelcome to the Youtube Downloader Utility!\nDownload or Convert? (D\\C)   "
-    )
-    if firstchoice == "d" or firstchoice == "D":
-        format = input("\nWhich format? mp(3/4):  ").lower()
-        if format == "3":
-            format = "mp3"
-        if format == "4":
-            format = "mp4"
-        secondChoice = input("\nIs this a song, playlist, or artist? (S/P/A)  ")
-        if secondChoice == "p" or secondChoice == "P":
-            url = input(f"\nyt Playlist Url:\n-->  ")
-            if url == "" or url == None or len(url) < 20:
-                url = "https://music.youtube.com/playlist?list=PLt-QnSFN9Gjp2sD8DmeY1B0awsd7tmpP7&si=P8J-srN4y03OWyed"
-            print("\n")
-            _Wrapper(url, True, format)
-        if secondChoice == "s" or secondChoice == "S":
-            url = input(f"\nyt song Url:\n-->  ")
-            if url == "" or url == None or len(url) < 20:
-                url = "https://www.youtube.com/watch?v=IICGZ7YOafs"
-            print("\n")
-            _Wrapper(url, False, format)
-    if firstchoice == "c" or firstchoice == "C":
-        mpQuery = input("\nConvert all to mp3?: (Y/N)  ")
-        if mpQuery == "y" or mpQuery == "Y":
-            for i in os.listdir(outputPath):
-                if i != ".DS_Store":
-                    # try:
+                def _inThread():
                     try:
-                        os.mkdir(os.path.join(outputPath, i, "converted"))
-                    except:
-                        None
-                    path = os.listdir(os.path.join(outputPath, i))
-                    path.sort()
-                    for name in path:
-                        if name.endswith(".mp3"):
-                            dirInput = os.path.abspath(
-                                os.path.join(outputPath, i, name)
-                            )
-                            dirOutput = os.path.abspath(
-                                os.path.join(
-                                    outputPath,
-                                    i,
-                                    "converted",
-                                    name.replace(".m4a.mp3", ".wav"),
-                                )
-                            )
-                            os.system(
-                                f'.{pathSeparator}/ffmpeg -y -v panic -i "{dirInput}" "{dirOutput}"'
-                            )
-                            print(f"Converted {name}")
-                # except:
-                # print("file conversion error")
+                        title = video.title
+                        video.streams.get_highest_resolution().download(
+                            output_path=pathSafe(name=pl.title),
+                            filename=pathSafe(title) + ".mp4",
+                        )
+                        print(f"| - Downloaded {Color.CYAN}{title}{Color.RESET}")
+                    except exceptions.VideoUnavailable:
+                        print(Color.RED + "Video is unavailable" + Color.RESET)
+                    except exceptions.VideoPrivate:
+                        print(Color.RED + "Video is private" + Color.RESET)
+                    except exceptions.VideoRegionBlocked:
+                        print(
+                            Color.RED + "Video is blocked in your region" + Color.RESET
+                        )
+                    except Exception as e:
+                        print(e)
+
+                _Thread(target=_inThread).start()
+
+            print(f"Downloaded {Color.GREEN}{pl.title}{Color.RESET}")
+
+        thread = _Thread(target=_th)
+        thread.start()
+
+    def downloadPlaylist_S(self, link):
+        pl = Playlist(
+            url=link,
+        )
+        print(f"starting download of playlist {pl.title}:")
+        try:
+            os.mkdir(path=pathSafe(pl.title))
+        except FileExistsError:
+            print(
+                f"{Color.YELLOW}Folder {pl.title} already exists{Color.RESET}, downloading into {os.path.abspath(os.curdir)}"
+            )
+        index = 0
+        for _video in pl.videos:
+            index += 1
+            time.sleep(0.05)
+            _title = _video.title
+            print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
+
+            def _inThread(title, video):
+                try:
+                    video.streams.get_audio_only().download(
+                        output_path=pathSafe(pl.title),
+                        filename=f"{index} - {pathSafe(name=title)}" + ".m4a",
+                    )
+                    print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
+                except exceptions.VideoUnavailable:
+                    print(Color.RED + "Video is unavailable" + Color.RESET)
+                except exceptions.VideoPrivate:
+                    print(Color.RED + "Video is private" + Color.RESET)
+                except exceptions.VideoRegionBlocked:
+                    print(Color.RED + "Video is blocked in your region" + Color.RESET)
+                except Exception as e:
+                    print(e)
+
+            _Thread(target=_inThread, args=(_title, _video), daemon=True).start()
+
+    def downloadArtist_V(self, link):
+        def _th():
+            ch = Channel(url=link)
+            os.mkdir(path=pathSafe(ch.title))
+            for video in ch.videos:
+                try:
+                    video.streams.get_highest_resolution().download(
+                        output_path=pathSafe(name=ch.title)
+                    )
+                except exceptions.VideoUnavailable:
+                    print(Color.RED + "Video is unavailable" + Color.RESET)
+                except exceptions.VideoPrivate:
+                    print(Color.RED + "Video is private" + Color.RESET)
+                except exceptions.VideoRegionBlocked:
+                    print(Color.RED + "Video is blocked in your region" + Color.RESET)
+                except Exception as e:
+                    print(e)
+
+        thread = _Thread(target=_th)
+        thread.start()
+
+
+try:
+    os.system("cls")
+    print(
+        f"{Color.YELLOW}YouTube Downloader{Color.RESET}\n\n{Color.BLUE}1.{Color.RESET} Download Video\n{Color.BLUE}2.{Color.RESET} Download Song\n{Color.BLUE}3.{Color.RESET} Download Playlist (Videos)\n{Color.BLUE}4.{Color.RESET} Download Playlist (Songs)\n{Color.BLUE}5.{Color.RESET} Download Artist (Videos)\n{Color.BLUE}6.{Color.RESET} Download Artist (Songs)\n\n{Color.RED}0.{Color.RESET} Exit"
+    )
+    option = input(f"\n{Color.GREEN}> {Color.RESET}")
+    if option == "1":
+        link = input(f"{Color.GREEN}url> {Color.RESET}")
+        CORE().downloadVideo(link)
+    elif option == "2":
+        link = input(f"{Color.GREEN}url> {Color.RESET}")
+        CORE().downloadSong(link)
+    elif option == "3":
+        link = input(f"{Color.GREEN}url> {Color.RESET}")
+        CORE().downloadPlaylist_V(link)
+    elif option == "4":
+        link = input(f"{Color.GREEN}url> {Color.RESET}")
+        CORE().downloadPlaylist_S(link)
+    elif option == "5":
+        link = input(f"{Color.GREEN}url> {Color.RESET}")
+        CORE().downloadArtist_V(link)
+    elif option == "6":
+        link = input(f"{Color.GREEN}url> {Color.RESET}")
+        CORE().downloadArtist_S(link)
+    elif option == "0":
+        exit()
+except KeyboardInterrupt:
+    exit()
+except Exception as e:
+    print(Color.RED + f"Something Went Wrong:\n" + Color.RESET + str(e))

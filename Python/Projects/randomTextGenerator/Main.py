@@ -6,7 +6,10 @@ from direct.gui.DirectGui import *
 import random
 from time import sleep
 from direct.stdpy.threading import Thread
+
 loadPrcFileData("", "window-title Random Text Generator\nnotify-level-text fatal\n")
+
+
 def generate_random_string(length, ascii_range: list[2]):
     """
     Generates a random string of a specified length using printable ASCII characters.
@@ -22,6 +25,8 @@ def generate_random_string(length, ascii_range: list[2]):
         return r"".join(random.choice(ascii_chars) for _ in range(int(length)))
     except Exception as e:
         return f"Error: {e}"
+
+
 class generator(ShowBase):
     def __init__(self):
         super().__init__()
@@ -78,15 +83,23 @@ class generator(ShowBase):
         self.length = 5
         self.update_thread = Thread(target=self.update)
         self.update_thread.start()
+
     def setSpeed(self):
         self.speed = self.speedSlider["value"]
+
     def setRange(self):
         self.range = [self.rangeSlider1["value"], self.rangeSlider2["value"]]
+
     def setLength(self):
         self.length = self.lengthSlider["value"]
+
     def update(self):
         while True:
             sleep(1 / (self.speed + 0.01))
             self.textFrame.setText(generate_random_string(self.length, self.range))
+            with open("randomText.txt", "w") as f:
+                f.write(self.textFrame.getText())
+
+
 app = generator()
 app.run()
