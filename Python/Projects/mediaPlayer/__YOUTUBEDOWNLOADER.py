@@ -2,11 +2,35 @@ from pytubefix import YouTube, Playlist, exceptions, Channel, Search
 import os
 import requests
 from threading import Thread as _Thread
+import threading as th
 import time
+import subprocess
 
 os.chdir(os.path.dirname(__file__))
+
+result = subprocess.run(
+    ["node", "one-shot.js"],
+    cwd="./po-token-generator/examples/",
+    capture_output=True,
+    text=True,
+)
+exampleOutput = """{
+  visitorData: '',
+  poToken: ''
+}"""
+
+data = result.stdout.splitlines()
+for s in data:
+    if "visitorData" in s:
+        visitorData = s.split(": ")[1].split(",")[0].strip("'")
+    if "poToken" in s:
+        poToken = s.split(": ")[1].split(",")[0].strip("'")
+
+with open("spoofedToken.json", "w") as f:
+    f.write(
+        '{\n\t"visitorData":"' + visitorData + '",\n\t"poToken":"' + poToken + '"\n}'
+    )
 os.chdir("youtubeDownloader")
-print(os.getcwd())
 
 
 class Color:
@@ -79,7 +103,11 @@ class CORE:
     def downloadVideo(self, link):
         def _th():
             try:
-                yt = YouTube(link)
+                yt = YouTube(
+                    link,
+                    client="WEB",
+                    token_file="spoofedToken.json",
+                )
                 ys = yt.streams.get_highest_resolution()
                 title = yt.title
                 print(f"Downloading {Color.CYAN}{title}{Color.RESET}")
@@ -103,7 +131,11 @@ class CORE:
     def downloadSong(self, link):
         def _th():
             try:
-                yt = YouTube(link)
+                yt = YouTube(
+                    link,
+                    client="WEB",
+                    token_file="spoofedToken.json",
+                )
                 ys = yt.streams.get_audio_only()
                 title = yt.title
                 ys.download(
@@ -128,7 +160,11 @@ class CORE:
 
     def downloadPlaylist_V(self, link):
         def _th():
-            pl = Playlist(url=link)
+            pl = Playlist(
+                url=link,
+                client="WEB",
+                token_file="spoofedToken.json",
+            )
             os.mkdir(path=pathSafe(pl.title))
             for video in pl.videos:
                 time.sleep(0.15)
@@ -162,8 +198,8 @@ class CORE:
     def downloadPlaylist_S(self, link):
         pl = Playlist(
             url=link,
-            use_po_token=True,
-            allow_oauth_cache=False,
+            client="WEB",
+            token_file="spoofedToken.json",
         )
         print(f"starting download of playlist {pl.title}:")
         try:
@@ -199,7 +235,11 @@ class CORE:
 
     def downloadArtist_V(self, link):
         def _th():
-            ch = Channel(url=link)
+            ch = Channel(
+                url=link,
+                client="WEB",
+                token_file="spoofedToken.json",
+            )
             os.mkdir(path=pathSafe(ch.title))
             for video in ch.videos:
                 try:
@@ -219,33 +259,37 @@ class CORE:
         thread.start()
 
 
-try:
-    os.system("cls")
-    print(
-        f"{Color.YELLOW}YouTube Downloader{Color.RESET}\n\n{Color.BLUE}1.{Color.RESET} Download Video\n{Color.BLUE}2.{Color.RESET} Download Song\n{Color.BLUE}3.{Color.RESET} Download Playlist (Videos)\n{Color.BLUE}4.{Color.RESET} Download Playlist (Songs)\n{Color.BLUE}5.{Color.RESET} Download Artist (Videos)\n{Color.BLUE}6.{Color.RESET} Download Artist (Songs)\n\n{Color.RED}0.{Color.RESET} Exit"
-    )
-    option = input(f"\n{Color.GREEN}> {Color.RESET}")
-    if option == "1":
-        link = input(f"{Color.GREEN}url> {Color.RESET}")
-        CORE().downloadVideo(link)
-    elif option == "2":
-        link = input(f"{Color.GREEN}url> {Color.RESET}")
-        CORE().downloadSong(link)
-    elif option == "3":
-        link = input(f"{Color.GREEN}url> {Color.RESET}")
-        CORE().downloadPlaylist_V(link)
-    elif option == "4":
-        link = input(f"{Color.GREEN}url> {Color.RESET}")
-        CORE().downloadPlaylist_S(link)
-    elif option == "5":
-        link = input(f"{Color.GREEN}url> {Color.RESET}")
-        CORE().downloadArtist_V(link)
-    elif option == "6":
-        link = input(f"{Color.GREEN}url> {Color.RESET}")
-        CORE().downloadArtist_S(link)
-    elif option == "0":
+while True:
+    try:
+        print(
+            f"{Color.YELLOW}YouTube Downloader{Color.RESET}\n\n{Color.BLUE}1.{Color.RESET} Download Video\n{Color.BLUE}2.{Color.RESET} Download Song\n{Color.BLUE}3.{Color.RESET} Download Playlist (Videos)\n{Color.BLUE}4.{Color.RESET} Download Playlist (Songs)\n{Color.BLUE}5.{Color.RESET} Download Artist (Videos)\n{Color.BLUE}6.{Color.RESET} Download Artist (Songs)\n\n{Color.RED}0.{Color.RESET} Exit"
+        )
+        option = input(f"\n{Color.GREEN}> {Color.RESET}")
+        if option == "1":
+            link = input(f"{Color.GREEN}url> {Color.RESET}")
+            CORE().downloadVideo(link)
+        elif option == "2":
+            link = input(f"{Color.GREEN}url> {Color.RESET}")
+            CORE().downloadSong(link)
+        elif option == "3":
+            link = input(f"{Color.GREEN}url> {Color.RESET}")
+            CORE().downloadPlaylist_V(link)
+        elif option == "4":
+            link = input(f"{Color.GREEN}url> {Color.RESET}")
+            CORE().downloadPlaylist_S(link)
+        elif option == "5":
+            link = input(f"{Color.GREEN}url> {Color.RESET}")
+            CORE().downloadArtist_V(link)
+        elif option == "6":
+            link = input(f"{Color.GREEN}url> {Color.RESET}")
+            CORE().downloadArtist_S(link)
+        elif option == "0":
+            exit()
+    except KeyboardInterrupt:
         exit()
-except KeyboardInterrupt:
-    exit()
-except Exception as e:
-    print(Color.RED + f"Something Went Wrong:\n" + Color.RESET + str(e))
+    except Exception as e:
+        print(Color.RED + f"Something Went Wrong:\n" + Color.RESET + str(e))
+
+    for thread in th.enumerate():
+        if thread is not th.main_thread():
+            thread.join()
