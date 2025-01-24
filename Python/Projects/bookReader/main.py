@@ -183,7 +183,7 @@ class Main(ShowBase):
         )
         self.accept("q", exit)
         if sys.platform == "win32":
-            self.book = parse_html_string(self.load_book(filedialog()))
+            self.book = parse_html_string(self.load_book(filedialog.askopenfilename()))
         elif sys.platform == "darwin":
             app = QApplication(sys.argv)
             self.book = parse_html_string(
