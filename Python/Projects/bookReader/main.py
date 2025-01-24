@@ -1,19 +1,42 @@
 import os
+import pip
 import sys
 from time import sleep
-import ebooklib.epub as epub
-import ebooklib.utils as utils
-import ebooklib.plugins as plugins
-from panda3d.core import *
-from panda3d.core import (
-    TextNode,
-)
-from direct.showbase.ShowBase import ShowBase
-from direct.gui.DirectGui import *
-import warnings
-from bs4 import BeautifulSoup
-from direct.stdpy.threading import Thread
 
+try:
+    import ebooklib.epub as epub
+    import ebooklib.utils as utils
+    import ebooklib.plugins as plugins
+except ImportError:
+    pip.main(["install", "ebooklib"])
+    import ebooklib.epub as epub
+    import ebooklib.utils as utils
+    import ebooklib.plugins as plugins
+try:
+    from panda3d.core import *
+    from panda3d.core import (
+        TextNode,
+    )
+    from direct.showbase.ShowBase import ShowBase
+    from direct.gui.DirectGui import *
+    from direct.stdpy.threading import Thread
+except ImportError:
+    pip.main(["install", "panda3d"])
+    from panda3d.core import *
+    from panda3d.core import loadPrcFileData
+    from panda3d.core import (
+        TextNode,
+    )
+    from direct.showbase.ShowBase import ShowBase
+    from direct.gui.DirectGui import *
+    from direct.stdpy.threading import Thread
+import warnings
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    pip.main(["install", "beautifulsoup4"])
+    from bs4 import BeautifulSoup
 
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -25,9 +48,17 @@ loadPrcFileData(  # type: ignore
 )
 
 if sys.platform == "win32":
-    from tkinter import filedialog
+    try:
+        from tkinter import filedialog
+    except ImportError:
+        pip.main(["install", "tkinter"])
+        from tkinter import filedialog
 elif sys.platform == "darwin":
-    from PyQt5.QtWidgets import QApplication, QFileDialog
+    try:
+        from PyQt5.QtWidgets import QApplication, QFileDialog
+    except ImportError:
+        pip.main(["install", "PyQt5"])
+        from PyQt5.QtWidgets import QApplication, QFileDialog
 
 
 def divideWithRemainder(num, divisor) -> tuple[2]:
