@@ -2,7 +2,19 @@ from math import pi
 import os
 import random
 import string
-from time import sleep
+
+
+def divideWithRemainder(num, divisor) -> tuple[2]:
+    result = 0
+    remainder = 0
+    while num >= divisor:
+        num -= divisor
+        result += 1
+    remainder = num
+    return (
+        result,
+        remainder,
+    )
 
 
 def getDistance(pointA, pointB):
@@ -10,6 +22,8 @@ def getDistance(pointA, pointB):
         return pointA - pointB
     elif pointA > 0 and pointB > 0 or pointA < 0 and pointB > 0:
         return pointA + pointB
+    else:
+        return pointB - pointA
 
 
 def degToRad(degrees):
@@ -30,28 +44,56 @@ def generate_random_string(length, ascii_range: list[2]):
     Returns:
         str: The generated random string.
     """
-    if length < 1:
-        raise ValueError("Length must be at least 1.")
-
-    ascii_chars = [chr(i) for i in range(ascii_range[0], ascii_range[1])]
-    return r"".join(random.choice(ascii_chars) for _ in range(length))
-
-
-def divideWithRemainder(num, divisor) -> list[2]:
-    result = 0
-    remainder = 0
-    while num >= divisor:
-        num -= divisor
-        result += 1
-    remainder = num
-    return [
-        result if len(str(result)) > 1 else f"0{result}",
-        remainder if len(str(remainder)) > 1 else f"0{remainder}",
-    ]
+    try:
+        ascii_chars = [chr(i) for i in range(int(ascii_range[0]), int(ascii_range[1]))]
+        return r"".join(random.choice(ascii_chars) for _ in range(int(length)))
+    except Exception as e:
+        return f"Error: {e}"
 
 
-def modulo(num, mod):
-    return num % mod
+def word_wrap(text, chars_to_wrap, lines_per_page=10, want_pagination=False):
+    """Wraps text to fit within a specified number of characters per line and handles pagination.
+
+    Parameters:
+        text (str): The text to wrap.
+        chars_to_wrap (int): The maximum number of characters per line.
+        lines_per_page (int): The number of lines per page.
+
+    Returns:
+        str: The wrapped text with pagination.
+    """
+    wrapped_text = ""
+    lines = text.split("\n")
+    for line in lines:
+        words = line.split(" ")
+        current_line = ""
+        for word in words:
+            if len(current_line) + len(word) + 1 > chars_to_wrap:
+                wrapped_text += current_line.rstrip() + "\n"
+                current_line = word + " "
+            else:
+                current_line += word + " "
+        wrapped_text += current_line.rstrip() + "\n"
+    if want_pagination:
+
+        # Handle pagination
+        lines = wrapped_text.split("\n")
+        paginated_text = ""
+        if len(lines) > lines_per_page:
+            for pageIndex in range(divideWithRemainder(len(lines), lines_per_page)[0]):
+                paginated_text += (
+                    "\n".join(
+                        lines[
+                            pageIndex
+                            * lines_per_page : (pageIndex + 1)
+                            * lines_per_page
+                        ]
+                    )
+                    + "\n\n"
+                )
+        return paginated_text
+    else:
+        return wrapped_text
 
 
 class CLI:
