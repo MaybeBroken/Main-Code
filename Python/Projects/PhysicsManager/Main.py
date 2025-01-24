@@ -6,7 +6,8 @@ import os
 import src.scripts.vars as Wvars
 from src.scripts.physics import physicsMgr as _pm
 
-physicsMgr = _pm(drag=0.000, gravity=(0, 0, -0.034), minimum_motion_check=0.03)
+physicsMgr = _pm()
+physicsMgr.enable()
 
 
 from screeninfo import get_monitors
@@ -14,7 +15,7 @@ from direct.showbase.ShowBase import ShowBase
 from panda3d.core import *
 from panda3d.fx import *
 
-if 1 == 2:
+if 0:
     from src.__class__.fx import *
     from src.__class__.core import *
 
@@ -104,6 +105,7 @@ class Main(ShowBase):
         result = task.cont
 
         playerMoveSpeed = Wvars.speed / 10
+        physicsMgr.updateWorldPositions()
 
         x_movement = 0
         y_movement = 0
@@ -198,7 +200,7 @@ class Main(ShowBase):
         self.accept("mouse1", self.doNothing)
         self.accept("mouse1-up", self.doNothing)
         self.accept("mouse3", self.doNothing)
-        self.accept("w", physicsMgr.addVectorForce, ["box2", [0.5, 0, 0]])
+        self.accept("w", physicsMgr.addVectorForce, [self.box2, "box2", [0.5, 0, 0]])
         self.accept("w-up", self.updateKeyMap, ["forward", False])
         self.accept("a", self.updateKeyMap, ["left", True])
         self.accept("a-up", self.updateKeyMap, ["left", False])
@@ -240,10 +242,7 @@ class Main(ShowBase):
         self.box1.setColor(0, 1, 1, 1)
         self.box2.setColor(0, 1, 1, 1)
 
-        physicsMgr.registerObject_Sphere(self.box2, "box2", radius=1)
-
-        physicsMgr.registerColliderPlane(self.box1, -15, "box1", "rebound", "z")
-        physicsMgr.registerColliderPlane(self.box1, -15, "box1", "rebound", "x")
+        physicsMgr.registerObject(self.box2, "box2")
 
     def fadeOutGuiElement_ThreadedOnly(
         self, element, timeToFade, execBeforeOrAfter, target, args=()

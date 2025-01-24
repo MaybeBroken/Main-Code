@@ -162,6 +162,8 @@ class CORE:
     def downloadPlaylist_S(self, link):
         pl = Playlist(
             url=link,
+            use_po_token=True,
+            allow_oauth_cache=False,
         )
         print(f"starting download of playlist {pl.title}:")
         try:
