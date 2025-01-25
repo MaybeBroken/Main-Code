@@ -100,7 +100,11 @@ def get_cover_image(url: str, dest_folder: str, dest_name: str):
 
 
 class CORE:
+    downloadingActive = False
+
     def downloadVideo(self, link):
+        self.downloadingActive = True
+
         def _th():
             try:
                 yt = YouTube(
@@ -124,11 +128,14 @@ class CORE:
                 print(Color.RED + "Video is blocked in your region" + Color.RESET)
             except Exception as e:
                 print(e)
+            self.downloadingActive = False
 
         thread = _Thread(target=_th)
         thread.start()
 
     def downloadSong(self, link):
+        self.downloadingActive = True
+
         def _th():
             try:
                 yt = YouTube(
@@ -154,48 +161,49 @@ class CORE:
             except Exception as e:
                 print(e)
             print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
+            self.downloadingActive = False
 
         thread = _Thread(target=_th)
         thread.start()
 
     def downloadPlaylist_V(self, link):
-        def _th():
-            pl = Playlist(
-                url=link,
-                client="WEB",
-                token_file="spoofedToken.json",
-            )
-            os.mkdir(path=pathSafe(pl.title))
-            for video in pl.videos:
-                time.sleep(0.15)
+        self.downloadingActive = True
 
-                def _inThread():
-                    try:
-                        title = video.title
-                        video.streams.get_highest_resolution().download(
-                            output_path=pathSafe(name=pl.title),
-                            filename=pathSafe(title) + ".mp4",
-                        )
-                        print(f"| - Downloaded {Color.CYAN}{title}{Color.RESET}")
-                    except exceptions.VideoUnavailable:
-                        print(Color.RED + "Video is unavailable" + Color.RESET)
-                    except exceptions.VideoPrivate:
-                        print(Color.RED + "Video is private" + Color.RESET)
-                    except exceptions.VideoRegionBlocked:
-                        print(
-                            Color.RED + "Video is blocked in your region" + Color.RESET
-                        )
-                    except Exception as e:
-                        print(e)
+        pl = Playlist(
+            url=link,
+            client="WEB",
+            token_file="spoofedToken.json",
+        )
+        os.mkdir(path=pathSafe(pl.title))
+        for video in pl.videos:
+            time.sleep(0.15)
 
-                _Thread(target=_inThread).start()
+            def _inThread():
+                try:
+                    title = video.title
+                    video.streams.get_highest_resolution().download(
+                        output_path=pathSafe(name=pl.title),
+                        filename=pathSafe(title) + ".mp4",
+                    )
+                    print(f"| - Downloaded {Color.CYAN}{title}{Color.RESET}")
+                except exceptions.VideoUnavailable:
+                    print(Color.RED + "Video is unavailable" + Color.RESET)
+                except exceptions.VideoPrivate:
+                    print(Color.RED + "Video is private" + Color.RESET)
+                except exceptions.VideoRegionBlocked:
+                    print(Color.RED + "Video is blocked in your region" + Color.RESET)
+                except Exception as e:
+                    print(e)
 
-            print(f"Downloaded {Color.GREEN}{pl.title}{Color.RESET}")
+            _Thread(target=_inThread).start()
 
-        thread = _Thread(target=_th)
-        thread.start()
+        print(
+            f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
+        )
+        self.downloadingActive = False
 
     def downloadPlaylist_S(self, link):
+        self.downloadingActive = True
         pl = Playlist(
             url=link,
             client="WEB",
@@ -232,37 +240,91 @@ class CORE:
                     print(e)
 
             _Thread(target=_inThread, args=(_title, _video), daemon=True).start()
+        print(
+            f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
+        )
+        self.downloadingActive = False
 
     def downloadArtist_V(self, link):
-        def _th():
-            ch = Channel(
-                url=link,
-                client="WEB",
-                token_file="spoofedToken.json",
-            )
-            os.mkdir(path=pathSafe(ch.title))
-            for video in ch.videos:
-                try:
-                    video.streams.get_highest_resolution().download(
-                        output_path=pathSafe(name=ch.title)
-                    )
-                except exceptions.VideoUnavailable:
-                    print(Color.RED + "Video is unavailable" + Color.RESET)
-                except exceptions.VideoPrivate:
-                    print(Color.RED + "Video is private" + Color.RESET)
-                except exceptions.VideoRegionBlocked:
-                    print(Color.RED + "Video is blocked in your region" + Color.RESET)
-                except Exception as e:
-                    print(e)
+        ch = Channel(
+            url=link,
+            client="WEB",
+            token_file="spoofedToken.json",
+        )
+        os.mkdir(path=pathSafe(ch.channel_name))
+        for _list in ch.home:
+            for video in _list.videos:
+                time.sleep(0.15)
 
-        thread = _Thread(target=_th)
-        thread.start()
+                def _inThread():
+                    try:
+                        title = video.title
+                        video.streams.get_highest_resolution().download(
+                            output_path=pathSafe(name=ch.channel_name),
+                            filename=pathSafe(title) + ".mp4",
+                        )
+                        print(f"| - Downloaded {Color.CYAN}{title}{Color.RESET}")
+                    except exceptions.VideoUnavailable:
+                        print(Color.RED + "Video is unavailable" + Color.RESET)
+                    except exceptions.VideoPrivate:
+                        print(Color.RED + "Video is private" + Color.RESET)
+                    except exceptions.VideoRegionBlocked:
+                        print(
+                            Color.RED + "Video is blocked in your region" + Color.RESET
+                        )
+                    except Exception as e:
+                        print(e)
+
+                _Thread(target=_inThread).start()
+
+            print(f"Downloaded {Color.GREEN}{ch.channel_name}{Color.RESET}")
+
+    def downloadArtist_S(self, link):
+        ch = Channel(
+            url=link,
+            client="WEB",
+            token_file="spoofedToken.json",
+        )
+        print(f"starting download of playlist {ch.channel_name}:")
+        try:
+            os.mkdir(path=pathSafe(ch.channel_name))
+        except FileExistsError:
+            print(
+                f"{Color.YELLOW}Folder {ch.channel_name} already exists{Color.RESET}, downloading into {os.path.abspath(os.curdir)}"
+            )
+        index = 0
+        for _list in ch.home:
+            for _video in _list.videos:
+                index += 1
+                time.sleep(0.05)
+                _title = _video.title
+                print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
+
+                def _inThread(title, video):
+                    try:
+                        video.streams.get_audio_only().download(
+                            output_path=pathSafe(ch.channel_name),
+                            filename=f"{index} - {pathSafe(name=title)}" + ".m4a",
+                        )
+                        print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
+                    except exceptions.VideoUnavailable:
+                        print(Color.RED + "Video is unavailable" + Color.RESET)
+                    except exceptions.VideoPrivate:
+                        print(Color.RED + "Video is private" + Color.RESET)
+                    except exceptions.VideoRegionBlocked:
+                        print(
+                            Color.RED + "Video is blocked in your region" + Color.RESET
+                        )
+                    except Exception as e:
+                        print(e)
+
+                _Thread(target=_inThread, args=(_title, _video), daemon=True).start()
 
 
 while True:
     try:
         print(
-            f"{Color.YELLOW}YouTube Downloader{Color.RESET}\n\n{Color.BLUE}1.{Color.RESET} Download Video\n{Color.BLUE}2.{Color.RESET} Download Song\n{Color.BLUE}3.{Color.RESET} Download Playlist (Videos)\n{Color.BLUE}4.{Color.RESET} Download Playlist (Songs)\n{Color.BLUE}5.{Color.RESET} Download Artist (Videos)\n{Color.BLUE}6.{Color.RESET} Download Artist (Songs)\n\n{Color.RED}0.{Color.RESET} Exit"
+            f"\n{Color.YELLOW}YouTube Downloader{Color.RESET}\n\n{Color.BLUE}1.{Color.RESET} Download Video\n{Color.BLUE}2.{Color.RESET} Download Song\n{Color.BLUE}3.{Color.RESET} Download Playlist (Videos)\n{Color.BLUE}4.{Color.RESET} Download Playlist (Songs)\n{Color.BLUE}5.{Color.RESET} Download Artist (Videos)\n{Color.BLUE}6.{Color.RESET} Download Artist (Songs)\n\n{Color.RED}0.{Color.RESET} Exit"
         )
         option = input(f"\n{Color.GREEN}> {Color.RESET}")
         if option == "1":
@@ -289,6 +351,8 @@ while True:
         exit()
     except Exception as e:
         print(Color.RED + f"Something Went Wrong:\n" + Color.RESET + str(e))
+
+    time.sleep(1)
 
     for thread in th.enumerate():
         if thread is not th.main_thread():
