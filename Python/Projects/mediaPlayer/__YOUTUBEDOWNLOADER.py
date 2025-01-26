@@ -216,7 +216,7 @@ class CORE:
             print(
                 f"{Color.YELLOW}Folder {pl.title} already exists{Color.RESET}, downloading into {os.path.abspath(os.curdir)}"
             )
-        index = 0
+        index = -1
         for _video in pl.videos:
             index += 1
             time.sleep(0.05)
