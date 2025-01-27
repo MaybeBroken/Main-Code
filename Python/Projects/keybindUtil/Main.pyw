@@ -230,7 +230,7 @@ class Main(ShowBase):
             self.openEditorPage(newName)
 
     def changeHotkey(self, key):
-        self.keyBindsDict[key]["hotkey"] = keyboard.read_hotkey()
+        self.keyBindsDict[key]["hotkey"] = keyboard.read_hotkey(False)
         self.keyBindsDict[key]["hotkeyObj"]["text"] = self.keyBindsDict[key]["hotkey"]
         self.openEditorPage(key)
 
