@@ -116,7 +116,7 @@ class CORE:
                 title = yt.title
                 print(f"Downloading {Color.CYAN}{title}{Color.RESET}")
                 ys.download(
-                    self.outputFolder + pathSeparator + "Videos" + pathSeparator,
+                    "Videos" + pathSeparator,
                     filename=pathSafe(title) + ".mp4",
                 )
                 print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
@@ -146,10 +146,7 @@ class CORE:
                 ys = yt.streams.get_audio_only()
                 title = yt.title
                 ys.download(
-                    output_path=self.outputFolder
-                    + pathSeparator
-                    + "Songs"
-                    + pathSeparator,
+                    output_path="Songs" + pathSeparator,
                     filename=pathSafe(title) + ".m4a",
                 )
             except exceptions.VideoUnavailable:
