@@ -644,7 +644,6 @@ class Main(ShowBase):
         Thread(target=self.syncProgress, daemon=True).start()
 
     def registerFolder(self, path):
-        oldLength = len(self.songList)
         path = os.path.join(".", "youtubeDownloader", f"{path}{pathSeparator}")
         try:
             path = path.replace(
@@ -652,20 +651,14 @@ class Main(ShowBase):
             )
         except:
             ...
-        self.rootListPath = path
-        try:
-            with open(self.rootListPath + "index", "rt"):
-                ...
-        except:
-            with open(self.rootListPath + "index", "xt"):
-                ...
         if os.path.isdir(path):
+            self.rootListPath = path
             _dir: list = os.listdir(path)
             _newDir = _dir.copy()
             for id in _dir:
                 try:
-                    id = str(id).split("-")
-                    _newDir[int(id[0])] = "-".join(id)
+                    id = str(id).split(" - ")
+                    _newDir[int(id[0])] = " - ".join(id)
                 except:
                     ...
             for song in _newDir:
