@@ -23,8 +23,6 @@ from panda3d.core import (
     loadPrcFile,
     ConfigVariableString,
     AudioSound,
-)
-from panda3d.core import (
     WindowProperties,
     NodePath,
     TextNode,
@@ -35,8 +33,6 @@ from panda3d.core import (
     PointLight,
     Point3,
     OccluderNode,
-)
-from panda3d.core import (
     CollisionTraverser,
     CollisionNode,
     CollisionBox,
@@ -174,10 +170,6 @@ class Main(ShowBase):
             currentP = self.camera.getP()
             currentR = self.camera.getR()
 
-            Wvars.camH = currentH
-            Wvars.camP = currentP
-            Wvars.camR = currentR
-
             self.camera.setHpr(
                 currentH - mouseChangeX * dt * self.cameraSwingFactor,
                 min(
@@ -188,17 +180,12 @@ class Main(ShowBase):
 
             self.lastMouseX = mouseX
             self.lastMouseY = mouseY
-        # if Wvars.inInventory == True:
-        #     md = self.win.getPointer(0)
-        #     self.lastMouseX = md.getX()
-        #     self.lastMouseY = md.getY()
         return result
 
     def setupControls(self):
         self.lastMouseX = 0
         self.lastMouseY = 0
         self.keyMap = {}
-        self.accept("q", sys.exit)
 
     def updateKeyMap(self, key, value):
         self.keyMap[key] = value
