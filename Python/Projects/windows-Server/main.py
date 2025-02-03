@@ -36,6 +36,9 @@ ERROR_LOG_PATH = os.path.join(XAMPP_PATH, "apache", "logs", "error.log")
 # Define the path to the httpd.pid file
 HTTPD_PID_PATH = os.path.join(XAMPP_PATH, "apache", "logs", "httpd.pid")
 
+# Define the IP address to bind the WebSocket server to
+IPADDR_PATH = os.path.join(XAMPP_PATH, "apache", "logs", "ip.txt")
+
 # Confirm the paths exist, if not, create them
 if not os.path.exists(XAMPP_PATH):
     raise FileNotFoundError(f"XAMPP installation directory not found: {XAMPP_PATH}")
@@ -85,8 +88,11 @@ def read_error_log():
 
 # Function to run a command in the terminal and return the output
 def run_command(command: str):
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return result.stdout
+    def _th():
+        result = os.system(command)
+        return result
+
+    threading.Thread(target=_th).start()
 
 
 # Function to handle incoming WebSocket connections
@@ -97,23 +103,27 @@ async def handle_connection(websocket):
             "Connection to server established\nReady to receive commands, type 'exit' to shutdown the server\n"
         )
         while True:
-            message = await websocket.recv()
-            if message == "exit":
-                await websocket.send(
-                    "Are you sure you want to exit? This is irreversible\nType 'yes' to confirm\n"
-                )
-                logging.info("Waiting for confirmation to exit...")
-                logging.disable(logging.CRITICAL)
-                confirmation = await websocket.recv()
-                if confirmation == "yes":
-                    await websocket.send("Exiting...")
-                    break
+            try:
+                message = await websocket.recv()
+                if message == "exit":
+                    await websocket.send(
+                        "Are you sure you want to exit? This is irreversible\nType 'yes' to confirm\n"
+                    )
+                    logging.info("Waiting for confirmation to exit...")
+                    logging.disable(logging.CRITICAL)
+                    confirmation = await websocket.recv()
+                    if confirmation == "yes":
+                        await websocket.send("Exiting...")
+                        break
+                    else:
+                        logging.disable(logging.NOTSET)
+                        logging.info("Resuming normal operations...")
+                        await websocket.send("Resuming normal operations...")
                 else:
-                    logging.disable(logging.NOTSET)
-                    logging.info("Resuming normal operations...")
-                    await websocket.send("Resuming normal operations...")
-            else:
-                await websocket.send(run_command(message))
+                    await websocket.send(str(run_command(message)))
+            except Exception as e:
+                logging.error(f"Error: {e}")
+                await websocket.send(f"Error: {e}")
     except websockets.ConnectionClosed:
         logging.info("Connection closed.")
     except Exception as e:
@@ -153,8 +163,8 @@ def make_fullscreen():
 # Main function
 def main():
     global IPADDR
-    if len(IPADDR) == 0 and os.path.exists("ip.txt"):
-        with open("ip.txt", "r") as f:
+    if len(IPADDR) == 0 and os.path.exists(IPADDR_PATH):
+        with open(IPADDR_PATH, "r") as f:
             IPADDR = f.read().strip()
     elif len(IPADDR) == 0:
         print("No IP address provided and none found in ip.txt.")
@@ -162,7 +172,7 @@ def main():
         main()
         return
     else:
-        with open("ip.txt", "w") as f:
+        with open(IPADDR_PATH, "w") as f:
             f.write(IPADDR)
     if not is_apache_running():
         threading.Thread(target=launch_apache, daemon=True).start()
@@ -175,9 +185,13 @@ def main():
 if __name__ == "__main__":
     try:
         make_fullscreen()  # Make the console window fullscreen
-        if not os.path.exists("ip.txt"):
-            open("ip.txt", "w").close()
-        IPADDR = input(f"Local IP Address: {open('ip.txt').read().strip()}")
+        if not os.path.exists(IPADDR_PATH):
+            open(IPADDR_PATH, "w").close()
+            IPADDR = input(f"Local IP Address: {open(IPADDR_PATH).read().strip()}")
+        else:
+            IPADDR = open(IPADDR_PATH).read().strip()
+            if len(IPADDR) == 0:
+                IPADDR = input(f"Local IP Address: {open(IPADDR_PATH).read().strip()}")
         main()
     except Exception as e:
         print(f"An error occurred: {e}")
