@@ -1,9 +1,14 @@
 # This program is a WebSocket server that connects to and allows users to run commands on the server.
-
-import asyncio
-import websockets
 import os
 
+try:
+    import asyncio
+    import websockets
+except ImportError:
+    os.system("python3 -m pip install websockets")
+    os.system("python3 -m pip install asyncio")
+    import asyncio
+    import websockets
 # Function to handle incoming WebSocket connections
 IPADDR_PATH = "ip.txt"
 
@@ -47,7 +52,22 @@ def main():
     else:
         with open(IPADDR_PATH, "w") as f:
             f.write(IPADDR)
-    asyncio.run(start_websocket_client())
+    try:
+        asyncio.run(start_websocket_client())
+    except Exception as e:
+        print(f"Error: {e}")
+        wantReconnect = input("Do you want to reconnect? (y/n): ")
+        if wantReconnect.lower() == "y":
+            main()
+        else:
+            wantDelete = input("Do you want to delete IP cache? (y/n): ")
+            if wantDelete.lower() == "y":
+                os.remove(IPADDR_PATH)
+                print("IP cache deleted.")
+                main()
+            else:
+                print("Exiting program.")
+                exit(0)
 
 
 if __name__ == "__main__":
