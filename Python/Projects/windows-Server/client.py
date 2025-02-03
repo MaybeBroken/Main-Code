@@ -14,7 +14,7 @@ IPADDR_PATH = "ip.txt"
 
 
 async def handle_connection(websocket):
-    print("New connection established.")
+    print(f"Connection handle received @ {IPADDR}")
     try:
         print(await websocket.recv())
         while True:
@@ -62,9 +62,9 @@ def main():
         else:
             wantDelete = input("Do you want to delete IP cache? (y/n): ")
             if wantDelete.lower() == "y":
-                os.remove(IPADDR_PATH)
+                with open(IPADDR_PATH, "w") as f:
+                    f.write("")
                 print("IP cache deleted.")
-                main()
             else:
                 print("Exiting program.")
                 exit(0)
