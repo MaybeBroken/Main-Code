@@ -1,0 +1,70 @@
+
+<resource fileversion="1">
+	<maps>
+		<map id="Milky Way D" name="Milky Way D" dimensions="800 10 240" systems="1" show-influence="false" seed="10101" autogenerate="false">
+			<description />
+			<pedia />
+			<sector-mode>Alphanumeric</sector-mode>
+			<sector-size>10 10</sector-size>
+			<skybox source="base" />
+			<background source="/images/nebula.png" style="Cover" scale="1" />
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="1.373" orbitalposition="122" orbitalperiod="159.160823352095" rotationperiod="343.38294701064" mass="0.73" radius="0.923267631555188" density="5.43" axistilt="0" name="b">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="5.045" orbitalposition="351" orbitalperiod="1121.04228599924" rotationperiod="456.520132597945" mass="3.5" radius="1.68992503165354" density="5.43" axistilt="0" name="c">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="14.29" orbitalposition="6" orbitalperiod="5344.15119376642" rotationperiod="285.16456985785" mass="0.27" radius="0.699537534953112" density="5.43" axistilt="0" name="d">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="23.773" orbitalposition="69" orbitalperiod="11467.1726564116" rotationperiod="941.408702483169" mass="0.84" radius="0.960139756561673" density="5.43" axistilt="0" name="e">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="37.594" orbitalposition="191" orbitalperiod="22803.8509460788" rotationperiod="49.8554580165309" mass="0.38" radius="0.769520432054773" density="5.43" axistilt="0" name="f">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="53.926" orbitalposition="111" orbitalperiod="39176.683667065" rotationperiod="539.320469052132" mass="0.99" radius="1.00517748302709" density="5.43" axistilt="0" name="g">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="64.01" orbitalposition="342" orbitalperiod="50664.3082472181" rotationperiod="7200.11115731123" mass="0.62" radius="0.882140605676645" density="5.43" axistilt="0" name="h">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="112.623" orbitalposition="267" orbitalperiod="118241.767400375" rotationperiod="3.70999514973914" mass="2.74" radius="1.46300712865539" density="5.43" axistilt="0" name="i">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="200.057" orbitalposition="146" orbitalperiod="279937.456073115" rotationperiod="73.479196360468" mass="0.47" radius="0.816536935382081" density="5.43" axistilt="0" name="j">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="390.25" orbitalposition="107" orbitalperiod="762684.218373522" rotationperiod="8538.01562221035" mass="0.289" radius="0.712936796324297" density="5.43" axistilt="0" name="k">
+                <description />
+                <pedia />
+            </planet>
+
+            <planet weather="" color="255 255 255 255" orbitaldistance="630.15" orbitalposition="164" orbitalperiod="1564934.88782772" rotationperiod="262.738162015525" mass="0.93" radius="0.987796026309732" density="5.43" axistilt="0" name="l">
+                <description />
+                <pedia />
+            </planet>
+
+			<objects />
+		</map>
+	</maps>
+</resource>
