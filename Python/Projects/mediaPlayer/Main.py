@@ -89,7 +89,7 @@ class CHARS:
 class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
-        self.setBackgroundColor(0, 0, 0, 1)
+        self.setBackgroundColor(self.hexToRgb("#262626"))
         self.backfaceCullingOn()
         self.disableMouse()
         self.viewMode = 0
@@ -157,19 +157,21 @@ class Main(ShowBase):
                 ):
                     self.songList[self.songIndex]["played"] = 0
                     self.nextSong()
-            self.cullSongPanels()
         except:
             ...
+        self.scrollBar.setValue(self.songListFrameOffset.getZ())
         return task.cont
 
     def cullSongPanels(self):
-        for song in self.songList:
-            if song["nodePath"]:
-                pos = song["nodePath"].getPos(self.render2d)
-                if pos.getZ() < -1.2 or pos.getZ() > 1.2:
-                    song["nodePath"].hide()
-                else:
-                    song["nodePath"].show()
+        while True:
+            t.sleep(0.1)
+            for song in self.songList:
+                if song["nodePath"]:
+                    pos = song["nodePath"].getPos(self.render2d)
+                    if pos.getZ() < -1.2 or pos.getZ() > 1.2:
+                        song["nodePath"].hide()
+                    else:
+                        song["nodePath"].show()
 
     def setupControls(self):
         self.paused = True
@@ -184,14 +186,14 @@ class Main(ShowBase):
         self.accept("window-event", self.winEvent)
         self.accept(
             "wheel_up",
-            lambda: self.songListFrameOffset.setZ(
-                self.songListFrameOffset.getZ() - 0.04
+            lambda: (
+                self.songListFrameOffset.setZ(self.songListFrameOffset.getZ() - 0.07),
             ),
         )
         self.accept(
             "wheel_down",
             lambda: self.songListFrameOffset.setZ(
-                self.songListFrameOffset.getZ() + 0.04
+                self.songListFrameOffset.getZ() + 0.07
             ),
         )
 
@@ -202,27 +204,27 @@ class Main(ShowBase):
         )
         self.songListFrame = DirectFrame(
             parent=self.guiFrame,
-            frameSize=(-0.5, 0.9, -1, 0.8),
-            frameColor=(0.4, 0.4, 0.4, 1),
+            frameSize=(-0.498, 0.99, -0.99, 0.79),
+            frameColor=self.hexToRgb("#030303"),
         )
         self.songListFrame.setBin("background", 1000)
         self.songListFrameOffset = NodePath("songListFrameOffset")
         self.songListFrameOffset.reparentTo(self.songListFrame)
         self.optionBar = DirectFrame(
             parent=self.guiFrame,
-            frameSize=(-1, -0.5, -1, 1),
-            frameColor=(0.2, 0.2, 0.2, 1),
+            frameSize=(-1, -0.5, -1, 0.79),
+            frameColor=self.hexToRgb("#030303"),
         )
         self.optionBar.setBin("background", 2000)
         self.topBar = DirectFrame(
             parent=self.guiFrame,
-            frameSize=(-1, 1, 0.8, 1),
-            frameColor=(0.1, 0.1, 0.1, 1),
+            frameSize=(-1, 1, 0.79, 1),
+            frameColor=self.hexToRgb("#030303"),
         )
         self.topBar.setBin("background", 3000)
         self.controlBar = DirectFrame(
             parent=self.guiFrame,
-            frameSize=(-1, 1, -1, -0.8),
+            frameSize=(-1, 1, -1, -0.79),
             frameColor=self.hexToRgb("#212121"),
         )
         self.controlBar.setBin("background", 3000)
@@ -239,10 +241,10 @@ class Main(ShowBase):
         self.progressBar = DirectWaitBar(
             parent=self.controlBar,
             scale=(1, 1, 0.05),
-            frameColor=self.hexToRgb("#212121"),
-            pos=(0, 0, -0.8),
+            pos=(0, 0, -0.79),
             relief=DGG.FLAT,
             barColor=self.hexToRgb("#B2071d"),
+            frameColor=(0, 0, 0, 0),
         )
         self.progressBar["range"] = 100
         self.progressBar.setRange()
@@ -251,7 +253,7 @@ class Main(ShowBase):
             text="Name of the Song Here",
             parent=self.controlBar,
             scale=(0.04 / self.getAspectRatio(self.win), 0.04, 0.04),
-            pos=(0.1, -0.9),
+            pos=(-0.4, -0.9),
             fg=self.hexToRgb("#f6f6f6"),
             align=TextNode.ALeft,
         )
@@ -269,7 +271,7 @@ class Main(ShowBase):
         self.arrowLeftButton = DirectButton(
             parent=self.controlBar,
             image=self.loader.loadTexture("src/textures/arrow.png"),
-            scale=(0.04 / self.getAspectRatio(self.win), 0.04, 0.04),
+            scale=(0.03 / self.getAspectRatio(self.win), 0.03, 0.03),
             pos=(-0.95, 0, -0.9),
             hpr=(0, 0, 180),
             command=self.prevSong,
@@ -281,7 +283,7 @@ class Main(ShowBase):
         self.arrowRightButton = DirectButton(
             parent=self.controlBar,
             image=self.loader.loadTexture("src/textures/arrow.png"),
-            scale=(0.04 / self.getAspectRatio(self.win), 0.04, 0.04),
+            scale=(0.03 / self.getAspectRatio(self.win), 0.03, 0.03),
             pos=(-0.75, 0, -0.9),
             command=self.nextSong,
             relief=DGG.FLAT,
@@ -318,6 +320,23 @@ class Main(ShowBase):
                     )
                     self.scaledItemList.append(button)
                     startY -= 0.075
+
+        self.scrollBar = DirectScrollBar(
+            parent=self.topBar,
+            range=[0, ((len(self.songList) - 1) / 10) * 1.5],
+            value=0,
+            thumb_relief=DGG.FLAT,
+            thumb_clickSound=None,
+            command=lambda: self.songListFrameOffset.setZ(self.scrollBar["value"]),
+            orientation=DGG.VERTICAL,
+            pos=(0.765, 0, 0),
+            frameSize=(0.1, 0.12, -0.82, 0.82),
+            frameColor=(0.6, 0.6, 0.6, 0.5),
+            relief=DGG.FLAT,
+            pageSize=1,
+        )
+        self.scrollBar.setBin("background", 1900)
+        self.scrollBar.hide()
 
     def checkFolderForSongs(self, path, formatList):
         for file in os.listdir(path):
@@ -438,29 +457,25 @@ class Main(ShowBase):
         self.prevSong()
 
     def nextSong(self):
-        if len(self.songList) > 0:
-            if self.viewMode == 0:
-                self.songList[self.songIndex]["object"].stop()
-                if self.songIndex + 1 < len(self.songList):
-                    self.songIndex += 1
-                self.songList[self.songIndex]["object"].play()
-                self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["object"].stop()
+        if self.songIndex + 1 < len(self.songList):
+            self.songIndex += 1
+        self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["played"] = 1
 
-            self.setBackgroundImage(
-                self.songList[self.songIndex]["imagePath"],
-                self.backgroundToggle,
-                self.backgroundToggle,
-            )
-            self.paused = False
+        self.setBackgroundImage(
+            self.songList[self.songIndex]["imagePath"],
+            self.backgroundToggle,
+            self.backgroundToggle,
+        )
+        self.paused = False
 
     def prevSong(self):
-        if len(self.songList) > 0:
-            if self.viewMode == 0:
-                self.songList[self.songIndex]["object"].stop()
-                if self.songIndex - 1 <= 0:
-                    self.songIndex -= 1
-                self.songList[self.songIndex]["object"].play()
-                self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["object"].stop()
+        if self.songIndex - 1 <= 0:
+            self.songIndex -= 1
+        self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["played"] = 1
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -469,13 +484,11 @@ class Main(ShowBase):
         self.paused = False
 
     def goToSong(self, songId):
-        if len(self.songList) > 0:
-            if self.viewMode == 0:
-                self.songList[self.songIndex]["object"].stop()
-                if songId < len(self.songList) and songId >= 0:
-                    self.songIndex = songId
-                self.songList[self.songIndex]["object"].play()
-                self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["object"].stop()
+        if songId < len(self.songList) and songId >= 0:
+            self.songIndex = songId
+        self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["played"] = 1
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -598,13 +611,13 @@ class Main(ShowBase):
         frame = DirectFrame(
             parent=self.songListFrameOffset,
             frameSize=(-0.45, 0.85, -0.06, 0.06),
-            frameColor=(0.2, 0.2, 0.2, 1),
+            frameColor=self.hexToRgb("#030303"),
             pos=(0, 0, y),
         )
         frame.setBin("background", 1000)
         frame.setTag("songId", str(songId))
         nameText = OnscreenText(
-            text=song["name"][:60] + "..." if len(song["name"]) > 60 else song["name"],
+            text=song["name"][:55] + "..." if len(song["name"]) > 55 else song["name"],
             parent=frame,
             scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
             fg=self.hexToRgb("#f6f6f6"),
@@ -635,13 +648,17 @@ class Main(ShowBase):
         )
         playButton.setTransparency(TransparencyAttrib.MAlpha)
         playButton.setBin("background", 1001)
+        frameHighlight = DirectFrame(
+            parent=frame,
+            frameSize=(-0.45, 0.85, -0.005, 0),
+            frameColor=self.hexToRgb("#1e1e1e"),
+            pos=(0, 0, -0.065),
+        )
+
         self.scaledItemList.append(playButton)
         self.scaledItemList.append(nameText)
         self.scaledItemList.append(lengthText)
         return frame
-
-    def userExit(self):
-        return sys.exit()
 
     def hexToRgb(self, hex: str) -> tuple:
         hex = hex.lstrip("#")
@@ -666,6 +683,11 @@ class Main(ShowBase):
             self.backgroundImage.setBin("background", 0)
         except:
             ...
+
+        self.scrollBar["range"] = [0, ((len(self.songList) - 1) / 10) * 1.5]
+        self.scrollBar.setRange()
+        self.scrollBar.setValue(0)
+        self.scrollBar.show()
         LerpPosInterval(
             self.controlBar,
             0.5,
@@ -680,7 +702,7 @@ class Main(ShowBase):
         )
         self.taskMgr.add(self.update, "update")
         self.taskMgr.add(self.syncProgress, "syncProgress")
-        self.cullSongPanels()
+        Thread(target=self.cullSongPanels).start()
 
     def registerFolder(self, path):
         self.taskMgr.remove("update")
