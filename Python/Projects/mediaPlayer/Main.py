@@ -222,6 +222,12 @@ class Main(ShowBase):
             frameColor=self.hexToRgb("#030303"),
         )
         self.topBar.setBin("background", 3000)
+        self.topBarHighlight = DirectFrame(
+            parent=self.topBar,
+            frameSize=(-1, 1, 0.79, 0.8),
+            frameColor=self.hexToRgb("#1e1e1e"),
+        )
+        self.topBarHighlight.setBin("background", 3001)
         self.controlBar = DirectFrame(
             parent=self.guiFrame,
             frameSize=(-1, 1, -1, -0.79),
@@ -317,8 +323,21 @@ class Main(ShowBase):
                         text_align=TextNode.ALeft,
                         relief=DGG.FLAT,
                         geom=None,
+                        text_fg=self.hexToRgb("#ffffff"),
+                        frameColor=(0, 0, 0, 0),
                     )
                     self.scaledItemList.append(button)
+                    divider = DirectFrame(
+                        parent=self.optionBar,
+                        frameSize=(
+                            -0.95,
+                            ((len(item) if len(item) < 28 else 31) * 0.012) - 0.9,
+                            0,
+                            0.004,
+                        ),
+                        frameColor=self.hexToRgb("#8f8f8f"),
+                        pos=(0, 0, startY - 0.0275),
+                    )
                     startY -= 0.075
 
         self.scrollBar = DirectScrollBar(
