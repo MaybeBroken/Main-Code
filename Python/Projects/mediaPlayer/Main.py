@@ -19,34 +19,17 @@ elif sys.platform == "win32":
 
 os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
 
-from panda3d.core import *
 from panda3d.core import (
-    TransparencyAttrib,
     Texture,
-    DirectionalLight,
-    AmbientLight,
     loadPrcFile,
     ConfigVariableString,
     AudioSound,
     WindowProperties,
     NodePath,
     TextNode,
-    CullFaceAttrib,
-    Spotlight,
-    PerspectiveLens,
-    SphereLight,
-    PointLight,
     Point3,
     Point4,
-    OccluderNode,
-    CollisionTraverser,
-    CollisionNode,
-    CollisionBox,
-    CollisionSphere,
-    CollisionRay,
-    CollisionHandlerQueue,
     Vec3,
-    CollisionHandlerPusher,
 )
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.stdpy.threading import Thread
@@ -98,7 +81,7 @@ def divide(num, divisor) -> list[2]:
 
 
 class CHARS:
-    SEPARATOR = "  -->  "
+    SEPARATOR = " /  "
 
 
 class Main(ShowBase):
@@ -107,13 +90,13 @@ class Main(ShowBase):
         self.setBackgroundColor(0, 0, 0, 1)
         self.backfaceCullingOn()
         self.disableMouse()
-        # do setup tasks
-        # ...
         self.viewMode = 0
         self.favoritesToggle = False
         self.favoritesList = []
         self.rootListPath = os.path.join(".", f"youtubeDownloader{pathSeparator}")
         self.setupWorld()
+        self.setupControls()
+        self.buildGui()
 
     def syncProgress(self):
         while True:
@@ -148,6 +131,12 @@ class Main(ShowBase):
                 )
             )
             self.progressText.setText(progressText)
+            self.progressBar["value"] = (
+                self.songList[self.songIndex]["object"].get_time()
+                / self.songList[self.songIndex]["object"].length()
+            ) * 100
+            self.progressBar.setValue()
+            self.songName.setText(self.songList[self.songIndex]["name"])
 
     def update(self):
         while True:
@@ -159,12 +148,6 @@ class Main(ShowBase):
                         and self.songList[self.songIndex]["played"] == 0
                     ):
                         self.songList[self.songIndex]["played"] = 1
-                        self.songList[self.songIndex]["nodePath"]["frameColor"] = (
-                            0,
-                            0.6,
-                            0.3,
-                            1,
-                        )
                         self.songList[self.songIndex]["object"].play()
                     elif (
                         self.songList[self.songIndex]["object"].status() == 1
@@ -177,41 +160,99 @@ class Main(ShowBase):
 
     def setupControls(self):
         self.accept("space", self.togglePlay)
-        self.accept("o", self.setBackgroundBin)
         self.accept("arrow_left", self.prevSong)
+        self.accept("arrow_up", self.prevSong)
         self.accept("arrow_right", self.nextSong)
+        self.accept("arrow_down", self.nextSong)
         self.accept("c", self.copySong)
-        self.accept("s", self.shuffleSongs)
-        self.accept("shift-s", self.sortSongs)
-        self.accept("f", self.toggleSongFavorite)
-        self.accept(
-            "shift-f",
-            self.changePlaylist,
-            extraArgs=[
-                self.songList[self.songIndex]["path"]
-                .replace(
-                    self.songList[self.songIndex]["path"].split(pathSeparator)[-2],
-                    "favorites",
-                )
-                .replace(
-                    pathSeparator
-                    + self.songList[self.songIndex]["path"].split(pathSeparator)[-1],
-                    "",
-                ),
-            ],
-        )
-        self.paused = False
+        self.accept("q", sys.exit)
+        self.accept("window-event", self.onWindowResize)
+        self.paused = True
         self.currentTime = 0
+
+    def buildGui(self):
+        self.guiFrame = DirectFrame(
+            parent=self.aspect2d, scale=(1 * self.getAspectRatio(self.win), 1, 1)
+        )
+        self.songListFrame = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-0.5, 0.9, -0.8, 0.8),
+            frameColor=(0.4, 0.4, 0.4, 1),
+        )
+        self.songListFrame.setBin("background", 1000)
+        self.optionBar = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-1, -0.5, -0.8, 0.8),
+            frameColor=(0.2, 0.2, 0.2, 1),
+        )
+        self.optionBar.setBin("background", 2000)
+        self.topBar = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-1, 1, 0.8, 1),
+            frameColor=(0.1, 0.1, 0.1, 1),
+        )
+        self.topBar.setBin("background", 3000)
+        self.controlBar = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-1, 1, -1, -0.8),
+            frameColor=self.hexToRgb("#212121"),
+        )
+        self.controlBar.setBin("background", 3000)
+        self.progressText = OnscreenText(
+            text="time / length",
+            parent=self.controlBar,
+            scale=(0.04 / self.getAspectRatio(self.win), 0.04, 0.04),
+            pos=(-0.7, -0.9),
+            fg=self.hexToRgb("#919191"),
+            align=TextNode.ALeft,
+        )
+        self.progressText.setBin("background", 3100)
+        self.progressBar = DirectWaitBar(
+            parent=self.controlBar,
+            scale=(1, 1, 0.05),
+            frameColor=self.hexToRgb("#212121"),
+            pos=(0, 0, -0.8),
+            relief=DGG.FLAT,
+            barColor=self.hexToRgb("#B2071d"),
+        )
+        self.progressBar["range"] = 100
+        self.progressBar.setRange()
+        self.progressBar.setBin("background", 3101)
+        self.songName = OnscreenText(
+            text="Name of the Song Here",
+            parent=self.topBar,
+            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            pos=(0.1, -0.9),
+            fg=self.hexToRgb("#f6f6f6"),
+            align=TextNode.ALeft,
+        )
+        self.songName.setBin("background", 3102)
+        startY = 0.7
+        self.scaledItemList = []
+        for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
+            if os.path.isdir(
+                os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
+            ):
+                button = DirectButton(
+                    parent=self.optionBar,
+                    text=item[:28] + "..." if len(item) > 28 else item,
+                    scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+                    pos=(-0.95, 0, startY),
+                    command=self.registerFolder,
+                    extraArgs=[item],
+                    text_align=TextNode.ALeft,
+                    relief=DGG.FLAT,
+                    geom=None,
+                )
+                self.scaledItemList.append(button)
+                startY -= 0.075
 
     def copySong(self):
         copy(self.songList[self.songIndex]["path"])
 
     def changePlaylist(self, path):
-        self.progressText.destroy()
         self.paused = True
         for song in self.songList:
-            song["nodePath"].hide()
-            song["nodePath"].destroy()
             song["object"].stop()
             self.songList.remove(song)
         self.paused = False
@@ -258,7 +299,6 @@ class Main(ShowBase):
             #     )
             # except:
             #     ...
-            print(self.songList[self.songIndex]["path"])
             shutil.copy(
                 self.songList[self.songIndex]["path"],
                 self.songList[self.songIndex]["path"]
@@ -296,27 +336,12 @@ class Main(ShowBase):
         self.songIndex = 0
         if self.viewMode == 0:
             for item in self.songList:
-                item["nodePath"].setPos(0, self.songIndex, -0.5)
-                item["nodePath"].setScale(0.8)
                 item["object"].stop()
-                item["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
                 item["nodePath"].hide()
-            if self.songIndex - 1 >= 0:
-                self.songList[self.songIndex - 1]["nodePath"].setPos(10)
-                self.songList[self.songIndex - 1]["nodePath"].hide()
-            self.songList[self.songIndex]["nodePath"].show()
-            self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0.5)
-            self.songList[self.songIndex]["nodePath"].setScale(0.8)
             self.songList[self.songIndex]["object"].stop()
-            self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
             self.songIndex += 1
-            self.songList[self.songIndex]["nodePath"].show()
-            self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
-            self.songList[self.songIndex]["nodePath"].setScale(1)
             self.songList[self.songIndex]["object"].play()
             self.songList[self.songIndex]["played"] = 1
-            self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
-            self.songList[self.songIndex + 1]["nodePath"].show()
 
         t.sleep(0.1)
         self.prevSong()
@@ -334,27 +359,11 @@ class Main(ShowBase):
 
         if self.viewMode == 0:
             for item in self.songList:
-                item["nodePath"].setPos(0, self.songIndex, -0.5)
-                item["nodePath"].setScale(0.8)
                 item["object"].stop()
-                item["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
-                item["nodePath"].hide()
-            if self.songIndex - 1 >= 0:
-                self.songList[self.songIndex - 1]["nodePath"].setPos(10)
-                self.songList[self.songIndex - 1]["nodePath"].hide()
-            self.songList[self.songIndex]["nodePath"].show()
-            self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0.5)
-            self.songList[self.songIndex]["nodePath"].setScale(0.8)
             self.songList[self.songIndex]["object"].stop()
-            self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
             self.songIndex += 1
-            self.songList[self.songIndex]["nodePath"].show()
-            self.songList[self.songIndex]["nodePath"].setPos(0, self.songIndex, 0)
-            self.songList[self.songIndex]["nodePath"].setScale(1)
             self.songList[self.songIndex]["object"].play()
             self.songList[self.songIndex]["played"] = 1
-            self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0.6, 0.3, 1)
-            self.songList[self.songIndex + 1]["nodePath"].show()
 
         t.sleep(0.1)
         self.prevSong()
@@ -362,49 +371,13 @@ class Main(ShowBase):
     def nextSong(self):
         if len(self.songList) > 0 and not self.paused:
             if self.viewMode == 0:
-                if self.songIndex - 1 >= 0:
-                    LerpPosInterval(
-                        self.songList[self.songIndex - 1]["nodePath"],
-                        0.75,
-                        Point3(0, self.songIndex, 2),
-                        other=self.songPanel,
-                        blendType="easeInOut",
-                    ).start()
-
-                self.songList[self.songIndex]["nodePath"].show()
-                LerpPosInterval(
-                    self.songList[self.songIndex]["nodePath"],
-                    0.25,
-                    Point3(0, self.songIndex, 0.5),
-                    other=self.songPanel,
-                    blendType="easeInOut",
-                ).start()
-                self.songList[self.songIndex]["nodePath"].setScale(0.8)
                 self.songList[self.songIndex]["object"].stop()
-                self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
                 if self.songIndex + 1 < len(self.songList):
                     self.songIndex += 1
                 else:
                     self.songIndex = 0
-                self.songList[self.songIndex]["nodePath"].show()
-                LerpPosInterval(
-                    self.songList[self.songIndex]["nodePath"],
-                    0.25,
-                    Point3(0, self.songIndex, 0),
-                    other=self.songPanel,
-                    blendType="easeInOut",
-                ).start()
-                self.songList[self.songIndex]["nodePath"].setScale(1)
                 self.songList[self.songIndex]["object"].play()
                 self.songList[self.songIndex]["played"] = 1
-                self.songList[self.songIndex]["nodePath"]["frameColor"] = (
-                    0,
-                    0.6,
-                    0.3,
-                    1,
-                )
-                if self.songIndex + 1 < len(self.songList):
-                    self.songList[self.songIndex + 1]["nodePath"].show()
 
             self.setBackgroundImage(
                 self.songList[self.songIndex]["imagePath"],
@@ -415,39 +388,10 @@ class Main(ShowBase):
     def prevSong(self):
         if len(self.songList) > 0 and not self.paused:
             if self.viewMode == 0:
-                if self.songIndex - 2 >= 0:
-                    self.songList[self.songIndex - 2]["nodePath"].setPos(0, 0, 0.5)
-                    self.songList[self.songIndex - 2]["nodePath"].show()
-                LerpPosInterval(
-                    self.songList[self.songIndex]["nodePath"],
-                    0.25,
-                    Point3(0, self.songIndex, -0.5),
-                    other=self.songPanel,
-                    blendType="easeInOut",
-                ).start()
-                self.songList[self.songIndex]["nodePath"].setScale(0.8)
                 self.songList[self.songIndex]["object"].stop()
-                self.songList[self.songIndex]["nodePath"]["frameColor"] = (0, 0, 0.6, 1)
-                if self.songIndex + 1 < len(self.songList):
-                    self.songList[self.songIndex + 1]["nodePath"].hide()
                 self.songIndex -= 1
-                self.songList[self.songIndex]["nodePath"].show()
-                LerpPosInterval(
-                    self.songList[self.songIndex]["nodePath"],
-                    0.25,
-                    Point3(0, self.songIndex, 0),
-                    other=self.songPanel,
-                    blendType="easeInOut",
-                ).start()
-                self.songList[self.songIndex]["nodePath"].setScale(1)
                 self.songList[self.songIndex]["object"].play()
                 self.songList[self.songIndex]["played"] = 1
-                self.songList[self.songIndex]["nodePath"]["frameColor"] = (
-                    0,
-                    0.6,
-                    0.3,
-                    1,
-                )
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -541,86 +485,38 @@ class Main(ShowBase):
         filters.setSrgbEncode()
         filters.setHighDynamicRange()
         filters.setBlurSharpen(0.5)
-
-        # GUI
-
-        self.guiFrame = DirectFrame(parent=self.aspect2d)
-        self.pathObject = DirectOptionMenu(
-            parent=self.guiFrame,
-            items=os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")),
-            scale=0.1,
-            pos=(-0.5, 0, 0),
-            text_pos=(1, 0, 0.5),
-            command=self.registerFolder,
-        )
         self.accept("q", sys.exit)
+        self.accept("window-event", self.onWindowResize)
+
+    def onWindowResize(self, window):
+        for item in self.scaledItemList:
+            item.setScale(
+                item.getScale()[2] / self.getAspectRatio(self.win),
+                item.getScale()[1],
+                item.getScale()[2],
+            )
+
+    def makeSongPanel(self, songId):
+        song = self.songList[songId]
+        return DirectButton(
+            parent=self.songListFrame,
+            text=song["name"],
+            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            pos=(0, 0, 0),
+            text_align=TextNode.ALeft,
+        )
+
+    def hexToRgb(self, hex: str) -> tuple:
+        hex = hex.lstrip("#")
+        return tuple(int(hex[i : i + 2], 16) / 255.0 for i in (0, 2, 4)) + (1.0,)
 
     def registerSongs(self):
-        self.songPanel = DirectFrame(parent=self.guiFrame, pos=(0, 0, 0))
-        self.progressText = OnscreenText(
-            text="",
-            parent=self.guiFrame,
-            scale=0.1,
-            pos=(0, -0.3),
-            fg=(1, 1, 1, 1),
-        )
-        # self.progressBar = DirectWaitBar(
-        #     parent=self.guiFrame,
-        #     scale=0.15,
-        #     pos=(0.25, 0, 0.485),
-        # )
-        self.songList.reverse()
         for songId in range(len(self.songList)):
-
-            def _playSong(song, panel, button):
-                if song.status() == 2:
-                    song.stop()
-                    panel["frameColor"] = (0, 0, 0.6, 1)
-                    button["text"] = "play"
-                else:
-                    song.play()
-                    panel["frameColor"] = (0, 0.6, 0.3, 1)
-                    button["text"] = "stop"
-
-            songPanel = DirectFrame(
-                parent=self.songPanel,
-                frameSize=(-2, 2, -0.2, 0.2),
-                pos=(0, 0, -0.5),
-                scale=0.8,
-                frameColor=(0, 0, 0.6, 1),
-            )
-
-            # playButton = DirectButton(
-            #     parent=songPanel,
-            #     text="play",
-            #     command=_playSong,
-            #     extraArgs=(self.songList[songId]["object"], songPanel),
-            #     scale=0.2,
-            #     pos=(0, 0, -0.1),
-            # )
-            # playButton["extraArgs"] = (
-            #     self.songList[songId]["object"],
-            #     songPanel,
-            #     playButton,
-            # )
-
-            songName = OnscreenText(
-                text=self.songList[songId]["name"],
-                parent=songPanel,
-                scale=0.1,
-                pos=(0, 0),
-                wordwrap=30,
-            )
+            if self.songList[songId]["nodePath"] is not None:
+                self.songList[songId]["nodePath"].destroy()
+        for songId in range(len(self.songList)):
+            songPanel = self.makeSongPanel(songId)
             self.songList[songId]["nodePath"] = songPanel
-            songPanel.hide()
-        self.songList.reverse()
-        self.songList[0]["nodePath"].setPos(0, 0, 0)
-        self.songList[0]["nodePath"].setScale(1)
-        self.songList[self.songIndex]["nodePath"].show()
-        try:
-            self.songList[self.songIndex + 1]["nodePath"].show()
-        except:
-            ...
         try:
             self.backgroundImage = OnscreenImage(
                 parent=self.guiFrame,
@@ -638,7 +534,6 @@ class Main(ShowBase):
             self.backgroundToggle,
             self.backgroundToggle,
         )
-        self.pathObject.removeNode()
         self.setupControls()
         Thread(target=self.update, daemon=True).start()
         Thread(target=self.syncProgress, daemon=True).start()
@@ -677,6 +572,7 @@ class Main(ShowBase):
                 else:
                     ...
         self.registerSongs()
+        self.togglePlay()
 
 
 def fadeOutGuiElement(
