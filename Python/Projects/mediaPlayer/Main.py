@@ -38,6 +38,7 @@ from direct.gui.DirectGui import *
 import direct.particles.Particles as part
 from direct.filter.CommonFilters import CommonFilters
 
+
 monitor = get_monitors()
 loadPrcFile(f"src{pathSeparator}settings.prc")
 if Wvars.winMode == "full-win":
@@ -98,9 +99,8 @@ class Main(ShowBase):
         self.buildGui()
         self.setupControls()
 
-    def syncProgress(self):
-        while True:
-            t.sleep(0.1)
+    def syncProgress(self, task):
+        try:
             progressText = (
                 str(
                     divide(
@@ -137,28 +137,32 @@ class Main(ShowBase):
             ) * 100
             self.progressBar.setValue()
             self.songName.setText(self.songList[self.songIndex]["name"])
+        except:
+            ...
+        return task.cont
 
-    def update(self):
-        while True:
-            t.sleep(0.5)
-            try:
-                if not self.paused:
-                    if (
-                        self.songList[self.songIndex]["object"].status() == 1
-                        and self.songList[self.songIndex]["played"] == 0
-                    ):
-                        self.songList[self.songIndex]["played"] = 1
-                        self.songList[self.songIndex]["object"].play()
-                    elif (
-                        self.songList[self.songIndex]["object"].status() == 1
-                        and self.songList[self.songIndex]["played"] == 1
-                    ):
-                        self.songList[self.songIndex]["played"] = 0
-                        self.nextSong()
-            except:
-                ...
+    def update(self, task):
+        try:
+            if not self.paused:
+                if (
+                    self.songList[self.songIndex]["object"].status() == 1
+                    and self.songList[self.songIndex]["played"] == 0
+                ):
+                    self.songList[self.songIndex]["played"] = 1
+                    self.songList[self.songIndex]["object"].play()
+                elif (
+                    self.songList[self.songIndex]["object"].status() == 1
+                    and self.songList[self.songIndex]["played"] == 1
+                ):
+                    self.songList[self.songIndex]["played"] = 0
+                    self.nextSong()
+        except:
+            ...
+        return task.cont
 
     def setupControls(self):
+        self.paused = True
+        self.currentTime = 0
         self.accept("space", self.togglePlay)
         self.accept("arrow_left", self.prevSong)
         self.accept("arrow_up", self.prevSong)
@@ -170,25 +174,24 @@ class Main(ShowBase):
         self.accept(
             "wheel_up",
             lambda: self.songListFrameOffset.setZ(
-                self.songListFrameOffset.getZ() + 0.1
+                self.songListFrameOffset.getZ() - 0.04
             ),
         )
         self.accept(
             "wheel_down",
             lambda: self.songListFrameOffset.setZ(
-                self.songListFrameOffset.getZ() - 0.1
+                self.songListFrameOffset.getZ() + 0.04
             ),
         )
-        self.paused = True
-        self.currentTime = 0
 
     def buildGui(self):
+        self.scaledItemList = []
         self.guiFrame = DirectFrame(
             parent=self.aspect2d, scale=(1 * self.getAspectRatio(self.win), 1, 1)
         )
         self.songListFrame = DirectFrame(
             parent=self.guiFrame,
-            frameSize=(-0.5, 0.9, -0.8, 0.8),
+            frameSize=(-0.5, 0.9, -1, 0.8),
             frameColor=(0.4, 0.4, 0.4, 1),
         )
         self.songListFrame.setBin("background", 1000)
@@ -196,7 +199,7 @@ class Main(ShowBase):
         self.songListFrameOffset.reparentTo(self.songListFrame)
         self.optionBar = DirectFrame(
             parent=self.guiFrame,
-            frameSize=(-1, -0.5, -0.8, 0.8),
+            frameSize=(-1, -0.5, -1, 1),
             frameColor=(0.2, 0.2, 0.2, 1),
         )
         self.optionBar.setBin("background", 2000)
@@ -212,6 +215,7 @@ class Main(ShowBase):
             frameColor=self.hexToRgb("#212121"),
         )
         self.controlBar.setBin("background", 3000)
+        self.controlBar.setPos(0, 0, -0.2)
         self.progressText = OnscreenText(
             text="time / length",
             parent=self.controlBar,
@@ -234,7 +238,7 @@ class Main(ShowBase):
         self.progressBar.setBin("background", 3101)
         self.songName = OnscreenText(
             text="Name of the Song Here",
-            parent=self.topBar,
+            parent=self.controlBar,
             scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
             pos=(0.1, -0.9),
             fg=self.hexToRgb("#f6f6f6"),
@@ -242,36 +246,44 @@ class Main(ShowBase):
         )
         self.songName.setBin("background", 3102)
         startY = 0.7
-        self.scaledItemList = []
         for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
             if os.path.isdir(
                 os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
             ):
-                button = DirectButton(
-                    parent=self.optionBar,
-                    text=item[:28] + "..." if len(item) > 28 else item,
-                    scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-                    pos=(-0.95, 0, startY),
-                    command=self.registerFolder,
-                    extraArgs=[item],
-                    text_align=TextNode.ALeft,
-                    relief=DGG.FLAT,
-                    geom=None,
-                )
-                self.scaledItemList.append(button)
-                startY -= 0.075
+                if self.checkFolderForSongs(
+                    os.path.join(".", f"youtubeDownloader{pathSeparator}", item),
+                    (
+                        ".m4a",
+                        ".mp3",
+                        ".wav",
+                        ".ogg",
+                        ".flac",
+                        ".wma",
+                        ".aac",
+                    ),
+                ):
+                    button = DirectButton(
+                        parent=self.optionBar,
+                        text=item[:28] + "..." if len(item) > 28 else item,
+                        scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+                        pos=(-0.95, 0, startY),
+                        command=self.registerFolder,
+                        extraArgs=[item],
+                        text_align=TextNode.ALeft,
+                        relief=DGG.FLAT,
+                        geom=None,
+                    )
+                    self.scaledItemList.append(button)
+                    startY -= 0.075
+
+    def checkFolderForSongs(self, path, formatList):
+        for file in os.listdir(path):
+            if file.endswith(tuple(formatList)):
+                return True
+        return False
 
     def copySong(self):
         copy(self.songList[self.songIndex]["path"])
-
-    def changePlaylist(self, path):
-        self.paused = True
-        for song in self.songList:
-            song["object"].stop()
-            self.songList.remove(song)
-        self.paused = False
-        self.registerFolder(path)
-        self.songList[self.songIndex]["object"].play()
 
     def toggleSongFavorite(self):
         favoritesList: list = []
@@ -388,8 +400,6 @@ class Main(ShowBase):
                 self.songList[self.songIndex]["object"].stop()
                 if self.songIndex + 1 < len(self.songList):
                     self.songIndex += 1
-                else:
-                    self.songIndex = 0
                 self.songList[self.songIndex]["object"].play()
                 self.songList[self.songIndex]["played"] = 1
 
@@ -403,7 +413,8 @@ class Main(ShowBase):
         if len(self.songList) > 0 and not self.paused:
             if self.viewMode == 0:
                 self.songList[self.songIndex]["object"].stop()
-                self.songIndex -= 1
+                if self.songIndex - 1 <= 0:
+                    self.songIndex -= 1
                 self.songList[self.songIndex]["object"].play()
                 self.songList[self.songIndex]["played"] = 1
         self.setBackgroundImage(
@@ -411,6 +422,21 @@ class Main(ShowBase):
             self.backgroundToggle,
             self.backgroundToggle,
         )
+
+    def goToSong(self, songId):
+        if len(self.songList) > 0:
+            if self.viewMode == 0:
+                self.songList[self.songIndex]["object"].stop()
+                if songId < len(self.songList) and songId >= 0:
+                    self.songIndex = songId
+                self.songList[self.songIndex]["object"].play()
+                self.songList[self.songIndex]["played"] = 1
+        self.setBackgroundImage(
+            self.songList[self.songIndex]["imagePath"],
+            self.backgroundToggle,
+            self.backgroundToggle,
+        )
+        self.paused = False
 
     def setBackgroundImage(self, imageName, blur, background):
         def _th1(self, imageName, blur, background):
@@ -424,16 +450,16 @@ class Main(ShowBase):
                     newImageName = imageName
                 self.backgroundImage.destroy()
                 self.backgroundImage = OnscreenImage(
-                    parent=self.guiFrame,
+                    parent=self.render2d,
                     image=self.loader.loadTexture(newImageName),
-                    scale=(1.5 * (640 / 480), 1, 1.5),
+                    scale=(0.5 * self.getAspectRatio(self.win), 1, 0.5),
                     pos=(0, 0, 0),
                 )
+                self.scaledItemList.append(self.backgroundImage)
                 if background:
-                    self.backgroundImage.setBin("background", 0)
+                    self.backgroundImage.setBin("foreground", 0)
                 else:
-                    # self.backgroundImage.setBin("foreground", 1000)
-                    ...
+                    self.backgroundImage.setBin("foreground", 0)
             except:
                 try:
                     self.backgroundImage.hide()
@@ -504,11 +530,17 @@ class Main(ShowBase):
         if window.isClosed():
             sys.exit()
         for item in self.scaledItemList:
-            item.setScale(
-                item.getScale()[2] / self.getAspectRatio(self.win),
-                item.getScale()[1],
-                item.getScale()[2],
-            )
+            try:
+                item.setScale(
+                    item.getScale()[2] / self.getAspectRatio(self.win),
+                    item.getScale()[1],
+                    item.getScale()[2],
+                )
+            except:
+                item.setScale(
+                    item.getScale()[1] / self.getAspectRatio(self.win),
+                    item.getScale()[1],
+                )
 
     def makeSongPanel(self, songId):
         song = self.songList[songId]
@@ -541,14 +573,19 @@ class Main(ShowBase):
         )
         lengthText.setBin("background", 1001)
         playButton = DirectButton(
-            text="[     ]",
+            text="[  ▷  ]",
             parent=frame,
             scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
             pos=(-0.4, 0, 0),
+            command=self.goToSong,
+            extraArgs=[songId],
             relief=DGG.FLAT,
             geom=None,
         )
         playButton.setBin("background", 1001)
+        self.scaledItemList.append(playButton)
+        self.scaledItemList.append(nameText)
+        self.scaledItemList.append(lengthText)
         return frame
 
     def userExit(self):
@@ -577,15 +614,31 @@ class Main(ShowBase):
             self.backgroundImage.setBin("background", 0)
         except:
             ...
+        LerpPosInterval(
+            self.controlBar,
+            0.5,
+            Point3(0, 0, 0),
+            Point3(0, 0, -0.2),
+            blendType="easeInOut",
+        ).start()
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
             self.backgroundToggle,
         )
-        Thread(target=self.update, daemon=True).start()
-        Thread(target=self.syncProgress, daemon=True).start()
+        self.taskMgr.add(self.update, "update")
+        self.taskMgr.add(self.syncProgress, "syncProgress")
 
     def registerFolder(self, path):
+        self.taskMgr.remove("update")
+        self.taskMgr.remove("syncProgress")
+        self.paused = True
+        del self.songList[:]
+        self.songIndex = 0
+        if self.songListFrameOffset is not None:
+            self.songListFrameOffset.setZ(0)
+        for node in self.songListFrameOffset.getChildren():
+            node.removeNode()
         path = os.path.join(".", "youtubeDownloader", f"{path}{pathSeparator}")
         try:
             path = path.replace(
