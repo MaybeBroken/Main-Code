@@ -95,8 +95,8 @@ class Main(ShowBase):
         self.favoritesList = []
         self.rootListPath = os.path.join(".", f"youtubeDownloader{pathSeparator}")
         self.setupWorld()
-        self.setupControls()
         self.buildGui()
+        self.setupControls()
 
     def syncProgress(self):
         while True:
@@ -166,7 +166,19 @@ class Main(ShowBase):
         self.accept("arrow_down", self.nextSong)
         self.accept("c", self.copySong)
         self.accept("q", sys.exit)
-        self.accept("window-event", self.onWindowResize)
+        self.accept("window-event", self.winEvent)
+        self.accept(
+            "wheel_up",
+            lambda: self.songListFrameOffset.setZ(
+                self.songListFrameOffset.getZ() + 0.1
+            ),
+        )
+        self.accept(
+            "wheel_down",
+            lambda: self.songListFrameOffset.setZ(
+                self.songListFrameOffset.getZ() - 0.1
+            ),
+        )
         self.paused = True
         self.currentTime = 0
 
@@ -180,6 +192,8 @@ class Main(ShowBase):
             frameColor=(0.4, 0.4, 0.4, 1),
         )
         self.songListFrame.setBin("background", 1000)
+        self.songListFrameOffset = NodePath("songListFrameOffset")
+        self.songListFrameOffset.reparentTo(self.songListFrame)
         self.optionBar = DirectFrame(
             parent=self.guiFrame,
             frameSize=(-1, -0.5, -0.8, 0.8),
@@ -485,10 +499,10 @@ class Main(ShowBase):
         filters.setSrgbEncode()
         filters.setHighDynamicRange()
         filters.setBlurSharpen(0.5)
-        self.accept("q", sys.exit)
-        self.accept("window-event", self.onWindowResize)
 
-    def onWindowResize(self, window):
+    def winEvent(self, window):
+        if window.isClosed():
+            sys.exit()
         for item in self.scaledItemList:
             item.setScale(
                 item.getScale()[2] / self.getAspectRatio(self.win),
@@ -498,13 +512,47 @@ class Main(ShowBase):
 
     def makeSongPanel(self, songId):
         song = self.songList[songId]
-        return DirectButton(
-            parent=self.songListFrame,
-            text=song["name"],
-            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-            pos=(0, 0, 0),
-            text_align=TextNode.ALeft,
+        y = 0.7 + ((-songId) / 10) * 1.5
+        frame = DirectFrame(
+            parent=self.songListFrameOffset,
+            frameSize=(-0.45, 0.85, -0.06, 0.06),
+            frameColor=(0.2, 0.2, 0.2, 1),
+            pos=(0, 0, y),
         )
+        frame.setBin("background", 1000)
+        nameText = OnscreenText(
+            text=song["name"][:60] + "..." if len(song["name"]) > 60 else song["name"],
+            parent=frame,
+            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            fg=self.hexToRgb("#f6f6f6"),
+            pos=(-0.3, 0, 0),
+            align=TextNode.ALeft,
+        )
+        nameText.setBin("background", 1001)
+        lengthText = OnscreenText(
+            text=str(divide(int(song["object"].length()), 60)[0])
+            + ":"
+            + str(divide(int(song["object"].length()), 60)[1]),
+            parent=frame,
+            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            fg=self.hexToRgb("#f6f6f6"),
+            pos=(0.7, 0, 0),
+            align=TextNode.ARight,
+        )
+        lengthText.setBin("background", 1001)
+        playButton = DirectButton(
+            text="[     ]",
+            parent=frame,
+            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            pos=(-0.4, 0, 0),
+            relief=DGG.FLAT,
+            geom=None,
+        )
+        playButton.setBin("background", 1001)
+        return frame
+
+    def userExit(self):
+        return sys.exit()
 
     def hexToRgb(self, hex: str) -> tuple:
         hex = hex.lstrip("#")
@@ -534,7 +582,6 @@ class Main(ShowBase):
             self.backgroundToggle,
             self.backgroundToggle,
         )
-        self.setupControls()
         Thread(target=self.update, daemon=True).start()
         Thread(target=self.syncProgress, daemon=True).start()
 
