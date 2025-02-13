@@ -27,6 +27,7 @@ from panda3d.core import (
     WindowProperties,
     NodePath,
     TextNode,
+    TransparencyAttrib,
     Point3,
     Point4,
     Vec3,
@@ -156,9 +157,19 @@ class Main(ShowBase):
                 ):
                     self.songList[self.songIndex]["played"] = 0
                     self.nextSong()
+            self.cullSongPanels()
         except:
             ...
         return task.cont
+
+    def cullSongPanels(self):
+        for song in self.songList:
+            if song["nodePath"]:
+                pos = song["nodePath"].getPos(self.render2d)
+                if pos.getZ() < -1.2 or pos.getZ() > 1.2:
+                    song["nodePath"].hide()
+                else:
+                    song["nodePath"].show()
 
     def setupControls(self):
         self.paused = True
@@ -239,12 +250,44 @@ class Main(ShowBase):
         self.songName = OnscreenText(
             text="Name of the Song Here",
             parent=self.controlBar,
-            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            scale=(0.04 / self.getAspectRatio(self.win), 0.04, 0.04),
             pos=(0.1, -0.9),
             fg=self.hexToRgb("#f6f6f6"),
             align=TextNode.ALeft,
         )
         self.songName.setBin("background", 3102)
+        self.pausePlayButton = DirectButton(
+            parent=self.controlBar,
+            image=self.loader.loadTexture("src/textures/play.png"),
+            scale=(0.04 / self.getAspectRatio(self.win), 0.04, 0.04),
+            pos=(-0.85, 0, -0.9),
+            command=self.togglePlay,
+            relief=DGG.FLAT,
+            frameColor=(0, 0, 0, 0),
+        )
+        self.pausePlayButton.setTransparency(TransparencyAttrib.MAlpha)
+        self.arrowLeftButton = DirectButton(
+            parent=self.controlBar,
+            image=self.loader.loadTexture("src/textures/arrow.png"),
+            scale=(0.04 / self.getAspectRatio(self.win), 0.04, 0.04),
+            pos=(-0.95, 0, -0.9),
+            hpr=(0, 0, 180),
+            command=self.prevSong,
+            relief=DGG.FLAT,
+            frameColor=(0, 0, 0, 0),
+        )
+        self.arrowLeftButton.setTransparency(TransparencyAttrib.MAlpha)
+
+        self.arrowRightButton = DirectButton(
+            parent=self.controlBar,
+            image=self.loader.loadTexture("src/textures/arrow.png"),
+            scale=(0.04 / self.getAspectRatio(self.win), 0.04, 0.04),
+            pos=(-0.75, 0, -0.9),
+            command=self.nextSong,
+            relief=DGG.FLAT,
+            frameColor=(0, 0, 0, 0),
+        )
+        self.arrowRightButton.setTransparency(TransparencyAttrib.MAlpha)
         startY = 0.7
         for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
             if os.path.isdir(
@@ -395,7 +438,7 @@ class Main(ShowBase):
         self.prevSong()
 
     def nextSong(self):
-        if len(self.songList) > 0 and not self.paused:
+        if len(self.songList) > 0:
             if self.viewMode == 0:
                 self.songList[self.songIndex]["object"].stop()
                 if self.songIndex + 1 < len(self.songList):
@@ -408,9 +451,10 @@ class Main(ShowBase):
                 self.backgroundToggle,
                 self.backgroundToggle,
             )
+            self.paused = False
 
     def prevSong(self):
-        if len(self.songList) > 0 and not self.paused:
+        if len(self.songList) > 0:
             if self.viewMode == 0:
                 self.songList[self.songIndex]["object"].stop()
                 if self.songIndex - 1 <= 0:
@@ -422,6 +466,7 @@ class Main(ShowBase):
             self.backgroundToggle,
             self.backgroundToggle,
         )
+        self.paused = False
 
     def goToSong(self, songId):
         if len(self.songList) > 0:
@@ -493,6 +538,11 @@ class Main(ShowBase):
 
     def togglePlay(self):
         if len(self.songList) > 0:
+            self.pausePlayButton["image"] = self.loader.loadTexture(
+                "src/textures/play.png"
+                if self.songList[self.songIndex]["object"].status() == 2
+                else "src/textures/pause.png"
+            )
             if self.songList[self.songIndex]["object"].status() == 2:
                 self.currentTime = self.songList[self.songIndex]["object"].getTime()
                 self.songList[self.songIndex]["object"].stop()
@@ -552,6 +602,7 @@ class Main(ShowBase):
             pos=(0, 0, y),
         )
         frame.setBin("background", 1000)
+        frame.setTag("songId", str(songId))
         nameText = OnscreenText(
             text=song["name"][:60] + "..." if len(song["name"]) > 60 else song["name"],
             parent=frame,
@@ -573,15 +624,16 @@ class Main(ShowBase):
         )
         lengthText.setBin("background", 1001)
         playButton = DirectButton(
-            text="[  ▷  ]",
+            image=self.loader.loadTexture("src/textures/play.png"),
             parent=frame,
-            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            scale=(0.03 / self.getAspectRatio(self.win), 0.03, 0.03),
             pos=(-0.4, 0, 0),
             command=self.goToSong,
             extraArgs=[songId],
             relief=DGG.FLAT,
-            geom=None,
+            frameColor=(0, 0, 0, 0),
         )
+        playButton.setTransparency(TransparencyAttrib.MAlpha)
         playButton.setBin("background", 1001)
         self.scaledItemList.append(playButton)
         self.scaledItemList.append(nameText)
@@ -628,6 +680,7 @@ class Main(ShowBase):
         )
         self.taskMgr.add(self.update, "update")
         self.taskMgr.add(self.syncProgress, "syncProgress")
+        self.cullSongPanels()
 
     def registerFolder(self, path):
         self.taskMgr.remove("update")
