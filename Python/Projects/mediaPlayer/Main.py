@@ -35,10 +35,7 @@ from panda3d.core import (
 )
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.stdpy.threading import Thread
-import direct.stdpy.file as panda_fMgr
 from direct.gui.DirectGui import *
-import direct.particles.Particles as part
-from direct.filter.CommonFilters import CommonFilters
 
 
 monitor = get_monitors()
