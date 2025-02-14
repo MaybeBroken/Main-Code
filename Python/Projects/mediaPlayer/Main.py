@@ -11,6 +11,7 @@ from direct.showbase.ShowBase import ShowBase
 from clipboard import copy
 from PIL import Image, ImageFilter
 from direct.interval.LerpInterval import LerpPosInterval, LerpColorInterval
+from __YOUTUBEDOWNLOADER import CORE
 
 if sys.platform == "darwin":
     pathSeparator = "/"
@@ -89,6 +90,7 @@ class CHARS:
 class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
+        self.doneInitialSetup = False
         self.setBackgroundColor(self.hexToRgb("#262626"))
         self.backfaceCullingOn()
         self.disableMouse()
@@ -296,6 +298,13 @@ class Main(ShowBase):
             frameColor=(0, 0, 0, 0),
         )
         self.arrowRightButton.setTransparency(TransparencyAttrib.MAlpha)
+
+        self.scaledItemList.append(self.pausePlayButton)
+        self.scaledItemList.append(self.arrowLeftButton)
+        self.scaledItemList.append(self.arrowRightButton)
+        self.scaledItemList.append(self.progressText)
+        self.scaledItemList.append(self.songName)
+
         startY = 0.7
         for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
             if os.path.isdir(
@@ -635,6 +644,9 @@ class Main(ShowBase):
         )
         frame.setBin("background", 1000)
         frame.setTag("songId", str(songId))
+        song["name"] = song["name"].split(" - ")[1:]
+        song["name"] = " - ".join(song["name"])
+        song["name"] = song["name"].replace(".m4a", "")
         nameText = OnscreenText(
             text=song["name"][:55] + "..." if len(song["name"]) > 55 else song["name"],
             parent=frame,
@@ -719,13 +731,13 @@ class Main(ShowBase):
             self.backgroundToggle,
             self.backgroundToggle,
         )
-        self.taskMgr.add(self.update, "update")
-        self.taskMgr.add(self.syncProgress, "syncProgress")
-        Thread(target=self.cullSongPanels).start()
+        if not self.doneInitialSetup:
+            self.taskMgr.add(self.update, "update")
+            self.taskMgr.add(self.syncProgress, "syncProgress")
+            Thread(target=self.cullSongPanels).start()
+            self.doneInitialSetup = True
 
     def registerFolder(self, path):
-        self.taskMgr.remove("update")
-        self.taskMgr.remove("syncProgress")
         self.paused = True
         del self.songList[:]
         self.songIndex = 0
@@ -743,7 +755,7 @@ class Main(ShowBase):
         if os.path.isdir(path):
             self.rootListPath = path
             _dir: list = os.listdir(path)
-            _newDir = _dir.copy()
+            _newDir: list = [None for _ in range(len(_dir))]
             for id in _dir:
                 try:
                     id = str(id).split(" - ")

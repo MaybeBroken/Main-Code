@@ -318,39 +318,40 @@ class CORE:
                 _Thread(target=_inThread, args=(_title, _video), daemon=True).start()
 
 
-while True:
-    try:
-        print(
-            f"\n{Color.YELLOW}YouTube Downloader{Color.RESET}\n\n{Color.BLUE}1.{Color.RESET} Download Video\n{Color.BLUE}2.{Color.RESET} Download Song\n{Color.BLUE}3.{Color.RESET} Download Playlist (Videos)\n{Color.BLUE}4.{Color.RESET} Download Playlist (Songs)\n{Color.BLUE}5.{Color.RESET} Download Artist (Videos)\n{Color.BLUE}6.{Color.RESET} Download Artist (Songs)\n\n{Color.RED}0.{Color.RESET} Exit"
-        )
-        option = input(f"\n{Color.GREEN}> {Color.RESET}")
-        if option == "1":
-            link = input(f"{Color.GREEN}url> {Color.RESET}")
-            CORE().downloadVideo(link)
-        elif option == "2":
-            link = input(f"{Color.GREEN}url> {Color.RESET}")
-            CORE().downloadSong(link)
-        elif option == "3":
-            link = input(f"{Color.GREEN}url> {Color.RESET}")
-            CORE().downloadPlaylist_V(link)
-        elif option == "4":
-            link = input(f"{Color.GREEN}url> {Color.RESET}")
-            CORE().downloadPlaylist_S(link)
-        elif option == "5":
-            link = input(f"{Color.GREEN}url> {Color.RESET}")
-            CORE().downloadArtist_V(link)
-        elif option == "6":
-            link = input(f"{Color.GREEN}url> {Color.RESET}")
-            CORE().downloadArtist_S(link)
-        elif option == "0":
+if __name__ == "__main__":
+    while True:
+        try:
+            print(
+                f"\n{Color.YELLOW}YouTube Downloader{Color.RESET}\n\n{Color.BLUE}1.{Color.RESET} Download Video\n{Color.BLUE}2.{Color.RESET} Download Song\n{Color.BLUE}3.{Color.RESET} Download Playlist (Videos)\n{Color.BLUE}4.{Color.RESET} Download Playlist (Songs)\n{Color.BLUE}5.{Color.RESET} Download Artist (Videos)\n{Color.BLUE}6.{Color.RESET} Download Artist (Songs)\n\n{Color.RED}0.{Color.RESET} Exit"
+            )
+            option = input(f"\n{Color.GREEN}> {Color.RESET}")
+            if option == "1":
+                link = input(f"{Color.GREEN}url> {Color.RESET}")
+                CORE().downloadVideo(link)
+            elif option == "2":
+                link = input(f"{Color.GREEN}url> {Color.RESET}")
+                CORE().downloadSong(link)
+            elif option == "3":
+                link = input(f"{Color.GREEN}url> {Color.RESET}")
+                CORE().downloadPlaylist_V(link)
+            elif option == "4":
+                link = input(f"{Color.GREEN}url> {Color.RESET}")
+                CORE().downloadPlaylist_S(link)
+            elif option == "5":
+                link = input(f"{Color.GREEN}url> {Color.RESET}")
+                CORE().downloadArtist_V(link)
+            elif option == "6":
+                link = input(f"{Color.GREEN}url> {Color.RESET}")
+                CORE().downloadArtist_S(link)
+            elif option == "0":
+                exit()
+        except KeyboardInterrupt:
             exit()
-    except KeyboardInterrupt:
-        exit()
-    except Exception as e:
-        print(Color.RED + f"Something Went Wrong:\n" + Color.RESET + str(e))
+        except Exception as e:
+            print(Color.RED + f"Something Went Wrong:\n" + Color.RESET + str(e))
 
-    time.sleep(1)
+        time.sleep(1)
 
-    for thread in th.enumerate():
-        if thread is not th.main_thread():
-            thread.join()
+        for thread in th.enumerate():
+            if thread is not th.main_thread():
+                thread.join()
