@@ -129,6 +129,57 @@ def apply_cover_image(url, dest_folder, songName, level=0):
         return apply_cover_image(url, dest_folder, songName, level + 1)
 
 
+base_callback_addon = lambda *args, **kwargs: print("Callback not registered")
+
+
+def registerCallbackFunction(callback):
+    global base_callback_addon
+    base_callback_addon = callback
+
+
+def base_callback(
+    video,
+    id,
+    title,
+    list,
+    progress: float = 0,
+    status: list = ["Queued", "Downloading", "finished"],
+):
+    print(
+        f"\n{Color.LIGHT_GREEN}{title}{Color.RESET} - {Color.LIGHT_CYAN}{status[0]}{Color.RESET} - {progress}% - {Color.LIGHT_GREY}{id}{Color.RESET}"
+    )
+    base_callback_addon(
+        video=video,
+        id=id,
+        title=title,
+        list=list,
+        progress=progress,
+        status=status,
+    )
+
+
+def downloadCallbackFunction(video, id, title, list, status):
+    def download_callback(
+        chunk: bytes,
+        bytes_remaining: int,
+    ):
+        print(
+            f"\r{Color.LIGHT_GREEN}Downloading{Color.RESET} - {Color.LIGHT_CYAN}{round((1 - bytes_remaining / 1000000) * 100, 2)}%{Color.RESET}",
+            end="",
+        )
+        progress = round((1 - bytes_remaining / 1000000) * 100, 2)
+        base_callback(
+            video=video,
+            id=id,
+            title=title,
+            list=list,
+            progress=progress,
+            status=status,
+        )
+
+    return download_callback
+
+
 class CORE:
     downloadingActive = False
 
@@ -143,12 +194,33 @@ class CORE:
                     token_file="spoofedToken.json",
                 )
                 ys = yt.streams.get_highest_resolution()
-                title = yt.title
+                title = pathSafe(f"{len(os.listdir('Videos'))} - {yt.title}", True)
+                base_callback(
+                    video=yt,
+                    id=len(os.listdir("Videos")),
+                    title=title,
+                    list=[yt],
+                    status=["Queued"],
+                )
                 print(f"Downloading {Color.CYAN}{title}{Color.RESET}")
+                ys.on_progress_for_chunks = downloadCallbackFunction(
+                    video=yt,
+                    id=len(os.listdir("Videos")),
+                    title=title,
+                    list=[yt],
+                    status=["Downloading"],
+                )
                 ys.download(
                     "Videos",
-                    filename=pathSafe(f"{len(os.listdir("Videos"))} - {title}", True)
-                    + ".mp4",
+                    filename=title + ".mp4",
+                )
+                base_callback(
+                    video=yt,
+                    id=len(os.listdir("Videos")),
+                    title=title,
+                    list=[yt],
+                    progress=100,
+                    status=["Finished"],
                 )
                 print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
             except exceptions.VideoUnavailable:
@@ -176,14 +248,28 @@ class CORE:
                 )
                 ys = yt.streams.get_audio_only()
                 title = pathSafe(f"{len(os.listdir("Songs"))} - {title}", True) + ".m4a"
+                ys.on_progress_for_chunks = downloadCallbackFunction(
+                    video=yt,
+                    id=len(os.listdir("Songs")),
+                    title=title,
+                    list=[yt],
+                    status=["Downloading"],
+                )
                 ys.download(
                     output_path="Songs",
                     filename=title,
                 )
                 print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
-                apply_cover_image(
-                    yt.thumbnail_url, "Songs" + os.path.sep + "img", title
+                base_callback(
+                    video=yt,
+                    id=len(os.listdir("Songs")),
+                    title=title,
+                    list=[yt],
+                    progress=100,
+                    status=["Finished"],
                 )
+
+                apply_cover_image(yt.thumbnail_url, os.path.join("Songs", "img"), title)
             except exceptions.VideoUnavailable:
                 print(Color.RED + "Video is unavailable" + Color.RESET)
             except exceptions.VideoPrivate:
@@ -211,12 +297,35 @@ class CORE:
         for video in pl.videos:
             time.sleep(0.15)
 
-            def _inThread(vId):
+            def _inThread(vId, video: YouTube):
                 try:
-                    title = video.title
-                    video.streams.get_highest_resolution().download(
+                    title = pathSafe(f"{vId} - {video.title}", True)
+                    base_callback(
+                        video=video,
+                        id=vId,
+                        title=title,
+                        list=pl.videos,
+                        status=["Queued"],
+                    )
+                    ys = video.streams.get_highest_resolution()
+                    ys.on_progress_for_chunks = downloadCallbackFunction(
+                        video=video,
+                        id=vId,
+                        title=title,
+                        list=pl.videos,
+                        status=["Downloading"],
+                    )
+                    ys.download(
                         output_path=pathSafe(name=pl.title),
-                        filename=pathSafe(f"{vId} - {title}", True) + ".mp4",
+                        filename=title + ".mp4",
+                    )
+                    base_callback(
+                        video=video,
+                        id=vId,
+                        title=title,
+                        list=pl.videos,
+                        progress=100,
+                        status=["Finished"],
                     )
                     print(f"| - Downloaded {Color.CYAN}{title}{Color.RESET}")
                 except exceptions.VideoUnavailable:
@@ -228,7 +337,7 @@ class CORE:
                 except Exception as e:
                     print(e)
 
-            _Thread(target=_inThread, args=(vId,)).start()
+            _Thread(target=_inThread, args=(vId, video)).start()
             vId += 1
 
         print(
@@ -257,17 +366,40 @@ class CORE:
             print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
 
             def _inThread(title, video: YouTube):
-                title = pathSafe(f"{index} - {title}", True) + ".m4a"
+                title = pathSafe(f"{index} - {title}", True)
+                base_callback(
+                    video=video,
+                    id=index,
+                    title=title,
+                    list=pl.videos,
+                    status=["Queued"],
+                )
                 try:
-                    video.streams.get_audio_only().download(
+                    ys = video.streams.get_audio_only()
+                    ys.on_progress_for_chunks = downloadCallbackFunction(
+                        video=video,
+                        id=index,
+                        title=title,
+                        list=pl.videos,
+                        status=["Downloading"],
+                    )
+                    ys.download(
                         output_path=pathSafe(pl.title),
-                        filename=title,
+                        filename=title + ".m4a",
                     )
                     print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
                     apply_cover_image(
                         video.thumbnail_url,
                         pathSafe(pl.title) + os.path.sep + "img",
                         title,
+                    )
+                    base_callback(
+                        video=video,
+                        id=index,
+                        title=title,
+                        list=pl.videos,
+                        progress=100,
+                        status=["Finished"],
                     )
                 except exceptions.VideoUnavailable:
                     print(Color.RED + "Video is unavailable" + Color.RESET)
@@ -278,7 +410,7 @@ class CORE:
                 except Exception as e:
                     print(e)
 
-            _Thread(target=_inThread, args=(_title, _video), daemon=True).start()
+            _Thread(target=_inThread, args=(_title, _video)).start()
             index += 1
         print(
             f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"

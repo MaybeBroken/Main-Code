@@ -11,7 +11,7 @@ from direct.showbase.ShowBase import ShowBase
 from clipboard import copy
 from PIL import Image, ImageFilter
 from direct.interval.LerpInterval import *
-from __YOUTUBEDOWNLOADER import CORE
+from __YOUTUBEDOWNLOADER import CORE, registerCallbackFunction
 
 if sys.platform == "darwin":
     pathSeparator = "/"
