@@ -538,27 +538,21 @@ class Main(ShowBase):
                 self.backgroundImage = OnscreenImage(
                     parent=self.render2d,
                     image=self.loader.loadTexture(newImageName),
-                    scale=(0.5 * self.getAspectRatio(self.win), 1, 0.5),
-                    pos=(0, 0, 0),
+                    scale=(0.15 * self.getAspectRatio(self.win), 1, 0.15),
+                    pos=(0.75, 0, -0.5),
                 )
                 self.scaledItemList.append(self.backgroundImage)
                 if background:
                     self.backgroundImage.setBin("foreground", 0)
                 else:
                     self.backgroundImage.setBin("foreground", 0)
-            except:
+            except FileNotFoundError:
                 try:
                     self.backgroundImage.hide()
                 except:
                     ...
 
-        def _th2(self, imageName, blur, background): ...
-
-        _th1(self, imageName, blur, background)
-        # if self.viewMode == 0:
-        #     Thread(target=_th1, args=(self, imageName, blur, background)).start()
-        # elif self.viewMode == 1:
-        #     Thread(target=_th2, args=(self, imageName, blur, background)).start()
+        Thread(target=_th1, args=(self, imageName, blur, background)).start()
 
     def setBackgroundBin(self):
         if self.viewMode == 0:

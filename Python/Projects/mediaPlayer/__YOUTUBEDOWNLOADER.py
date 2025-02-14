@@ -5,6 +5,7 @@ from threading import Thread as _Thread
 import threading as th
 import time
 import subprocess
+import music_tag
 
 os.chdir(os.path.dirname(__file__))
 
@@ -54,7 +55,7 @@ class Color:
 pathSeparator = "\\"
 
 
-def pathSafe(name: str):
+def pathSafe(name: str, replace: bool = False):
     for index in [
         ["/", "-"],
         ["|", "-"],
@@ -70,6 +71,8 @@ def pathSafe(name: str):
             name = name.replace(index[0], index[1])
         except:
             ...
+    if replace:
+        name = f"{"0"*(3-len(name.split(" - ")[0]))}{name.split(' - ')[0]} - {" - ".join(name.split(' - ')[1:])}"
     return name
 
 
@@ -99,6 +102,29 @@ def get_cover_image(url: str, dest_folder: str, dest_name: str):
         get_cover_image(url, dest_folder, dest_name)
 
 
+def apply_cover_image(url, dest_folder, songName):
+    songName = songName.replace(".m4a", ".png")
+    if (
+        not get_cover_image(
+            url=url,
+            dest_folder=dest_folder,
+            dest_name=songName,
+        )
+        == None
+    ):
+        songPath = os.path.join(dest_folder, songName)
+        song = music_tag.load_file(songPath)
+        with open(
+            songPath.replace(".png", ".m4a"),
+            "rb",
+        ) as imgFile:
+            song["artwork"] = imgFile.read()
+        song.save()
+        print(
+            f"{Color.LIGHT_GREEN}Applied art to {Color.LIGHT_CYAN}{songName}{Color.RESET}"
+        )
+
+
 class CORE:
     downloadingActive = False
 
@@ -117,7 +143,8 @@ class CORE:
                 print(f"Downloading {Color.CYAN}{title}{Color.RESET}")
                 ys.download(
                     "Videos",
-                    filename=pathSafe(title) + ".mp4",
+                    filename=pathSafe(f"{len(os.listdir("Videos"))} - {title}", True)
+                    + ".mp4",
                 )
                 print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
             except exceptions.VideoUnavailable:
@@ -144,10 +171,14 @@ class CORE:
                     token_file="spoofedToken.json",
                 )
                 ys = yt.streams.get_audio_only()
-                title = yt.title
+                title = pathSafe(f"{len(os.listdir("Songs"))} - {title}", True) + ".m4a"
                 ys.download(
                     output_path="Songs",
-                    filename=pathSafe(title) + ".m4a",
+                    filename=title,
+                )
+                print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
+                apply_cover_image(
+                    yt.thumbnail_url, "Songs" + os.path.sep + "img", title
                 )
             except exceptions.VideoUnavailable:
                 print(Color.RED + "Video is unavailable" + Color.RESET)
@@ -172,15 +203,16 @@ class CORE:
             token_file="spoofedToken.json",
         )
         os.mkdir(path=pathSafe(pl.title))
+        vId = 0
         for video in pl.videos:
             time.sleep(0.15)
 
-            def _inThread():
+            def _inThread(vId):
                 try:
                     title = video.title
                     video.streams.get_highest_resolution().download(
                         output_path=pathSafe(name=pl.title),
-                        filename=pathSafe(title) + ".mp4",
+                        filename=pathSafe(f"{vId} - {title}", True) + ".mp4",
                     )
                     print(f"| - Downloaded {Color.CYAN}{title}{Color.RESET}")
                 except exceptions.VideoUnavailable:
@@ -192,7 +224,8 @@ class CORE:
                 except Exception as e:
                     print(e)
 
-            _Thread(target=_inThread).start()
+            _Thread(target=_inThread, args=(vId,)).start()
+            vId += 1
 
         print(
             f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
@@ -213,20 +246,25 @@ class CORE:
             print(
                 f"{Color.YELLOW}Folder {pl.title} already exists{Color.RESET}, downloading into {os.path.abspath(os.curdir)}"
             )
-        index = -1
+        index = 0
         for _video in pl.videos:
-            index += 1
             time.sleep(0.05)
             _title = _video.title
             print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
 
-            def _inThread(title, video):
+            def _inThread(title, video: YouTube):
+                title = pathSafe(f"{index} - {title}", True) + ".m4a"
                 try:
                     video.streams.get_audio_only().download(
                         output_path=pathSafe(pl.title),
-                        filename=f"{index} - {pathSafe(name=title)}" + ".m4a",
+                        filename=title,
                     )
                     print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
+                    apply_cover_image(
+                        video.thumbnail_url,
+                        pathSafe(pl.title) + os.path.sep + "img",
+                        title,
+                    )
                 except exceptions.VideoUnavailable:
                     print(Color.RED + "Video is unavailable" + Color.RESET)
                 except exceptions.VideoPrivate:
@@ -237,6 +275,7 @@ class CORE:
                     print(e)
 
             _Thread(target=_inThread, args=(_title, _video), daemon=True).start()
+            index += 1
         print(
             f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
         )
