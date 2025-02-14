@@ -102,27 +102,31 @@ def get_cover_image(url: str, dest_folder: str, dest_name: str):
         get_cover_image(url, dest_folder, dest_name)
 
 
-def apply_cover_image(url, dest_folder, songName):
-    songName = songName.replace(".m4a", ".png")
-    if (
-        not get_cover_image(
-            url=url,
-            dest_folder=dest_folder,
-            dest_name=songName,
-        )
-        == None
-    ):
-        songPath = os.path.join(dest_folder, songName)
-        song = music_tag.load_file(songPath)
-        with open(
-            songPath.replace(".png", ".m4a"),
-            "rb",
-        ) as imgFile:
-            song["artwork"] = imgFile.read()
-        song.save()
+def apply_cover_image(url, dest_folder, songName, level=0):
+    if level > 5:
         print(
-            f"{Color.LIGHT_GREEN}Applied art to {Color.LIGHT_CYAN}{songName}{Color.RESET}"
+            f"{Color.RED}Failed to download cover image after multiple attempts{Color.RESET}"
         )
+        return False
+    songName = songName.replace(".m4a", ".png")
+    file_path = get_cover_image(url=url, dest_folder=dest_folder, dest_name=songName)
+    if file_path is not None:
+        songPath = os.path.join(
+            dest_folder.split("/")[0], songName.replace(".png", ".m4a")
+        )
+        if os.path.exists(songPath):
+            song = music_tag.load_file(songPath)
+            with open(file_path, "rb") as imgFile:
+                song["artwork"] = imgFile.read()
+            song.save()
+            print(
+                f"{Color.LIGHT_GREEN}Applied art to {Color.LIGHT_CYAN}{songName}{Color.RESET}"
+            )
+        else:
+            print(f"{Color.RED}File {songPath} does not exist{Color.RESET}")
+    else:
+        print(f"{Color.RED}Failed to download cover image{Color.RESET}")
+        return apply_cover_image(url, dest_folder, songName, level + 1)
 
 
 class CORE:

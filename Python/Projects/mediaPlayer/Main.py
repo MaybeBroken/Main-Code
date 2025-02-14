@@ -10,7 +10,7 @@ from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
 from clipboard import copy
 from PIL import Image, ImageFilter
-from direct.interval.LerpInterval import LerpPosInterval, LerpColorInterval
+from direct.interval.LerpInterval import *
 from __YOUTUBEDOWNLOADER import CORE
 
 if sys.platform == "darwin":
@@ -176,6 +176,7 @@ class Main(ShowBase):
                         song["nodePath"].show()
 
     def setupControls(self):
+        self.lastBackTime = t.time()
         self.paused = True
         self.currentTime = 0
         self.accept("space", self.togglePlay)
@@ -235,8 +236,20 @@ class Main(ShowBase):
             frameSize=(-1, 1, -1, -0.79),
             frameColor=self.hexToRgb("#212121"),
         )
+        self.controlBarClickButton = DirectButton(
+            parent=self.controlBar,
+            frameSize=(-1, 1, -1, -0.79),
+            frameColor=(0, 0, 0, 0),
+            command=self.setBackgroundBin,
+        )
         self.controlBar.setBin("background", 3000)
         self.controlBar.setPos(0, 0, -0.2)
+        self.blackoutOverlay = DirectFrame(
+            parent=self.guiFrame,
+            frameSize=(-1, 1, -1, 1),
+            frameColor=(0, 0, 0, 0),
+        )
+        self.blackoutOverlay.setBin("background", 2999)
         self.progressText = OnscreenText(
             text="time / length",
             parent=self.controlBar,
@@ -500,7 +513,7 @@ class Main(ShowBase):
 
     def prevSong(self):
         self.songList[self.songIndex]["object"].stop()
-        if self.songIndex - 1 <= 0:
+        if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime > 1:
             self.songIndex -= 1
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
@@ -510,6 +523,7 @@ class Main(ShowBase):
             self.backgroundToggle,
         )
         self.paused = False
+        self.lastBackTime = t.time()
 
     def goToSong(self, songId):
         self.songList[self.songIndex]["object"].stop()
@@ -525,51 +539,67 @@ class Main(ShowBase):
         self.paused = False
 
     def setBackgroundImage(self, imageName, blur, background):
-        def _th1(self, imageName, blur, background):
+        def _th1(imageName, blur, background):
             try:
-                if blur:
+                if blur and not os.path.exists(
+                    imageName.replace(".png", " - blur.png")
+                ):
                     image = Image.open(imageName)
                     image = image.filter(ImageFilter.GaussianBlur(4))
                     newImageName = imageName.replace(".png", " - blur.png")
                     image.save(newImageName)
                 else:
                     newImageName = imageName
-                self.backgroundImage.destroy()
-                self.backgroundImage = OnscreenImage(
-                    parent=self.render2d,
-                    image=self.loader.loadTexture(newImageName),
-                    scale=(0.15 * self.getAspectRatio(self.win), 1, 0.15),
-                    pos=(0.75, 0, -0.5),
-                )
-                self.scaledItemList.append(self.backgroundImage)
-                if background:
-                    self.backgroundImage.setBin("foreground", 0)
-                else:
-                    self.backgroundImage.setBin("foreground", 0)
-            except FileNotFoundError:
-                try:
-                    self.backgroundImage.hide()
-                except:
-                    ...
+                self.backgroundImage.setImage(newImageName)
+            except Exception as e:
+                self.backgroundImage.setImage("src/textures/404.png")
 
-        Thread(target=_th1, args=(self, imageName, blur, background)).start()
+        Thread(target=_th1, args=(imageName, blur, background)).start()
 
     def setBackgroundBin(self):
         if self.viewMode == 0:
             if self.backgroundToggle:
                 self.backgroundToggle = False
-                self.setBackgroundImage(
-                    self.songList[self.songIndex]["imagePath"],
-                    self.backgroundToggle,
-                    self.backgroundToggle,
-                )
+                LerpPosInterval(
+                    self.backgroundImage,
+                    0.25,
+                    Point3(0, 0, 0),
+                ).start()
+                LerpScaleInterval(
+                    self.backgroundImage,
+                    0.25,
+                    Point3(
+                        (0.75 / self.getAspectRatio(self.win)) * (1280 / 720),
+                        1,
+                        0.75,
+                    ),
+                ).start()
+                LerpColorInterval(
+                    self.blackoutOverlay,
+                    0.25,
+                    (0, 0, 0, 1),
+                ).start()
             else:
                 self.backgroundToggle = True
-                self.setBackgroundImage(
-                    self.songList[self.songIndex]["imagePath"],
-                    self.backgroundToggle,
-                    self.backgroundToggle,
-                )
+                LerpPosInterval(
+                    self.backgroundImage,
+                    0.25,
+                    Point3(0.65, 0, -0.5),
+                ).start()
+                LerpScaleInterval(
+                    self.backgroundImage,
+                    0.25,
+                    Point3(
+                        (0.25 / self.getAspectRatio(self.win)) * (1280 / 720),
+                        1,
+                        0.25,
+                    ),
+                ).start()
+                LerpColorInterval(
+                    self.blackoutOverlay,
+                    0.25,
+                    (0, 0, 0, 0),
+                ).start()
 
     def togglePlay(self):
         if len(self.songList) > 0:
@@ -595,22 +625,6 @@ class Main(ShowBase):
         self.songIndex = 0
         self.backgroundToggle = True
 
-        # Shaders
-
-        filters = CommonFilters(self.win, self.cam)
-        filters.setBloom(
-            blend=(0.3, 0.4, 0.3, 0.8),
-            mintrigger=0.1,
-            maxtrigger=1,
-            desat=0.1,
-            intensity=1,
-            size="medium",
-        )
-        # filters.setAmbientOcclusion()
-        filters.setSrgbEncode()
-        filters.setHighDynamicRange()
-        filters.setBlurSharpen(0.5)
-
     def winEvent(self, window):
         if window.isClosed():
             sys.exit()
@@ -622,10 +636,13 @@ class Main(ShowBase):
                     item.getScale()[2],
                 )
             except:
-                item.setScale(
-                    item.getScale()[1] / self.getAspectRatio(self.win),
-                    item.getScale()[1],
-                )
+                try:
+                    item.setScale(
+                        item.getScale()[1] / self.getAspectRatio(self.win),
+                        item.getScale()[1],
+                    )
+                except:
+                    pass
 
     def makeSongPanel(self, songId):
         song = self.songList[songId]
@@ -696,18 +713,6 @@ class Main(ShowBase):
         for songId in range(len(self.songList)):
             songPanel = self.makeSongPanel(songId)
             self.songList[songId]["nodePath"] = songPanel
-        try:
-            self.backgroundImage = OnscreenImage(
-                parent=self.guiFrame,
-                image=self.loader.loadTexture(
-                    self.songList[self.songIndex]["imagePath"]
-                ),
-                scale=(1.5 * (640 / 480), 1, 1.5),
-                pos=(0, 0, 0),
-            )
-            self.backgroundImage.setBin("background", 0)
-        except:
-            ...
 
         self.scrollBar["range"] = [0, ((len(self.songList) - 1) / 10) * 1.5]
         self.scrollBar.setRange()
@@ -720,6 +725,13 @@ class Main(ShowBase):
             Point3(0, 0, -0.2),
             blendType="easeInOut",
         ).start()
+        self.backgroundImage = OnscreenImage(
+            parent=self.render2d,
+            image=self.loader.loadTexture("src/textures/404.png"),
+            scale=((0.25 / self.getAspectRatio(self.win)) * (1280 / 720), 1, 0.25),
+            pos=(0.65, 0, -0.5),
+        )
+        self.backgroundImage.setBin("foreground", 5000)
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
