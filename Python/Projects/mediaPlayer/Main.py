@@ -1,5 +1,6 @@
 import json
 from math import pi, sin, cos
+from pydoc import text
 from random import randint, shuffle
 import shutil
 import time as t
@@ -11,14 +12,50 @@ from direct.showbase.ShowBase import ShowBase
 from clipboard import copy
 from PIL import Image, ImageFilter
 from direct.interval.LerpInterval import *
-from __YOUTUBEDOWNLOADER import CORE, registerCallbackFunction
+from __YOUTUBEDOWNLOADER import (
+    CORE,
+    YouTube,
+    Playlist,
+    registerCallbackFunction,
+    registerInitalizeCallbackFunction,
+)
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPM
+from PIL import ImageOps
+
+CORE = CORE()
+import clipboard
 
 if sys.platform == "darwin":
     pathSeparator = "/"
 elif sys.platform == "win32":
     pathSeparator = "\\"
-
 os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
+
+
+def convertSvgToPng(svgPath, pngPath, dpi=800, bgColor="#ffffff"):
+    if os.path.exists(svgPath):
+        drawing = svg2rlg(svgPath)
+        renderPM.drawToFile(
+            drawing,
+            pngPath,
+            fmt="PNG",
+            dpi=dpi,
+            bg=int(bgColor.lstrip("#"), 16),
+        )
+        img = Image.open(pngPath)
+        inverted_image = ImageOps.invert(img.convert("RGB"))
+        inverted_image.save(pngPath)
+    else:
+        print(f"Error: {svgPath} does not exist.")
+    return pngPath
+
+
+convertSvgToPng(
+    "src/textures/playlist.svg",
+    "src/textures/playlist.png",
+)
+
 
 from panda3d.core import (
     Texture,
@@ -98,6 +135,130 @@ class Main(ShowBase):
         self.setupWorld()
         self.buildGui()
         self.setupControls()
+        self.downloaderSongs: list[YouTube, NodePath] = []
+        registerCallbackFunction(self.downloadCallback())
+        registerInitalizeCallbackFunction(self.initalizeCallback())
+
+    def downloadCallback(self):
+
+        def _callback(
+            video: YouTube,
+            id: int,
+            title: str,
+            list: list[YouTube],
+            progress: float = 0,
+            status: list = ["Queued", "Downloading", "finished"],
+        ):
+
+            print(
+                f"Video: {title}, ID: {id} of {len(list)}, Progress: {progress}%, Status: {status}"
+            )
+
+        return _callback
+
+    def initalizeCallback(self):
+
+        def _callback(playlist: Playlist):
+            item = playlist.title
+            print(item)
+            button = DirectButton(
+                parent=self.optionBar,
+                text=item[:28] + "..." if len(item) > 28 else item,
+                scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+                pos=(-0.95, 0, self.listStartY),
+                text_align=TextNode.ALeft,
+                relief=DGG.FLAT,
+                geom=None,
+                text_fg=self.hexToRgb("#ffffff"),
+                frameColor=(1, 1, 1, 0.15),
+            )
+            self.scaledItemList.append(button)
+            divider = DirectFrame(
+                parent=self.optionBar,
+                frameSize=(
+                    -0.95,
+                    ((len(item) if len(item) < 28 else 31) * 0.012) - 0.9,
+                    0,
+                    0.004,
+                ),
+                frameColor=self.hexToRgb("#8f8f8f"),
+                pos=(0, 0, self.listStartY - 0.0275),
+            )
+            self.listStartY -= 0.075
+            self.songListFrameOffset.setZ(0)
+            print("created playlist object")
+
+            for songId in range(len(self.songList)):
+                if self.songList[songId]["object"]:
+                    self.songList[songId]["object"].stop()
+                if self.songList[songId]["nodePath"] is not None:
+                    self.songList[songId]["nodePath"].destroy()
+
+            del self.songList[:]
+            LerpPosInterval(
+                self.controlBar,
+                0.5,
+                Point3(0, 0, 0),
+                Point3(0, 0, -0.2),
+                blendType="easeInOut",
+            ).start()
+            index = 0
+            for video in playlist.videos_generator():
+                self.songList.append(
+                    {
+                        "name": video.title,
+                        "nodePath": None,
+                    }
+                )
+                self.makeDownloaderPanel(index)
+                if ((len(self.songList) - 1) / 10) * 1.5 > 1:
+                    self.scrollBar.setValue(self.songListFrameOffset.getZ())
+                    self.scrollBar["range"] = [0, ((len(self.songList) - 1) / 10) * 1.5]
+                    self.scrollBar.setRange()
+                    self.scrollBar.show()
+                index += 1
+            print("created song panels")
+
+        return _callback
+
+    def makeDownloaderPanel(self, songId):
+        song = self.songList[songId]
+        y = 0.7 + ((-songId) / 10) * 1.5
+        frame = DirectFrame(
+            parent=self.songListFrameOffset,
+            frameSize=(-0.45, 0.85, -0.06, 0.06),
+            frameColor=self.hexToRgb("#030303"),
+            pos=(0, 0, y),
+        )
+        frame.setBin("background", 1000)
+        frame.setTag("songId", str(songId))
+        nameText = OnscreenText(
+            text=song["name"][:55] + "..." if len(song["name"]) > 55 else song["name"],
+            parent=frame,
+            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            fg=self.hexToRgb("#f6f6f6"),
+            pos=(-0.3, 0, 0),
+            align=TextNode.ALeft,
+        )
+        nameText.setBin("background", 1001)
+        frameHighlight = DirectFrame(
+            parent=frame,
+            frameSize=(-0.45, 0.85, -0.005, 0),
+            frameColor=self.hexToRgb("#1e1e1e"),
+            pos=(0, 0, -0.065),
+        )
+
+        self.scaledItemList.append(nameText)
+        return frame
+
+    def startPlaylistDownloader(self, url):
+        Thread(target=CORE.downloadPlaylist_S, args=(url,)).start()
+
+    def startSongDownloader(self, url):
+        try:
+            CORE.downloadSong(url)
+        except Exception as e:
+            print(e)
 
     def syncProgress(self, task):
         try:
@@ -179,22 +340,49 @@ class Main(ShowBase):
         self.accept("space", self.togglePlay)
         self.accept("arrow_left", self.prevSong)
         self.accept("arrow_up", self.prevSong)
+        self.accept("arrow_left-repeat", self.prevSong)
+        self.accept("arrow_up-repeat", self.prevSong)
         self.accept("arrow_right", self.nextSong)
         self.accept("arrow_down", self.nextSong)
+        self.accept("arrow_right-repeat", self.nextSong)
+        self.accept("arrow_down-repeat", self.nextSong)
         self.accept("c", self.copySong)
         self.accept("q", sys.exit)
         self.accept("window-event", self.winEvent)
         self.accept(
             "wheel_up",
             lambda: (
-                self.songListFrameOffset.setZ(self.songListFrameOffset.getZ() - 0.07),
+                self.songListFrameOffset.setZ(
+                    self.songListFrameOffset.getZ() - 0.07
+                    if self.songListFrameOffset.getZ() - 0.07 > 0
+                    else 0
+                ),
             ),
         )
         self.accept(
             "wheel_down",
             lambda: self.songListFrameOffset.setZ(
                 self.songListFrameOffset.getZ() + 0.07
+                if self.songListFrameOffset.getZ() + 0.07
+                < ((len(self.songList) - 1) / 10) * 1.5
+                else ((len(self.songList) - 1) / 10) * 1.5
             ),
+        )
+
+    def pasteFromClipboard(self):
+        self.downloadSongPromptEntry.destroy()
+        initial_text = clipboard.paste()
+        self.downloadSongPromptEntry = DirectEntry(
+            parent=self.topBar,
+            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            pos=(-0.95, 0, 0.9),
+            frameColor=(0, 0, 0, 0),
+            text_fg=self.hexToRgb("#f6f6f6"),
+            width=50,
+            command=self.startPlaylistDownloader,
+            cursorKeys=1,
+            initialText=initial_text,
+            focus=1,
         )
 
     def buildGui(self):
@@ -228,6 +416,32 @@ class Main(ShowBase):
             frameColor=self.hexToRgb("#1e1e1e"),
         )
         self.topBarHighlight.setBin("background", 3001)
+
+        self.downloadSongPrompt = OnscreenText(
+            text="Enter the URL of the playlist to download:",
+            parent=self.topBar,
+            pos=(-0.95, 0.95),
+            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            fg=self.hexToRgb("#f6f6f6"),
+            align=TextNode.ALeft,
+        )
+        self.downloadSongPromptEntry = DirectEntry(
+            parent=self.topBar,
+            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+            pos=(-0.95, 0, 0.9),
+            frameColor=(0, 0, 0, 0),
+            text_fg=self.hexToRgb("#f6f6f6"),
+            width=50,
+            command=self.startPlaylistDownloader,
+            cursorKeys=1,
+            focus=0,
+        )
+        self.downloadSongPromptEntry.hide()
+        self.downloadSongPrompt.hide()
+        # self.accept("control-c", self.copySong)
+        # self.accept("control-v", self.pasteFromClipboard)
+        # self.pasteFromClipboard()
+
         self.controlBar = DirectFrame(
             parent=self.guiFrame,
             frameSize=(-1, 1, -1, -0.79),
@@ -315,7 +529,7 @@ class Main(ShowBase):
         self.scaledItemList.append(self.progressText)
         self.scaledItemList.append(self.songName)
 
-        startY = 0.7
+        self.listStartY = 0.7
         for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
             if os.path.isdir(
                 os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
@@ -336,7 +550,7 @@ class Main(ShowBase):
                         parent=self.optionBar,
                         text=item[:28] + "..." if len(item) > 28 else item,
                         scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-                        pos=(-0.95, 0, startY),
+                        pos=(-0.95, 0, self.listStartY),
                         command=self.registerFolder,
                         extraArgs=[item],
                         text_align=TextNode.ALeft,
@@ -355,9 +569,15 @@ class Main(ShowBase):
                             0.004,
                         ),
                         frameColor=self.hexToRgb("#8f8f8f"),
-                        pos=(0, 0, startY - 0.0275),
+                        pos=(0, 0, self.listStartY - 0.0275),
                     )
-                    startY -= 0.075
+                    icon = OnscreenImage(
+                        image="src/textures/playlist.png",
+                        parent=self.optionBar,
+                        scale=(0.025 / self.getAspectRatio(self.win), 0.025, 0.025),
+                        pos=(-0.975, 0, self.listStartY + 0.0025),
+                    )
+                    self.listStartY -= 0.075
 
         self.scrollBar = DirectScrollBar(
             parent=self.topBar,
@@ -463,7 +683,6 @@ class Main(ShowBase):
         if self.viewMode == 0:
             for item in self.songList:
                 item["object"].stop()
-                item["nodePath"].hide()
             self.songList[self.songIndex]["object"].stop()
             self.songIndex += 1
             self.songList[self.songIndex]["object"].play()
@@ -510,7 +729,7 @@ class Main(ShowBase):
 
     def prevSong(self):
         self.songList[self.songIndex]["object"].stop()
-        if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime > 1:
+        if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime < 1.5:
             self.songIndex -= 1
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
@@ -551,7 +770,7 @@ class Main(ShowBase):
             except Exception as e:
                 self.backgroundImage.setImage("src/textures/404.png")
 
-        Thread(target=_th1, args=(imageName, blur, background)).start()
+        Thread(target=_th1, args=(imageName, False, background)).start()
 
     def setBackgroundBin(self):
         if self.viewMode == 0:

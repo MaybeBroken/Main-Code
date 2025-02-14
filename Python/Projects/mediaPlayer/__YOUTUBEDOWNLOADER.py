@@ -6,6 +6,7 @@ import threading as th
 import time
 import subprocess
 import music_tag
+from typing import Callable, Any
 
 os.chdir(os.path.dirname(__file__))
 
@@ -53,6 +54,16 @@ class Color:
 
 
 pathSeparator = "\\"
+
+
+def checkValidLink(link: str):
+    retVal = False
+    if link.startswith("http://") or link.startswith("https://"):
+        if "youtube.com" in link or "youtu.be" in link:
+            if "playlist" in link or "list=" in link:
+                retVal = True
+
+    return retVal
 
 
 def pathSafe(name: str, replace: bool = False):
@@ -120,21 +131,27 @@ def apply_cover_image(url, dest_folder, songName, level=0):
                 song["artwork"] = imgFile.read()
             song.save()
             print(
-                f"{Color.LIGHT_GREEN}Applied art to {Color.LIGHT_CYAN}{songName}{Color.RESET}"
+                f"| {Color.LIGHT_GREEN}Applied art to {Color.LIGHT_CYAN}{songName}{Color.RESET}"
             )
         else:
-            print(f"{Color.RED}File {songPath} does not exist{Color.RESET}")
+            print(f"| {Color.RED}File {songPath} does not exist{Color.RESET}")
     else:
-        print(f"{Color.RED}Failed to download cover image{Color.RESET}")
+        print(f"| {Color.RED}Failed to download cover image{Color.RESET}")
         return apply_cover_image(url, dest_folder, songName, level + 1)
 
 
-base_callback_addon = lambda *args, **kwargs: print("Callback not registered")
+base_callback_addon = lambda *args, **kwargs: ...
+initalize_callback = lambda *args, **kwargs: print("Callback not registered")
 
 
-def registerCallbackFunction(callback):
+def registerCallbackFunction(callback: Callable[[Any], Any]):
     global base_callback_addon
     base_callback_addon = callback
+
+
+def registerInitalizeCallbackFunction(callback: Callable[[Any], Any]):
+    global initalize_callback
+    initalize_callback = callback
 
 
 def base_callback(
@@ -145,9 +162,6 @@ def base_callback(
     progress: float = 0,
     status: list = ["Queued", "Downloading", "finished"],
 ):
-    print(
-        f"\n{Color.LIGHT_GREEN}{title}{Color.RESET} - {Color.LIGHT_CYAN}{status[0]}{Color.RESET} - {progress}% - {Color.LIGHT_GREY}{id}{Color.RESET}"
-    )
     base_callback_addon(
         video=video,
         id=id,
@@ -163,10 +177,6 @@ def downloadCallbackFunction(video, id, title, list, status):
         chunk: bytes,
         bytes_remaining: int,
     ):
-        print(
-            f"\r{Color.LIGHT_GREEN}Downloading{Color.RESET} - {Color.LIGHT_CYAN}{round((1 - bytes_remaining / 1000000) * 100, 2)}%{Color.RESET}",
-            end="",
-        )
         progress = round((1 - bytes_remaining / 1000000) * 100, 2)
         base_callback(
             video=video,
@@ -270,6 +280,7 @@ class CORE:
                 )
 
                 apply_cover_image(yt.thumbnail_url, os.path.join("Songs", "img"), title)
+                print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
             except exceptions.VideoUnavailable:
                 print(Color.RED + "Video is unavailable" + Color.RESET)
             except exceptions.VideoPrivate:
@@ -278,7 +289,6 @@ class CORE:
                 print(Color.RED + "Video is blocked in your region" + Color.RESET)
             except Exception as e:
                 print(e)
-            print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
             self.downloadingActive = False
 
         thread = _Thread(target=_th)
@@ -287,12 +297,15 @@ class CORE:
     def downloadPlaylist_V(self, link):
         self.downloadingActive = True
 
+        session = requests.Session()
         pl = Playlist(
             url=link,
             client="WEB",
             token_file="spoofedToken.json",
+            session=session,
         )
         os.mkdir(path=pathSafe(pl.title))
+        initalize_callback(pl)
         vId = 0
         for video in pl.videos:
             time.sleep(0.15)
@@ -346,13 +359,22 @@ class CORE:
         self.downloadingActive = False
 
     def downloadPlaylist_S(self, link):
+        if checkValidLink(link) is False:
+            print(Color.RED + "Invalid Link" + Color.RESET)
+            return
+        else:
+            print(Color.GREEN + "Valid Link" + Color.RESET)
+
         self.downloadingActive = True
         pl = Playlist(
             url=link,
             client="WEB",
             token_file="spoofedToken.json",
+            allow_oauth_cache=False,
         )
         print(f"starting download of playlist {pl.title}:")
+        initalize_callback(pl)
+        print(f"Downloading {Color.CYAN}{pl.title}{Color.RESET}")
         try:
             os.mkdir(path=pathSafe(pl.title))
         except FileExistsError:
@@ -391,7 +413,7 @@ class CORE:
                     apply_cover_image(
                         video.thumbnail_url,
                         pathSafe(pl.title) + os.path.sep + "img",
-                        title,
+                        title + ".m4a",
                     )
                     base_callback(
                         video=video,
