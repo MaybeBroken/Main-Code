@@ -69,12 +69,6 @@ def convertSvgToPng(svgPath, pngPath, dpi=800, bgColor="#212121"):
     return pngPath
 
 
-convertSvgToPng(
-    "src/textures/shuffle.svg",
-    "src/textures/shuffle.png",
-)
-
-
 monitor = get_monitors()
 loadPrcFile(f"src{pathSeparator}settings.prc")
 if Wvars.winMode == "full-win":
