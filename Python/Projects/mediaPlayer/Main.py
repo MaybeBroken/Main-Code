@@ -1,6 +1,5 @@
 import json
 from math import pi, sin, cos
-from pydoc import text
 from random import randint, shuffle
 import shutil
 import time as t
@@ -10,7 +9,6 @@ import src.scripts.vars as Wvars
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
 from clipboard import copy
-from PIL import Image, ImageFilter
 from direct.interval.LerpInterval import *
 from __YOUTUBEDOWNLOADER import (
     CORE,
@@ -19,9 +17,6 @@ from __YOUTUBEDOWNLOADER import (
     registerCallbackFunction,
     registerInitalizeCallbackFunction,
 )
-from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPM
-from PIL import ImageOps
 from panda3d.core import (
     Texture,
     loadPrcFile,
@@ -35,6 +30,8 @@ from panda3d.core import (
     Point4,
     Vec3,
 )
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPM
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.stdpy.threading import Thread
 from direct.gui.DirectGui import *
@@ -692,6 +689,11 @@ class Main(ShowBase):
             item["object"].stop()
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
+        self.setBackgroundImage(
+            self.songList[self.songIndex]["imagePath"],
+            self.backgroundToggle,
+            self.backgroundToggle,
+        )
 
     def sortSongs(self):
         self.songList = self.baseSongList.copy()
@@ -700,6 +702,11 @@ class Main(ShowBase):
             item["object"].stop()
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
+        self.setBackgroundImage(
+            self.songList[self.songIndex]["imagePath"],
+            self.backgroundToggle,
+            self.backgroundToggle,
+        )
 
     def nextSong(self):
         self.songList[self.songIndex]["object"].stop()
@@ -730,6 +737,10 @@ class Main(ShowBase):
         self.lastBackTime = t.time()
 
     def goToSong(self, songId):
+        if self.shuffleSongsToggle:
+            self.sortSongs()
+            self.shuffleSongsToggle = False
+            self.toggleSongShuffleButton.setColor((1, 1, 1, 1))
         self.songList[self.songIndex]["object"].stop()
         if songId < len(self.songList) and songId >= 0:
             self.songIndex = songId
