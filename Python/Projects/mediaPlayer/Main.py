@@ -22,41 +22,6 @@ from __YOUTUBEDOWNLOADER import (
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
 from PIL import ImageOps
-
-CORE = CORE()
-import clipboard
-
-if sys.platform == "darwin":
-    pathSeparator = "/"
-elif sys.platform == "win32":
-    pathSeparator = "\\"
-os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
-
-
-def convertSvgToPng(svgPath, pngPath, dpi=800, bgColor="#ffffff"):
-    if os.path.exists(svgPath):
-        drawing = svg2rlg(svgPath)
-        renderPM.drawToFile(
-            drawing,
-            pngPath,
-            fmt="PNG",
-            dpi=dpi,
-            bg=int(bgColor.lstrip("#"), 16),
-        )
-        img = Image.open(pngPath)
-        inverted_image = ImageOps.invert(img.convert("RGB"))
-        inverted_image.save(pngPath)
-    else:
-        print(f"Error: {svgPath} does not exist.")
-    return pngPath
-
-
-convertSvgToPng(
-    "src/textures/playlist.svg",
-    "src/textures/playlist.png",
-)
-
-
 from panda3d.core import (
     Texture,
     loadPrcFile,
@@ -73,6 +38,44 @@ from panda3d.core import (
 from direct.gui.OnscreenImage import OnscreenImage
 from direct.stdpy.threading import Thread
 from direct.gui.DirectGui import *
+from reportlab.graphics.shapes import Drawing
+from reportlab.lib.colors import HexColor
+
+CORE = CORE()
+import clipboard
+
+if sys.platform == "darwin":
+    pathSeparator = "/"
+elif sys.platform == "win32":
+    pathSeparator = "\\"
+os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
+
+
+def convertSvgToPng(svgPath, pngPath, dpi=800, bgColor="#212121"):
+    if os.path.exists(svgPath):
+        drawing = svg2rlg(svgPath)
+        # Change the color of the objects in the SVG
+        for obj in drawing.contents:
+            if isinstance(obj, Drawing):
+                for sub_obj in obj.contents:
+                    sub_obj.fillColor = HexColor(bgColor)
+
+        renderPM.drawToFile(
+            drawing,
+            pngPath,
+            fmt="PNG",
+            dpi=dpi,
+            bg=HexColor(bgColor),
+        )
+    else:
+        print(f"Error: {svgPath} does not exist.")
+    return pngPath
+
+
+convertSvgToPng(
+    "src/textures/shuffle.svg",
+    "src/textures/shuffle.png",
+)
 
 
 monitor = get_monitors()
@@ -307,12 +310,6 @@ class Main(ShowBase):
             if not self.paused:
                 if (
                     self.songList[self.songIndex]["object"].status() == 1
-                    and self.songList[self.songIndex]["played"] == 0
-                ):
-                    self.songList[self.songIndex]["played"] = 1
-                    self.songList[self.songIndex]["object"].play()
-                elif (
-                    self.songList[self.songIndex]["object"].status() == 1
                     and self.songList[self.songIndex]["played"] == 1
                 ):
                     self.songList[self.songIndex]["played"] = 0
@@ -523,6 +520,16 @@ class Main(ShowBase):
         )
         self.arrowRightButton.setTransparency(TransparencyAttrib.MAlpha)
 
+        self.toggleSongShuffleButton = DirectButton(
+            parent=self.controlBar,
+            image=self.loader.loadTexture("src/textures/shuffle.png"),
+            scale=(0.03 / self.getAspectRatio(self.win), 0.03, 0.03),
+            pos=(0.65, 0, -0.9),
+            command=self.toggleShuffle,
+            relief=DGG.FLAT,
+            frameColor=(0, 0, 0, 0),
+        )
+
         self.scaledItemList.append(self.pausePlayButton)
         self.scaledItemList.append(self.arrowLeftButton)
         self.scaledItemList.append(self.arrowRightButton)
@@ -678,40 +685,21 @@ class Main(ShowBase):
                 listFile.write(json.JSONEncoder().encode(favoritesList))
 
     def shuffleSongs(self):
+        self.baseSongList = self.songList.copy()
         shuffle(self.songList)
         self.songIndex = 0
-        if self.viewMode == 0:
-            for item in self.songList:
-                item["object"].stop()
-            self.songList[self.songIndex]["object"].stop()
-            self.songIndex += 1
-            self.songList[self.songIndex]["object"].play()
-            self.songList[self.songIndex]["played"] = 1
-
-        t.sleep(0.1)
-        self.prevSong()
+        for item in self.songList:
+            item["object"].stop()
+        self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["played"] = 1
 
     def sortSongs(self):
-        _songList = self.songList.copy()
-        for id in self.songList:
-            try:
-                newId = str(id["name"]).split("-")
-                _songList[int(newId[0])] = id
-            except:
-                ...
-        self.songList = _songList
+        self.songList = self.baseSongList.copy()
         self.songIndex = 0
-
-        if self.viewMode == 0:
-            for item in self.songList:
-                item["object"].stop()
-            self.songList[self.songIndex]["object"].stop()
-            self.songIndex += 1
-            self.songList[self.songIndex]["object"].play()
-            self.songList[self.songIndex]["played"] = 1
-
-        t.sleep(0.1)
-        self.prevSong()
+        for item in self.songList:
+            item["object"].stop()
+        self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["played"] = 1
 
     def nextSong(self):
         self.songList[self.songIndex]["object"].stop()
@@ -729,7 +717,7 @@ class Main(ShowBase):
 
     def prevSong(self):
         self.songList[self.songIndex]["object"].stop()
-        if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime < 1.5:
+        if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime < 2.5:
             self.songIndex -= 1
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
@@ -755,22 +743,10 @@ class Main(ShowBase):
         self.paused = False
 
     def setBackgroundImage(self, imageName, blur, background):
-        def _th1(imageName, blur, background):
-            try:
-                if blur and not os.path.exists(
-                    imageName.replace(".png", " - blur.png")
-                ):
-                    image = Image.open(imageName)
-                    image = image.filter(ImageFilter.GaussianBlur(4))
-                    newImageName = imageName.replace(".png", " - blur.png")
-                    image.save(newImageName)
-                else:
-                    newImageName = imageName
-                self.backgroundImage.setImage(newImageName)
-            except Exception as e:
-                self.backgroundImage.setImage("src/textures/404.png")
-
-        Thread(target=_th1, args=(imageName, False, background)).start()
+        try:
+            self.backgroundImage.setImage(imageName)
+        except Exception as e:
+            self.backgroundImage.setImage("src/textures/404.png")
 
     def setBackgroundBin(self):
         if self.viewMode == 0:
@@ -833,6 +809,22 @@ class Main(ShowBase):
                 self.songList[self.songIndex]["object"].play()
                 self.paused = False
 
+    def toggleShuffle(self):
+        if self.shuffleSongsToggle:
+            self.sortSongs()
+            self.shuffleSongsToggle = False
+            self.toggleSongShuffleButton.setColor((1, 1, 1, 1))
+        else:
+            self.shuffleSongs()
+            self.shuffleSongsToggle = True
+            self.toggleSongShuffleButton.setColor((0.65, 1, 0.7, 1))
+        LerpHprInterval(
+            self.toggleSongShuffleButton,
+            0.25,
+            (0, self.toggleSongShuffleButton.getP() + 180, 0),
+            blendType="easeInOut",
+        ).start()
+
     def setupWorld(self):
 
         # Vars
@@ -840,6 +832,7 @@ class Main(ShowBase):
         self.songList = []
         self.songIndex = 0
         self.backgroundToggle = True
+        self.shuffleSongsToggle = False
 
     def winEvent(self, window):
         if window.isClosed():
@@ -898,7 +891,7 @@ class Main(ShowBase):
             image=self.loader.loadTexture("src/textures/play.png"),
             parent=frame,
             scale=(0.03 / self.getAspectRatio(self.win), 0.03, 0.03),
-            pos=(-0.4, 0, 0),
+            pos=(-0.45, 0, 0),
             command=self.goToSong,
             extraArgs=[songId],
             relief=DGG.FLAT,
@@ -912,7 +905,20 @@ class Main(ShowBase):
             frameColor=self.hexToRgb("#1e1e1e"),
             pos=(0, 0, -0.065),
         )
-
+        try:
+            image = OnscreenImage(
+                parent=frame,
+                image=self.loader.loadTexture(song["imagePath"]),
+                scale=(0.05 / self.getAspectRatio(self.win) * (1280 / 720), 1, 0.05),
+                pos=(-0.36, 0, 0),
+            )
+        except:
+            image = OnscreenImage(
+                parent=frame,
+                image=self.loader.loadTexture("src/textures/404.png"),
+                scale=(0.05 / self.getAspectRatio(self.win) * (1280 / 720), 1, 0.05),
+                pos=(-0.36, 0, 0),
+            )
         self.scaledItemList.append(playButton)
         self.scaledItemList.append(nameText)
         self.scaledItemList.append(lengthText)
@@ -926,8 +932,12 @@ class Main(ShowBase):
         for songId in range(len(self.songList)):
             if self.songList[songId]["nodePath"] is not None:
                 self.songList[songId]["nodePath"].destroy()
+        for obj in self.songList:
+            if obj["object"].length() < 1:
+                self.songList.remove(obj)
         for songId in range(len(self.songList)):
             songPanel = self.makeSongPanel(songId)
+            self.songListFrameOffset.setZ(((songId) / 10) * 1.5 - 0.9)
             self.songList[songId]["nodePath"] = songPanel
 
         self.scrollBar["range"] = [0, ((len(self.songList) - 1) / 10) * 1.5]
@@ -958,6 +968,7 @@ class Main(ShowBase):
             self.taskMgr.add(self.syncProgress, "syncProgress")
             Thread(target=self.cullSongPanels).start()
             self.doneInitialSetup = True
+        self.togglePlay()
 
     def registerFolder(self, path):
         self.paused = True
@@ -999,8 +1010,7 @@ class Main(ShowBase):
                     )
                 else:
                     ...
-        self.registerSongs()
-        self.togglePlay()
+        Thread(target=self.registerSongs).start()
 
 
 def fadeOutGuiElement(
