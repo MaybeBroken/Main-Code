@@ -297,6 +297,13 @@ class Main(ShowBase):
                 / self.songList[self.songIndex]["object"].length()
             ) * 100
             self.progressBar.setValue()
+            self.progressControlBar.setValue(
+                (
+                    self.songList[self.songIndex]["object"].get_time()
+                    / self.songList[self.songIndex]["object"].length()
+                )
+                * 100
+            )
             self.songName.setText(self.songList[self.songIndex]["name"])
         except:
             ...
@@ -475,6 +482,23 @@ class Main(ShowBase):
         self.progressBar["range"] = 100
         self.progressBar.setRange()
         self.progressBar.setBin("background", 3101)
+        self.progressControlBar = DirectScrollBar(
+            parent=self.controlBar,
+            range=[0, 100],
+            value=0,
+            thumb_relief=DGG.FLAT,
+            thumb_clickSound=None,
+            thumb_geom=None,
+            thumb_scale=0.9,
+            command=self.setSongTime,
+            orientation=DGG.HORIZONTAL,
+            pos=(0, 0, -0.79),
+            frameSize=(-1.02, 1.02, -0.01, 0.01),
+            frameColor=(0, 0, 0, 0),
+            relief=DGG.FLAT,
+            pageSize=1,
+        )
+        self.progressControlBar.setBin("background", 3103)
         self.songName = OnscreenText(
             text="Name of the Song Here",
             parent=self.controlBar,
@@ -606,6 +630,22 @@ class Main(ShowBase):
                 return True
         return False
 
+    def setSongTime(self):
+        try:
+            if self.progressControlBar.guiItem.isButtonDown():
+                if int(self.progressControlBar.getValue()) != self.lastSongTime:
+                    new_time = (
+                        self.progressControlBar.getValue() / 100
+                    ) * self.songList[self.songIndex]["object"].length()
+                    self.songList[self.songIndex]["object"].stop()
+                    self.songList[self.songIndex]["object"].set_time(new_time)
+                    self.songList[self.songIndex]["object"].play()
+                    self.progressBar["value"] = self.progressControlBar.getValue()
+                    self.progressBar.setValue()
+        except Exception as e:
+            print(e)
+        self.lastSongTime = int(self.progressControlBar.getValue())
+
     def copySong(self):
         copy(self.songList[self.songIndex]["path"])
 
@@ -724,7 +764,7 @@ class Main(ShowBase):
 
     def prevSong(self):
         self.songList[self.songIndex]["object"].stop()
-        if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime < 2.5:
+        if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime < 3.5:
             self.songIndex -= 1
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
@@ -844,6 +884,7 @@ class Main(ShowBase):
         self.songIndex = 0
         self.backgroundToggle = True
         self.shuffleSongsToggle = False
+        self.lastSongTime = 0
 
     def winEvent(self, window):
         if window.isClosed():
