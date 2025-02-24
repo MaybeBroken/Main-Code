@@ -25,8 +25,12 @@ data = result.stdout.splitlines()
 for s in data:
     if "visitorData" in s:
         visitorData = s.split(": ")[1].split(",")[0].strip("'")
+    else:
+        visitorData = ""
     if "poToken" in s:
         poToken = s.split(": ")[1].split(",")[0].strip("'")
+    else:
+        poToken = ""
 
 with open("spoofedToken.json", "w") as f:
     f.write(
