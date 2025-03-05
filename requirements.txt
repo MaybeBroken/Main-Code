@@ -1,0 +1,12 @@
+panda3d
+screeninfo
+clipboard
+pyyaml
+websockets
+numpy
+opensimplex
+scipy
+Pillow
+music-tag
+pytubefix
+requests
