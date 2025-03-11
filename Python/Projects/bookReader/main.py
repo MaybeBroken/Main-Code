@@ -31,6 +31,7 @@ except ImportError:
     from direct.gui.DirectGui import *
     from direct.stdpy.threading import Thread
 import warnings
+import cleanify
 
 try:
     from bs4 import BeautifulSoup
@@ -130,21 +131,23 @@ def parse_html_string(html_string):
     """
     soup = BeautifulSoup(html_string, "html.parser")
     html_string = soup.get_text()
-
     return html_string
 
 
 class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
+        self.setBackgroundColor(0.1, 0.1, 0.1, 1)
         self.bookTextNode = OnscreenText()
         self.bookTextNode.setAlign(TextNode.ALeft)
         self.bookTextNode.setScale(0.05)
         self.bookTextNode.setPos(-1, 0.75)
+        self.bookTextNode.setFg((1, 1, 1, 1))
         self.progressText = OnscreenText()
         self.progressText.setScale(0.05)
         self.progressText.setPos(0, -0.8)
         self.progressText.setAlign(TextNode.ACenter)
+        self.progressText.setFg((1, 1, 1, 1))
         self.pageIndex = 0
         self.runningRepeatArrow = False
         self.accept(
@@ -189,6 +192,14 @@ class Main(ShowBase):
             self.book = parse_html_string(
                 self.load_book(QFileDialog.getOpenFileName()[0])
             )
+        self.book = cleanify.Purger(
+            cleanify.EbookContext(
+                rating="G",
+                AiRevision=False,
+                AiRecursiveRevisionLevel=1,
+                AiRevisionModel="GPT-3.5",
+            )
+        ).cleanify(self.book)
         self.book = word_wrap(self.book, 90, 30)
         self.bookTextNode.setText(self.book[self.pageIndex])
         self.progressText.setText(

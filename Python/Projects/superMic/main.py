@@ -3,11 +3,11 @@ import sounddevice as sd
 import threading
 import noisereduce as nr
 
-CHUNK = 2
+CHUNK = 32
 FORMAT = "float32"
 CHANNELS = 1
 RATE = 44100
-AMPLIFICATION_FACTOR = 10.0
+AMPLIFICATION_FACTOR = 1
 
 current_amplification_factor = AMPLIFICATION_FACTOR
 
