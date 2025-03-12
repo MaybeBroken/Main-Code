@@ -18,17 +18,14 @@ from __YOUTUBEDOWNLOADER import (
     registerInitalizeCallbackFunction,
 )
 from panda3d.core import (
-    Texture,
+    FilterProperties,
     loadPrcFile,
     ConfigVariableString,
     AudioSound,
-    WindowProperties,
     NodePath,
     TextNode,
     TransparencyAttrib,
     Point3,
-    Point4,
-    Vec3,
 )
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
@@ -879,6 +876,12 @@ class Main(ShowBase):
         self.backgroundToggle = True
         self.shuffleSongsToggle = False
         self.lastSongTime = 0
+
+        # Audio
+
+        fp = FilterProperties()
+        fp.addSfxreverb(0.6, 0.5, 0.1, 0.1, 0.1)
+        self.musicManager.configureFilters(fp)
 
     def winEvent(self, window):
         if window.isClosed():

@@ -89,3 +89,12 @@ class Purger:
         else:
             # Use the default cleanify method
             return self.cleanify(text)
+
+
+if __name__ == "__main__":
+    # Example usage
+    ebook_context = EbookContext(rating="PG-13", AiRevision=True)
+    purger = Purger(ebook_context)
+    text = input("Enter text to clean: ")
+    cleaned_text = purger.cleanify(text)
+    print(cleaned_text)
