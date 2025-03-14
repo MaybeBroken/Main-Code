@@ -1,7 +1,6 @@
 import numpy as np
 import sounddevice as sd
 import threading
-import noisereduce as nr
 
 CHUNK = 32
 FORMAT = "float32"
