@@ -56,30 +56,53 @@ class timeline:
         self.canvas.create_text(
             400, 20, text="Timeline Viewer", fill="white", font=("Arial", 16)
         )
+        self.listCycle = 33
 
     def build_graph(self):
+        self.canvas.delete("data_line")
         if not self.data:
             return
-        x_offset = -50
-        y_offset = 150
-        x_scale = 50
-        y_scale = 15
-        for i, (time_point, data_point) in enumerate(self.data):
-            x = x_offset + (time_point * x_scale)
-            y = y_offset - (data_point * y_scale)
-            if i > 0:
-                previous_time, previous_data = self.data[i - 1]
-                previous_x = x_offset + (previous_time * x_scale)
-                previous_y = y_offset - (previous_data * y_scale)
-                self.canvas.create_line(
-                    previous_x, previous_y, x, y, fill="green", width=2
-                )
+        x_offset = 750
+        y_offset = 550
+        x_scale = 100
+        y_scale = 200
+        for i, (time_point, _x, _y, _z) in enumerate(self.data):
+            for _i, (data_point, color) in enumerate(
+                [(_x, "red"), (_y, "green"), (_z, "blue")]
+            ):
+                x = x_offset - (time_point * x_scale)
+                y = y_offset - (data_point * y_scale)
+                if i > 0:
+                    previous_time, previous_data = (
+                        self.data[i - 1][0],
+                        self.data[i - 1][_i],
+                    )
+                    previous_x = x_offset - (previous_time * x_scale)
+                    previous_y = y_offset - (previous_data * y_scale)
+                    if (
+                        self.listCycle <= 32
+                        and self.listCycle != 0
+                        and abs(x - previous_x) < 15
+                    ):
+                        self.canvas.create_line(
+                            previous_x,
+                            previous_y,
+                            x,
+                            y,
+                            fill=color,
+                            width=2,
+                            tags="data_line",
+                        )
 
-    def add_data_point(self, data):
+    def add_data_point(self, dataX, dataY, dataZ):
         current_time = time.time() - self.start_time
-        self.data.append((current_time, data))
-        if len(self.data) > 700:
+        self.data.append((current_time, dataX, dataY, dataZ))
+        if self.listCycle > 32:
+            self.start_time = time.time()
+            self.listCycle = 0
+        if len(self.data) > 32:
             self.data.pop(0)
+            self.listCycle += 1
 
     def get_data(self):
         return self.data
@@ -194,9 +217,14 @@ class ArduinoSerialInterface:
                     for i in range(len(data)):
                         data[i] = data[i].strip()
                         data[i] = data[i].split(":")
-                    if len(data) == 4 and DATA(data).format() is not None:
+                    formatted_data = DATA(data).format()
+                    if len(data) == 4 and formatted_data is not None:
                         DATAQUEUE.append(data)
-                        timeline_viewer.add_data_point(DATA(data).format().vec_total)
+                        timeline_viewer.add_data_point(
+                            formatted_data.vec_x,
+                            formatted_data.vec_y,
+                            formatted_data.vec_z,
+                        )
             except serial.SerialException as e:
                 print(f"Error reading data: {e}")
 
