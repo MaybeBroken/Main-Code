@@ -1,4 +1,4 @@
-from typing import overload
+from random import randint
 import serial
 import time
 import threading
@@ -10,10 +10,27 @@ from direct.gui.DirectGui import *
 from panda3d.core import *
 from panda3d.core import (
     Vec4,
+    loadPrcFileData,
 )
 from math import radians, degrees, sin, cos, tan, asin, acos, atan2
 
+from matplotlib import (
+    pyplot as plt,
+    animation as anm,
+    colors as cl,
+    cm,
+)
+
 DATAQUEUE = []
+
+
+loadPrcFileData(
+    "",
+    """window-title GyroCam Interface
+want-pstats 1
+show-frame-rate-meter 1
+""",
+)
 
 
 class DATA:
@@ -33,79 +50,6 @@ class DATA:
         except IndexError as e:
             return None
         return self
-
-
-class timeline:
-    def __init__(self):
-        self.start_time = time.time()
-        self.data = []  # List to store data points as tuples (time, data)
-        self.win = Tk()
-        self.win.title("Timeline Viewer")
-        self.win.geometry("800x600")
-        self.win.configure(bg="black")
-        self.canvas = Canvas(self.win, bg="black", width=800, height=600)
-        self.canvas.pack(fill=BOTH, expand=True)
-        self.canvas.create_line(50, 550, 750, 550, fill="white", width=2)  # X-axis
-        self.canvas.create_line(50, 550, 50, 50, fill="white", width=2)  # Y-axis
-        self.canvas.create_text(
-            400, 580, text="Time (s)", fill="white", font=("Arial", 12)
-        )
-        self.canvas.create_text(
-            20, 300, text="Data", fill="white", font=("Arial", 12), angle=90
-        )
-        self.canvas.create_text(
-            400, 20, text="Timeline Viewer", fill="white", font=("Arial", 16)
-        )
-        self.listCycle = 33
-
-    def build_graph(self):
-        self.canvas.delete("data_line")
-        if not self.data:
-            return
-        x_offset = 750
-        y_offset = 550
-        x_scale = 100
-        y_scale = 200
-        for i, (time_point, _x, _y, _z) in enumerate(self.data):
-            for _i, (data_point, color) in enumerate(
-                [(_x, "red"), (_y, "green"), (_z, "blue")]
-            ):
-                x = x_offset - (time_point * x_scale)
-                y = y_offset - (data_point * y_scale)
-                if i > 0:
-                    previous_time, previous_data = (
-                        self.data[i - 1][0],
-                        self.data[i - 1][_i],
-                    )
-                    previous_x = x_offset - (previous_time * x_scale)
-                    previous_y = y_offset - (previous_data * y_scale)
-                    if (
-                        self.listCycle <= 32
-                        and self.listCycle != 0
-                        and abs(x - previous_x) < 15
-                    ):
-                        self.canvas.create_line(
-                            previous_x,
-                            previous_y,
-                            x,
-                            y,
-                            fill=color,
-                            width=2,
-                            tags="data_line",
-                        )
-
-    def add_data_point(self, dataX, dataY, dataZ):
-        current_time = time.time() - self.start_time
-        self.data.append((current_time, dataX, dataY, dataZ))
-        if self.listCycle > 32:
-            self.start_time = time.time()
-            self.listCycle = 0
-        if len(self.data) > 32:
-            self.data.pop(0)
-            self.listCycle += 1
-
-    def get_data(self):
-        return self.data
 
 
 class SIMULATION(ShowBase):
@@ -129,17 +73,44 @@ class SIMULATION(ShowBase):
         self.model.setHpr(h_rad, p_rad, r_rad)
 
     def update(self, task):
+        global DATAQUEUE
+        if DATAQUEUE:
+            print(f"Processing {len(DATAQUEUE)} items in DATAQUEUE")
         for data in DATAQUEUE:
             viewer.set(
                 f"Data from Arduino:\n" + "\n".join([str(item) for item in DATAQUEUE])
             )
             formatted_data = DATA(data).format()
             if formatted_data is not None:
-                simulation.setModelState(formatted_data, task)
+                self.setModelState(formatted_data, task)
+                plot.add_data(formatted_data)
         DATAQUEUE.clear()
         window.update()
-        timeline_viewer.build_graph()
         return task.cont
+
+
+class PLOT:
+    def __init__(self):
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_xlim(0, 100)
+        self.ax.set_ylim(-10, 10)
+        (self.line,) = self.ax.plot([], [], lw=2)
+        self.xdata = []
+        self.ydata = []
+
+    def setup(self):
+        plt.ion()
+        plt.show()
+
+    def add_data(self, data: DATA):
+        self.xdata.append(len(self.xdata))
+        self.ydata.append(data.vec_x)
+        if len(self.xdata) > 100:
+            self.xdata.pop(0)
+            self.ydata.pop(0)
+        self.line.set_data(self.xdata, self.ydata)
+        plt.draw()
+        plt.pause(0.01)
 
 
 class VIEWER:
@@ -174,10 +145,27 @@ class VIEWER:
         self.emulatedTerminal.insert(END, text + "\n")
         self.emulatedTerminal.config(state=DISABLED)
         self.emulatedTerminal.see(END)
+        self.window.update_idletasks()  # Ensure pending events are processed
         self.window.update()
 
     def set(self, text):
         self.emulatedData.config(text=text)
+        self.window.update_idletasks()  # Ensure pending events are processed
+        self.window.update()
+
+
+class PsuedoSerial:
+    def __init__(self):
+        self.is_open = True
+        self.port = "BLANK"
+        self.baud_rate = 115200
+        self.timeout = 1
+
+    def disconnect(self): ...
+    def close(self): ...
+    def write(self, data): ...
+    def readline(self):
+        return f"0:{randint(0, 10)}:{randint(0, 10)}:{randint(0, 10)}|0:{randint(0, 10)}|0:{randint(0, 10)}:{randint(0, 10)}:{randint(0, 10)}|0:{randint(0, 10)}".encode()
 
 
 class ArduinoSerialInterface:
@@ -189,10 +177,13 @@ class ArduinoSerialInterface:
 
     def connect(self):
         try:
-            self.serial_connection = serial.Serial(
-                self.port, self.baud_rate, timeout=self.timeout
-            )
-            time.sleep(2)
+            if not self.port == "BLANK":
+                self.serial_connection = serial.Serial(
+                    self.port, self.baud_rate, timeout=self.timeout
+                )
+                time.sleep(2)
+            else:
+                self.serial_connection = PsuedoSerial()
             print(f"Connected to Arduino on port {self.port}")
             self.start_reading_thread()
         except PermissionError as e:
@@ -208,6 +199,7 @@ class ArduinoSerialInterface:
         self.reading_thread.start()
 
     def read_data_continuously(self):
+        global DATAQUEUE
         while self.serial_connection and self.serial_connection.is_open:
             try:
                 data = self.read_data()
@@ -220,11 +212,8 @@ class ArduinoSerialInterface:
                     formatted_data = DATA(data).format()
                     if len(data) == 4 and formatted_data is not None:
                         DATAQUEUE.append(data)
-                        timeline_viewer.add_data_point(
-                            formatted_data.vec_x,
-                            formatted_data.vec_y,
-                            formatted_data.vec_z,
-                        )
+                        if len(DATAQUEUE) > 1000:  # Prevent excessive memory usage
+                            DATAQUEUE.pop(0)
             except serial.SerialException as e:
                 print(f"Error reading data: {e}")
 
@@ -277,7 +266,7 @@ if __name__ == "__main__":
     available_ports = list_active_serial_ports()
     if not available_ports:
         print("No serial ports available.")
-        exit(1)
+        available_ports = ["BLANK"]
     port_label = Label(
         window,
         text="Select a serial port:",
@@ -303,17 +292,24 @@ if __name__ == "__main__":
     connect_button = Button(
         window,
         text="Connect",
-        command=lambda: connect(ConnectionListbox.get(ACTIVE)),
+        command=lambda: (
+            print("Connecting to Arduino..."),
+            connect(ConnectionListbox.get(ACTIVE)),
+        ),
         bg="black",
-        fg="white",
+        fg="black",
         font=("Courier New", 12),
     )
     connect_button.pack(pady=10)
     viewer = VIEWER()
     simulation = SIMULATION()
-    timeline_viewer = timeline()
-
+    plot = PLOT()
+    plot.setup()
     try:
-        simulation.run()
+        simulation.spawnTkLoop()
+        simulation.tkRun()
     except KeyboardInterrupt:
         ARDUINO.disconnect()
+    finally:
+        print("Exiting program, clearing DATAQUEUE")
+        DATAQUEUE.clear()
