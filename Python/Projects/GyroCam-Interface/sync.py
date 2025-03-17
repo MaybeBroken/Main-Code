@@ -103,6 +103,16 @@ class PLOT:
         self.xdata = []
         self.ydata = {"x": [], "y": [], "z": []}
         self.ax.legend()
+        self.ax.set_xlabel("Time")
+        self.ax.set_ylabel("Value")
+        self.ax.set_title("Sensor Data")
+        self.ax.grid()
+        self.ax.set_facecolor("black")
+        self.ax.xaxis.label.set_color("white")
+        self.ax.yaxis.label.set_color("white")
+        self.ax.tick_params(axis="x", colors="red")
+        self.ax.tick_params(axis="y", colors="green")
+        self.fig.patch.set_facecolor("black")
 
     def setup(self):
         plt.ion()
