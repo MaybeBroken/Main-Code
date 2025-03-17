@@ -21,6 +21,9 @@ from matplotlib import (
     cm,
 )
 from direct.interval.IntervalGlobal import *
+from opensimplex import OpenSimplex as SimplexNoise
+
+simplex_noise = SimplexNoise(seed=0)
 
 DATAQUEUE = []
 
@@ -64,9 +67,9 @@ class SIMULATION(ShowBase):
         self.model = self.loader.loadModel("models/box")
         self.model.reparentTo(self.render)
         self.task_mgr.add(self.update, "update_task")
+        self.last_update_time = 0  # Track the last update time
 
-    def setModelState(self, data: DATA, task):
-
+    def setModelState(self, data: DATA):
         pos_interval = LerpPosInterval(
             self.model, 0.01, (data.vec_x, data.vec_y, data.vec_z)
         )
@@ -78,15 +81,18 @@ class SIMULATION(ShowBase):
 
     def update(self, task):
         global DATAQUEUE
-        if DATAQUEUE:
-            data = DATAQUEUE.pop(0)
-            viewer.set(
-                f"Data from Arduino:\n" + "\n".join([str(item) for item in DATAQUEUE])
-            )
-            formatted_data = DATA(data).format()
-            if formatted_data is not None:
-                self.setModelState(formatted_data, task)
-                plot.add_data(formatted_data)
+        current_time = task.time
+        if current_time - self.last_update_time > 0.1:  # Update every 0.1 seconds
+            self.last_update_time = current_time
+            if DATAQUEUE:
+                data = DATAQUEUE.pop(-1)
+                viewer.set(f"Data from Arduino:\n" + str(DATAQUEUE[0]))
+                formatted_data = DATA(data).format()
+                if formatted_data is not None:
+                    self.setModelState(formatted_data)
+                    plot.add_data(formatted_data)
+            if len(DATAQUEUE) > 10:
+                DATAQUEUE = DATAQUEUE[5:]
         return task.cont
 
 
@@ -94,7 +100,7 @@ class PLOT:
     def __init__(self):
         self.fig, self.ax = plt.subplots()
         self.ax.set_xlim(0, 100)
-        self.ax.set_ylim(-10, 10)
+        self.ax.set_ylim(0, 20)
         self.lines = {
             "x": self.ax.plot([], [], lw=2, label="X")[0],
             "y": self.ax.plot([], [], lw=2, label="Y")[0],
@@ -114,14 +120,23 @@ class PLOT:
         self.ydata["y"].append(data.vec_y)
         self.ydata["z"].append(data.vec_z)
         if len(self.xdata) > 100:
-            self.xdata.pop(0)
-            self.ydata["x"].pop(0)
-            self.ydata["y"].pop(0)
-            self.ydata["z"].pop(0)
+            self.reset_plot()
         for key in self.lines:
             self.lines[key].set_data(self.xdata, self.ydata[key])
         self.fig.canvas.draw_idle()  # Update the plot without bringing it to the front
         self.fig.canvas.flush_events()  # Ensure the plot updates in the background
+
+    def reset_plot(self):
+        self.xdata.clear()
+        self.ydata["x"].clear()
+        self.ydata["y"].clear()
+        self.ydata["z"].clear()
+        self.ax.set_xlim(0, 100)
+        self.ax.set_ylim(0, 20)
+        for key in self.lines:
+            self.lines[key].set_data([], [])
+        self.fig.canvas.draw_idle()
+        self.fig.canvas.flush_events()
 
 
 class VIEWER:
@@ -171,12 +186,17 @@ class PsuedoSerial:
         self.port = "BLANK"
         self.baud_rate = 115200
         self.timeout = 1
+        self.last_read = 0
 
     def disconnect(self): ...
     def close(self): ...
     def write(self, data): ...
     def readline(self):
-        return f"0:{randint(0, 10)}:{randint(0, 10)}:{randint(0, 10)}|0:{randint(0, 10)}|0:{randint(0, 10)}:{randint(0, 10)}:{randint(0, 10)}|0:{randint(0, 10)}".encode()
+        self.last_read += 0.00001
+        noise1 = abs(simplex_noise.noise3(32, -32, self.last_read) * 20)
+        noise2 = abs(simplex_noise.noise3(32, 32, self.last_read) * 20)
+        noise3 = abs(simplex_noise.noise3(-32, 32, self.last_read) * 20)
+        return f"0:{noise1}:{noise2}:{noise3}|0:{noise1 + noise2 + noise3}|0:{randint(0, 10)}:{randint(0, 10)}:{randint(0, 10)}|0:{randint(0, 10)}".encode()
 
 
 class ArduinoSerialInterface:
@@ -311,6 +331,7 @@ if __name__ == "__main__":
         command=lambda: (
             print("Connecting to Arduino..."),
             connect(ConnectionListbox.get(ACTIVE)),
+            window.withdraw(),
         ),
         bg="black",
         fg="black",
