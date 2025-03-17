@@ -20,15 +20,17 @@ from matplotlib import (
     colors as cl,
     cm,
 )
+from direct.interval.IntervalGlobal import *
 
 DATAQUEUE = []
-
 
 loadPrcFileData(
     "",
     """window-title GyroCam Interface
 want-pstats 1
 show-frame-rate-meter 1
+clock-mode global
+sync-video 0
 """,
 )
 
@@ -64,19 +66,20 @@ class SIMULATION(ShowBase):
         self.task_mgr.add(self.update, "update_task")
 
     def setModelState(self, data: DATA, task):
-        # Convert degrees to radians for rotation
-        h_rad = radians(data.vec_h)
-        p_rad = radians(data.vec_p)
-        r_rad = radians(data.vec_r)
 
-        self.model.setPos(data.vec_x, data.vec_y, data.vec_z)
-        self.model.setHpr(h_rad, p_rad, r_rad)
+        pos_interval = LerpPosInterval(
+            self.model, 0.01, (data.vec_x, data.vec_y, data.vec_z)
+        )
+        hpr_interval = LerpHprInterval(
+            self.model, 0.01, (data.vec_h, data.vec_p, data.vec_r)
+        )
+        pos_interval.start()
+        hpr_interval.start()
 
     def update(self, task):
         global DATAQUEUE
         if DATAQUEUE:
-            print(f"Processing {len(DATAQUEUE)} items in DATAQUEUE")
-        for data in DATAQUEUE:
+            data = DATAQUEUE.pop(0)
             viewer.set(
                 f"Data from Arduino:\n" + "\n".join([str(item) for item in DATAQUEUE])
             )
@@ -84,8 +87,6 @@ class SIMULATION(ShowBase):
             if formatted_data is not None:
                 self.setModelState(formatted_data, task)
                 plot.add_data(formatted_data)
-        DATAQUEUE.clear()
-        window.update()
         return task.cont
 
 
@@ -94,23 +95,33 @@ class PLOT:
         self.fig, self.ax = plt.subplots()
         self.ax.set_xlim(0, 100)
         self.ax.set_ylim(-10, 10)
-        (self.line,) = self.ax.plot([], [], lw=2)
+        self.lines = {
+            "x": self.ax.plot([], [], lw=2, label="X")[0],
+            "y": self.ax.plot([], [], lw=2, label="Y")[0],
+            "z": self.ax.plot([], [], lw=2, label="Z")[0],
+        }
         self.xdata = []
-        self.ydata = []
+        self.ydata = {"x": [], "y": [], "z": []}
+        self.ax.legend()
 
     def setup(self):
         plt.ion()
-        plt.show()
+        plt.show(block=False)  # Ensure the plot updates in the background
 
     def add_data(self, data: DATA):
         self.xdata.append(len(self.xdata))
-        self.ydata.append(data.vec_x)
+        self.ydata["x"].append(data.vec_x)
+        self.ydata["y"].append(data.vec_y)
+        self.ydata["z"].append(data.vec_z)
         if len(self.xdata) > 100:
             self.xdata.pop(0)
-            self.ydata.pop(0)
-        self.line.set_data(self.xdata, self.ydata)
-        plt.draw()
-        plt.pause(0.01)
+            self.ydata["x"].pop(0)
+            self.ydata["y"].pop(0)
+            self.ydata["z"].pop(0)
+        for key in self.lines:
+            self.lines[key].set_data(self.xdata, self.ydata[key])
+        self.fig.canvas.draw_idle()  # Update the plot without bringing it to the front
+        self.fig.canvas.flush_events()  # Ensure the plot updates in the background
 
 
 class VIEWER:
@@ -258,6 +269,11 @@ def connect(port):
     ARDUINO.connect()
 
 
+def update_simulation():
+    simulation.task_mgr.step()
+    window.after(16, update_simulation)  # Schedule the next update in ~16ms (60 FPS)
+
+
 if __name__ == "__main__":
     window = Tk()
     window.title("Arduino Serial Interface")
@@ -305,9 +321,11 @@ if __name__ == "__main__":
     simulation = SIMULATION()
     plot = PLOT()
     plot.setup()
+
+    update_simulation()  # Start the simulation update loop
+
     try:
-        simulation.spawnTkLoop()
-        simulation.tkRun()
+        window.mainloop()  # Run Tkinter main loop in the main thread
     except KeyboardInterrupt:
         ARDUINO.disconnect()
     finally:
