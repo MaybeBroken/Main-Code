@@ -11,6 +11,7 @@ from panda3d.core import *
 from panda3d.core import (
     Vec4,
     loadPrcFileData,
+    GraphicsEngine,
 )
 from math import radians, degrees, sin, cos, tan, asin, acos, atan2
 
@@ -67,33 +68,26 @@ class SIMULATION(ShowBase):
         self.model = self.loader.loadModel("models/box")
         self.model.reparentTo(self.render)
         self.task_mgr.add(self.update, "update_task")
-        self.last_update_time = 0  # Track the last update time
 
     def setModelState(self, data: DATA):
-        pos_interval = LerpPosInterval(
-            self.model, 0.01, (data.vec_x, data.vec_y, data.vec_z)
-        )
-        hpr_interval = LerpHprInterval(
-            self.model, 0.01, (data.vec_h, data.vec_p, data.vec_r)
-        )
-        pos_interval.start()
-        hpr_interval.start()
+        self.model.setPos(data.vec_x, data.vec_y, data.vec_z)
+        self.model.setHpr(data.vec_h, data.vec_p, data.vec_r)
 
     def update(self, task):
         global DATAQUEUE
-        current_time = task.time
-        if current_time - self.last_update_time > 0.1:  # Update every 0.1 seconds
-            self.last_update_time = current_time
-            if DATAQUEUE:
-                data = DATAQUEUE.pop(-1)
-                viewer.set(f"Data from Arduino:\n" + str(DATAQUEUE[0]))
-                formatted_data = DATA(data).format()
-                if formatted_data is not None:
-                    self.setModelState(formatted_data)
-                    plot.add_data(formatted_data)
-            if len(DATAQUEUE) > 10:
-                DATAQUEUE = DATAQUEUE[5:]
+        if DATAQUEUE:
+            data = DATAQUEUE.pop(-1)
+            viewer.set(f"Data from Arduino:\n" + str(DATAQUEUE[0]))
+            formatted_data = DATA(data).format()
+            if formatted_data is not None:
+                self.setModelState(formatted_data)
+                plot.add_data(formatted_data)
+        if len(DATAQUEUE) > 10:
+            DATAQUEUE = DATAQUEUE[5:]
         return task.cont
+
+    def update_graphics_only(self):
+        self.graphicsEngine.renderFrame()
 
 
 class PLOT:
