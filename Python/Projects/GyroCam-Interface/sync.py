@@ -63,7 +63,7 @@ class SIMULATION(ShowBase):
         ShowBase.__init__(self)
         self.disableMouse()
         self.setBackgroundColor(0, 0, 0)
-        self.camera.setPos(15, 10, 12)
+        self.camera.setPos(25, 30, 12)
         self.camera.lookAt(0, 0, 0)
         self.model = self.loader.loadModel("models/box")
         self.model.reparentTo(self.render)
@@ -94,7 +94,7 @@ class PLOT:
     def __init__(self):
         self.fig, self.ax = plt.subplots()
         self.ax.set_xlim(0, 100)
-        self.ax.set_ylim(0, 20)
+        self.ax.set_ylim(-20, 20)
         self.lines = {
             "x": self.ax.plot([], [], lw=2, label="X")[0],
             "y": self.ax.plot([], [], lw=2, label="Y")[0],
@@ -117,6 +117,7 @@ class PLOT:
     def setup(self):
         plt.ion()
         plt.show(block=False)  # Ensure the plot updates in the background
+        viewer.print("Plotting setup complete")
 
     def add_data(self, data: DATA):
         self.xdata.append(len(self.xdata))
@@ -136,7 +137,7 @@ class PLOT:
         self.ydata["y"].clear()
         self.ydata["z"].clear()
         self.ax.set_xlim(0, 100)
-        self.ax.set_ylim(0, 20)
+        self.ax.set_ylim(-20, 20)
         for key in self.lines:
             self.lines[key].set_data([], [])
         self.fig.canvas.draw_idle()
@@ -197,9 +198,9 @@ class PsuedoSerial:
     def write(self, data): ...
     def readline(self):
         self.last_read += 0.00001
-        noise1 = abs(simplex_noise.noise3(32, -32, self.last_read) * 20)
-        noise2 = abs(simplex_noise.noise3(32, 32, self.last_read) * 20)
-        noise3 = abs(simplex_noise.noise3(-32, 32, self.last_read) * 20)
+        noise1 = simplex_noise.noise3(32, -32, self.last_read) * 20
+        noise2 = simplex_noise.noise3(32, 32, self.last_read) * 20
+        noise3 = simplex_noise.noise3(-32, 32, self.last_read) * 20
         return f"0:{noise1}:{noise2}:{noise3}|0:{noise1 + noise2 + noise3}|0:{randint(0, 10)}:{randint(0, 10)}:{randint(0, 10)}|0:{randint(0, 10)}".encode()
 
 
@@ -220,13 +221,18 @@ class ArduinoSerialInterface:
             else:
                 self.serial_connection = PsuedoSerial()
             print(f"Connected to Arduino on port {self.port}")
+            viewer.print(f"Streaming to Arduino on port {self.port}")
             self.start_reading_thread()
         except PermissionError as e:
             print(
                 f"PermissionError: {e}. Please check if the port is already in use or if you have the necessary permissions."
             )
+            viewer.print(
+                f"PermissionError: {e}. Please check if the port is already in use or if you have the necessary permissions."
+            )
         except serial.SerialException as e:
             print(f"Error connecting to Arduino: {e}")
+            viewer.print(f"Error connecting to Arduino: {e}")
 
     def start_reading_thread(self):
         self.reading_thread = threading.Thread(target=self.read_data_continuously)
@@ -256,12 +262,14 @@ class ArduinoSerialInterface:
         if self.serial_connection and self.serial_connection.is_open:
             self.serial_connection.close()
             print(f"Disconnected from Arduino on port {self.port}")
+            viewer.print(f"Disconnected from Arduino on port {self.port}")
 
     def send_data(self, data):
         if self.serial_connection and self.serial_connection.is_open:
             self.serial_connection.write(data.encode())
         else:
             print("Serial connection is not open")
+        viewer.print("Serial connection is not open")
 
     def read_data(self):
         if self.serial_connection and self.serial_connection.is_open:
@@ -270,7 +278,7 @@ class ArduinoSerialInterface:
                 if data:
                     return data
             except serial.SerialException as e:
-                print(f"Error reading data: {e}")
+                viewer.print(f"Error reading data: {e}")
         return None
 
 
@@ -289,6 +297,7 @@ ARDUINO: ArduinoSerialInterface = None
 
 def connect(port):
     global ARDUINO
+    viewer.print(f"Connecting to Arduino on port {port}@115.2k baud")
     ARDUINO = ArduinoSerialInterface(port=port, baud_rate=115200)
     ARDUINO.connect()
 
@@ -347,7 +356,9 @@ if __name__ == "__main__":
     plot = PLOT()
     plot.setup()
 
+    viewer.print("Loaded simulation configuration")
     update_simulation()  # Start the simulation update loop
+    viewer.print("Simulation started")
 
     try:
         window.mainloop()  # Run Tkinter main loop in the main thread
