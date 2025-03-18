@@ -54,6 +54,9 @@ class DATA:
             self.vec_r = round(float(self.data[2][3]), 1)
             self.temp_celcius = float(self.data[3][1])
             self.temp_fahrenheit = (self.temp_celcius * 9 / 5) + 32
+            self.acc_x = self.vec_x * 9.81 * 10
+            self.acc_y = self.vec_y * 9.81 * 10
+            self.acc_z = self.vec_z * 9.81 * 10
         except IndexError as e:
             return None
         return self
@@ -85,7 +88,7 @@ class OBJECT:
         self.temp_celcius = 0
         self.temp_fahrenheit = 0
 
-    def set_data(self, data: DATA):
+    def set_data(self, data: DATA, dt):
         self.vec_h = data.vec_h
         self.vec_p = data.vec_p
         self.vec_r = data.vec_r
@@ -98,9 +101,10 @@ class OBJECT:
         self.pos_p += data.vec_p
         self.pos_r += data.vec_r
 
-        self.pos_x += data.vec_x
-        self.pos_y += data.vec_y
-        self.pos_z += data.vec_z
+        # Update position directly based on acceleration data
+        self.pos_x += data.acc_x * dt / 2
+        self.pos_y += data.acc_y * dt / 2
+        self.pos_z += data.acc_z * dt / 2
         self.pos_total = self.pos_x + self.pos_y + self.pos_z
 
         self.temp_celcius = data.temp_celcius
@@ -117,6 +121,7 @@ class SIMULATION(ShowBase):
         self.model = self.loader.loadModel("models/box")
         self.model.reparentTo(self.render)
         self.task_mgr.add(self.update, "update_task")
+        self.last_time = time.time()
 
     def setModelState(self, object: OBJECT):
         self.model.setPos(object.pos_x, object.pos_y, object.pos_z)
@@ -124,13 +129,16 @@ class SIMULATION(ShowBase):
 
     def update(self, task):
         global DATAQUEUE
+        current_time = time.time()
+        dt = current_time - self.last_time
+        self.last_time = current_time
         if DATAQUEUE:
             try:
                 data = DATAQUEUE.pop(-1)
                 viewer.set(f"Data from Arduino:\n" + str(data))
                 formatted_data = DATA(data).format()
                 if formatted_data is not None:
-                    camera.set_data(formatted_data)
+                    camera.set_data(formatted_data, dt)
                     self.setModelState(camera)
                     plot.add_data(camera)
             except Exception as e:
