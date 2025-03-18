@@ -45,17 +45,66 @@ class DATA:
 
     def format(self):
         try:
-            self.vec_x = float(self.data[0][1])
-            self.vec_y = float(self.data[0][2])
-            self.vec_z = float(self.data[0][3])
-            self.vec_total = float(self.data[1][1])
-            self.vec_h = float(self.data[2][1])
-            self.vec_p = float(self.data[2][2])
-            self.vec_r = float(self.data[2][3])
+            self.vec_x = round(float(self.data[0][1]), 1)
+            self.vec_y = round(float(self.data[0][2]), 1)
+            self.vec_z = round(float(self.data[0][3]), 1) - 1
+            self.vec_total = float(self.data[1][1]) * 5
+            self.vec_h = round(float(self.data[2][1]), 1)
+            self.vec_p = round(float(self.data[2][2]), 1)
+            self.vec_r = round(float(self.data[2][3]), 1)
             self.temp_celcius = float(self.data[3][1])
+            self.temp_fahrenheit = (self.temp_celcius * 9 / 5) + 32
         except IndexError as e:
             return None
         return self
+
+
+class OBJECT:
+    def __init__(self, name):
+        self.name = name
+        self.vec_x = 0
+        self.vec_y = 0
+        self.vec_z = 0
+
+        self.vec_total = 0
+
+        self.vec_h = 0
+        self.vec_p = 0
+        self.vec_r = 0
+
+        self.pos_x = 0
+        self.pos_y = 0
+        self.pos_z = 0
+
+        self.pos_total = 0
+
+        self.pos_h = 0
+        self.pos_p = 0
+        self.pos_r = 0
+
+        self.temp_celcius = 0
+        self.temp_fahrenheit = 0
+
+    def set_data(self, data: DATA):
+        self.vec_h = data.vec_h
+        self.vec_p = data.vec_p
+        self.vec_r = data.vec_r
+        self.vec_x = data.vec_x
+        self.vec_y = data.vec_y
+        self.vec_z = data.vec_z
+        self.vec_total = data.vec_total
+
+        self.pos_h += data.vec_h
+        self.pos_p += data.vec_p
+        self.pos_r += data.vec_r
+
+        self.pos_x += data.vec_x
+        self.pos_y += data.vec_y
+        self.pos_z += data.vec_z
+        self.pos_total = self.pos_x + self.pos_y + self.pos_z
+
+        self.temp_celcius = data.temp_celcius
+        self.temp_fahrenheit = data.temp_fahrenheit
 
 
 class SIMULATION(ShowBase):
@@ -69,19 +118,23 @@ class SIMULATION(ShowBase):
         self.model.reparentTo(self.render)
         self.task_mgr.add(self.update, "update_task")
 
-    def setModelState(self, data: DATA):
-        self.model.setPos(data.vec_x, data.vec_y, data.vec_z)
-        self.model.setHpr(data.vec_h, data.vec_p, data.vec_r)
+    def setModelState(self, object: OBJECT):
+        self.model.setPos(object.pos_x, object.pos_y, object.pos_z)
+        self.model.setHpr(object.pos_h, object.pos_p, object.pos_r)
 
     def update(self, task):
         global DATAQUEUE
         if DATAQUEUE:
-            data = DATAQUEUE.pop(-1)
-            viewer.set(f"Data from Arduino:\n" + str(DATAQUEUE[0]))
-            formatted_data = DATA(data).format()
-            if formatted_data is not None:
-                self.setModelState(formatted_data)
-                plot.add_data(formatted_data)
+            try:
+                data = DATAQUEUE.pop(-1)
+                viewer.set(f"Data from Arduino:\n" + str(data))
+                formatted_data = DATA(data).format()
+                if formatted_data is not None:
+                    camera.set_data(formatted_data)
+                    self.setModelState(camera)
+                    plot.add_data(camera)
+            except Exception as e:
+                viewer.print(f"Error processing data: {e}\n{data}")
         if len(DATAQUEUE) > 10:
             DATAQUEUE = DATAQUEUE[5:]
         return task.cont
@@ -119,11 +172,11 @@ class PLOT:
         plt.show(block=False)  # Ensure the plot updates in the background
         viewer.print("Plotting setup complete")
 
-    def add_data(self, data: DATA):
+    def add_data(self, data: OBJECT):
         self.xdata.append(len(self.xdata))
-        self.ydata["x"].append(data.vec_x)
-        self.ydata["y"].append(data.vec_y)
-        self.ydata["z"].append(data.vec_z)
+        self.ydata["x"].append(data.pos_x)
+        self.ydata["y"].append(data.pos_y)
+        self.ydata["z"].append(data.pos_z)
         if len(self.xdata) > 100:
             self.reset_plot()
         for key in self.lines:
@@ -286,9 +339,18 @@ def list_active_serial_ports():
     """Lists all active serial ports on the system."""
     ports = list_ports.comports()
     active_ports = []
+    inactive_ports = []
     for port in ports:
-        if port.device.startswith("COM") or port.device.startswith("/dev/tty"):
+        if port.device.startswith("COM") or port.device.startswith("/dev/"):
             active_ports.append(port.device)
+        else:
+            inactive_ports.append(port.device)
+    print("Available ports:")
+    for port in active_ports:
+        print(port)
+    print("Inactive ports:")
+    for port in inactive_ports:
+        print(port)
     return active_ports
 
 
@@ -355,6 +417,7 @@ if __name__ == "__main__":
     simulation = SIMULATION()
     plot = PLOT()
     plot.setup()
+    camera = OBJECT("Camera")
 
     viewer.print("Loaded simulation configuration")
     update_simulation()  # Start the simulation update loop
