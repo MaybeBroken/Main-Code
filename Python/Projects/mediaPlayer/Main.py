@@ -718,8 +718,10 @@ class Main(ShowBase):
         self.songIndex = 0
         for item in self.songList:
             item["object"].stop()
+            item["nodePath"].setColorScale((1, 1, 1, 1))
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -731,8 +733,10 @@ class Main(ShowBase):
         self.songIndex = 0
         for item in self.songList:
             item["object"].stop()
+            item["nodePath"].setColorScale((1, 1, 1, 1))
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -741,10 +745,12 @@ class Main(ShowBase):
 
     def nextSong(self):
         self.songList[self.songIndex]["object"].stop()
+        self.songList[self.songIndex]["nodePath"].setColorScale((1, 1, 1, 1))
         if self.songIndex + 1 < len(self.songList):
             self.songIndex += 1
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
 
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
@@ -755,10 +761,12 @@ class Main(ShowBase):
 
     def prevSong(self):
         self.songList[self.songIndex]["object"].stop()
+        self.songList[self.songIndex]["nodePath"].setColorScale((1, 1, 1, 1))
         if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime < 3.5:
             self.songIndex -= 1
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -773,10 +781,12 @@ class Main(ShowBase):
             self.shuffleSongsToggle = False
             self.toggleSongShuffleButton.setColor((1, 1, 1, 1))
         self.songList[self.songIndex]["object"].stop()
+        self.songList[self.songIndex]["nodePath"].setColorScale((1, 1, 1, 1))
         if songId < len(self.songList) and songId >= 0:
             self.songIndex = songId
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
+        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -1012,6 +1022,7 @@ class Main(ShowBase):
             self.backgroundToggle,
             self.backgroundToggle,
         )
+        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         if not self.doneInitialSetup:
             self.taskMgr.add(self.update, "update")
             self.taskMgr.add(self.syncProgress, "syncProgress")
