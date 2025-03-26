@@ -372,7 +372,6 @@ class CORE:
         self.downloadingActive = True
         pl = Playlist(
             url=link,
-            client="WEB",
             token_file="spoofedToken.json",
             allow_oauth_cache=False,
         )
@@ -433,8 +432,6 @@ class CORE:
                     print(Color.RED + "Video is private" + Color.RESET)
                 except exceptions.VideoRegionBlocked:
                     print(Color.RED + "Video is blocked in your region" + Color.RESET)
-                except Exception as e:
-                    print(e)
 
             _Thread(target=_inThread, args=(_title, _video)).start()
             index += 1
