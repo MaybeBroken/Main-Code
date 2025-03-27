@@ -22,21 +22,20 @@ exampleOutput = """{
 }"""
 
 data = result.stdout.splitlines()
-for s in data:
+for s in data[1:-1]:
     if "visitorData" in s:
         visitorData = s.split(": ")[1].split(",")[0].strip("'")
-    else:
-        visitorData = ""
-    if "poToken" in s:
+    elif "poToken" in s:
         poToken = s.split(": ")[1].split(",")[0].strip("'")
     else:
+        visitorData = ""
         poToken = ""
 
+os.chdir("youtubeDownloader")
 with open("spoofedToken.json", "w") as f:
     f.write(
         '{\n\t"visitorData":"' + visitorData + '",\n\t"poToken":"' + poToken + '"\n}'
     )
-os.chdir("youtubeDownloader")
 
 
 class Color:
@@ -128,7 +127,7 @@ def apply_cover_image(url, dest_folder, songName, level=0):
     if file_path is not None:
         songPath = os.path.join(
             dest_folder.split("/")[0], songName.replace(".png", ".m4a")
-        )
+        ).replace("\\img\\", "\\")
         if os.path.exists(songPath):
             song = music_tag.load_file(songPath)
             with open(file_path, "rb") as imgFile:
