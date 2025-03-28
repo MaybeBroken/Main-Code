@@ -28,6 +28,7 @@ from panda3d.core import (
     TextNode,
     TransparencyAttrib,
     Point3,
+    AudioManager,
 )
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
@@ -36,6 +37,9 @@ from direct.stdpy.threading import Thread
 from direct.gui.DirectGui import *
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib.colors import HexColor
+from pydub import AudioSegment
+import numpy as np
+import scipy.fftpack as fft
 
 try:
     CORE = CORE()
@@ -750,78 +754,6 @@ class Main(ShowBase):
     def copySong(self):
         copy(self.songList[self.songIndex]["path"])
 
-    def toggleSongFavorite(self):
-        favoritesList: list = []
-        favoritesNum = 0
-        with open(self.rootListPath + "index", "tr") as listFile:
-            try:
-                favoritesList = json.JSONDecoder().decode(listFile.readline())
-            except:
-                favoritesList = []
-        favoritesNum = len(favoritesList)
-        if not self.songList[self.songIndex]["path"] in favoritesList:
-            favoritesList.append(self.songList[self.songIndex]["path"])
-            # try:
-            #     os.mkdir(
-            #         self.songList[self.songIndex]["path"]
-            #         .replace(
-            #             self.songList[self.songIndex]["path"].split(pathSeparator)[-2],
-            #             f"{self.songList[self.songIndex]["path"].split(pathSeparator)[-2]}{pathSeparator}favorites",
-            #         )
-            #         .replace(
-            #             self.songList[self.songIndex]["path"].split(pathSeparator)[-1],
-            #             "",
-            #         ),
-            #     )
-            #     os.mkdir(
-            #         self.songList[self.songIndex]["imagePath"]
-            #         .replace(
-            #             self.songList[self.songIndex]["imagePath"].split(pathSeparator)[
-            #                 -3
-            #             ],
-            #             f"{self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-3]}{pathSeparator}favorites",
-            #         )
-            #         .replace(
-            #             self.songList[self.songIndex]["imagePath"].split(pathSeparator)[
-            #                 -1
-            #             ],
-            #             "",
-            #         ),
-            #     )
-            # except:
-            #     ...
-            shutil.copy(
-                self.songList[self.songIndex]["path"],
-                self.songList[self.songIndex]["path"]
-                .replace(
-                    self.songList[self.songIndex]["path"].split(pathSeparator)[-3],
-                    f"{self.songList[self.songIndex]["path"].split(pathSeparator)[-3]}{pathSeparator}favorites",
-                )
-                .replace(
-                    self.songList[self.songIndex]["path"]
-                    .replace(
-                        self.songList[self.songIndex]["path"].split(pathSeparator)[-3],
-                        f"{self.songList[self.songIndex]["path"].split(pathSeparator)[-3]}{pathSeparator}favorites",
-                    )
-                    .split(pathSeparator)[-1],
-                    f"{favoritesNum} - {self.songList[self.songIndex]["path"].split(pathSeparator)[-1].split(" - ", 1)[1]}",
-                ),
-            )
-            shutil.copy(
-                self.songList[self.songIndex]["imagePath"],
-                self.songList[self.songIndex]["imagePath"]
-                .replace(
-                    self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-3],
-                    f"{self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-3]}{pathSeparator}favorites",
-                )
-                .replace(
-                    self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-1],
-                    f"{favoritesNum} - {self.songList[self.songIndex]["imagePath"].split(pathSeparator)[-1].split(" - ", 1)[1]}",
-                ),
-            )
-            with open(self.rootListPath + "index", "tw") as listFile:
-                listFile.write(json.JSONEncoder().encode(favoritesList))
-
     def shuffleSongs(self):
         self.baseSongList = self.songList.copy()
         shuffle(self.songList)
@@ -1168,19 +1100,44 @@ class Main(ShowBase):
             for song in _newDir:
                 if str(song).endswith((".m4a", ".mp3")):
                     imagePath = song.replace("m4a", "png")
+                    audio_path = f"{path}{song}"
                     self.songList.append(
                         {
-                            "path": f"{path}{song}",
-                            "object": self.loader.loadMusic(f"{path}{song}"),
+                            "path": audio_path,
+                            "object": self.loader.loadMusic(audio_path),
                             "name": str(song).replace(".m4a", ""),
                             "nodePath": None,
                             "played": 0,
                             "imagePath": f"{path}img{pathSeparator}{imagePath}",
+                            "mediaFile": audio_path,
                         }
                     )
                 else:
                     ...
         Thread(target=self.registerSongs).start()
+
+    def analyzeMediaFile(self, mediaFile):
+        """
+        Analyzes the given media file using FFT and returns the frequency spectrum.
+
+        :param mediaFile: AudioSegment object representing the media file.
+        :return: Tuple of (frequencies, magnitudes).
+        """
+        # Convert audio to raw data (mono and 16-bit PCM)
+        samples = np.array(mediaFile.get_array_of_samples())
+        if mediaFile.channels > 1:
+            samples = samples.reshape((-1, mediaFile.channels)).mean(
+                axis=1
+            )  # Convert to mono
+
+        # Perform FFT
+        fft_result = fft.fft(samples)
+        freqs = fft.fftfreq(len(samples), d=1.0 / mediaFile.frame_rate)
+
+        # Return positive frequencies and their magnitudes
+        positive_freqs = freqs[: len(freqs) // 2]
+        magnitudes = np.abs(fft_result[: len(fft_result) // 2])
+        return positive_freqs, magnitudes
 
 
 def fadeOutGuiElement(
