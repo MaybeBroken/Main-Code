@@ -129,7 +129,7 @@ class Main(ShowBase):
         self.setupWorld()
         self.buildGui()
         self.setupControls()
-        Thread(target=self.refreshPlaylists).start()
+        Thread(target=self.checkForUpdatedLists).start()
         self.downloaderSongs: list[YouTube, NodePath] = []
         registerCallbackFunction(self.downloadCallback())
         registerInitalizeCallbackFunction(self.initalizeCallback())
@@ -383,13 +383,46 @@ class Main(ShowBase):
 
     def checkForUpdatedLists(self):
         self.lastDir = []
+        for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
+            if os.path.isdir(
+                os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
+            ):
+                if self.checkFolderForSongs(
+                    os.path.join(".", f"youtubeDownloader{pathSeparator}", item),
+                    (
+                        ".m4a",
+                        ".mp3",
+                        ".wav",
+                        ".ogg",
+                        ".flac",
+                        ".wma",
+                        ".aac",
+                    ),
+                ):
+                    self.lastDir.append(item)
         while True:
             t.sleep(0.2)
-            currentDir = os.listdir(
+            currentDir = []
+            for item in os.listdir(
                 os.path.join(".", f"youtubeDownloader{pathSeparator}")
-            )
+            ):
+                if os.path.isdir(
+                    os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
+                ):
+                    if self.checkFolderForSongs(
+                        os.path.join(".", f"youtubeDownloader{pathSeparator}", item),
+                        (
+                            ".m4a",
+                            ".mp3",
+                            ".wav",
+                            ".ogg",
+                            ".flac",
+                            ".wma",
+                            ".aac",
+                        ),
+                    ):
+                        currentDir.append(item)
             if len(currentDir) != len(self.lastDir):
-                print("Updated playlists detected.")
                 self.refreshPlaylists()
             self.lastDir = currentDir
 
@@ -400,7 +433,6 @@ class Main(ShowBase):
                     self.scaledItemList.remove(li)
                 li.removeNode()
         self.playlists.clear()
-        print("cleared playlists")
         self.listStartY = 0.7
         self.playlists = []
         for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
@@ -452,7 +484,6 @@ class Main(ShowBase):
                     )
                     self.listStartY -= 0.075
                     self.playlists.append([button, divider, icon])
-        print("refreshed playlists\nFound: " + str(len(self.playlists)))
 
     def buildGui(self):
         self.scaledItemList = []
@@ -1069,8 +1100,11 @@ class Main(ShowBase):
                 self.songList.remove(obj)
         for songId in range(len(self.songList)):
             global IMAGESCALE
-            refImage = PIL.Image.open(self.songList[songId]["imagePath"])
-            IMAGESCALE = refImage.width / refImage.height
+            try:
+                refImage = PIL.Image.open(self.songList[songId]["imagePath"])
+                IMAGESCALE = refImage.width / refImage.height
+            except:
+                IMAGESCALE = 1280 / 720
             songPanel = self.makeSongPanel(songId)
             self.songListFrameOffset.setZ(((songId) / 10) * 1.5 - 0.9)
             self.songList[songId]["nodePath"] = songPanel
