@@ -1,10 +1,12 @@
 import json
-from math import pi, sin, cos
 from random import randint, shuffle
 import shutil
 import time as t
 import sys
 import os
+import PIL
+import PIL.Image
+import PIL.ImageOps
 import src.scripts.vars as Wvars
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
@@ -35,7 +37,10 @@ from direct.gui.DirectGui import *
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib.colors import HexColor
 
-CORE = CORE()
+try:
+    CORE = CORE()
+except:
+    print("YT Downlaoder failed to load")
 import clipboard
 
 if sys.platform == "darwin":
@@ -43,6 +48,8 @@ if sys.platform == "darwin":
 elif sys.platform == "win32":
     pathSeparator = "\\"
 os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
+
+IMAGESCALE: int = None
 
 
 def convertSvgToPng(svgPath, pngPath, dpi=800, bgColor="#212121"):
@@ -91,10 +98,6 @@ if Wvars.winMode == "win":
     ConfigVariableString("undecorated", "false").setValue("false")
 
 
-def degToRad(degrees):
-    return degrees * (pi / 180.0)
-
-
 def divide(num, divisor) -> list[2]:
     result = 0
     remainder = 0
@@ -126,6 +129,7 @@ class Main(ShowBase):
         self.setupWorld()
         self.buildGui()
         self.setupControls()
+        Thread(target=self.refreshPlaylists).start()
         self.downloaderSongs: list[YouTube, NodePath] = []
         registerCallbackFunction(self.downloadCallback())
         registerInitalizeCallbackFunction(self.initalizeCallback())
@@ -377,6 +381,79 @@ class Main(ShowBase):
             focus=1,
         )
 
+    def checkForUpdatedLists(self):
+        self.lastDir = []
+        while True:
+            t.sleep(0.2)
+            currentDir = os.listdir(
+                os.path.join(".", f"youtubeDownloader{pathSeparator}")
+            )
+            if len(currentDir) != len(self.lastDir):
+                print("Updated playlists detected.")
+                self.refreshPlaylists()
+            self.lastDir = currentDir
+
+    def refreshPlaylists(self):
+        for elem in self.playlists:
+            for li in elem:
+                if li in self.scaledItemList:
+                    self.scaledItemList.remove(li)
+                li.removeNode()
+        self.playlists.clear()
+        print("cleared playlists")
+        self.listStartY = 0.7
+        self.playlists = []
+        for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
+            if os.path.isdir(
+                os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
+            ):
+                if self.checkFolderForSongs(
+                    os.path.join(".", f"youtubeDownloader{pathSeparator}", item),
+                    (
+                        ".m4a",
+                        ".mp3",
+                        ".wav",
+                        ".ogg",
+                        ".flac",
+                        ".wma",
+                        ".aac",
+                    ),
+                ):
+                    button = DirectButton(
+                        parent=self.optionBar,
+                        text=item[:28] + "..." if len(item) > 28 else item,
+                        scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+                        pos=(-0.95, 0, self.listStartY),
+                        command=self.registerFolder,
+                        extraArgs=[item],
+                        text_align=TextNode.ALeft,
+                        relief=DGG.FLAT,
+                        geom=None,
+                        text_fg=self.hexToRgb("#ffffff"),
+                        frameColor=(0, 0, 0, 0),
+                    )
+                    self.scaledItemList.append(button)
+                    divider = DirectFrame(
+                        parent=self.optionBar,
+                        frameSize=(
+                            -0.95,
+                            ((len(item) if len(item) < 28 else 31) * 0.012) - 0.9,
+                            0,
+                            0.004,
+                        ),
+                        frameColor=self.hexToRgb("#8f8f8f"),
+                        pos=(0, 0, self.listStartY - 0.0275),
+                    )
+                    icon = OnscreenImage(
+                        image="src/textures/playlist.png",
+                        parent=self.optionBar,
+                        scale=(0.025 / self.getAspectRatio(self.win), 0.025, 0.025),
+                        pos=(-0.975, 0, self.listStartY + 0.0025),
+                    )
+                    self.listStartY -= 0.075
+                    self.playlists.append([button, divider, icon])
+        print("refreshed playlists\nFound: " + str(len(self.playlists)))
+
     def buildGui(self):
         self.scaledItemList = []
         self.guiFrame = DirectFrame(
@@ -549,6 +626,7 @@ class Main(ShowBase):
         self.scaledItemList.append(self.songName)
 
         self.listStartY = 0.7
+        self.playlists = []
         for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
             if os.path.isdir(
                 os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
@@ -597,6 +675,7 @@ class Main(ShowBase):
                         pos=(-0.975, 0, self.listStartY + 0.0025),
                     )
                     self.listStartY -= 0.075
+                    self.playlists.append([button, divider, icon])
 
         self.scrollBar = DirectScrollBar(
             parent=self.topBar,
@@ -813,7 +892,7 @@ class Main(ShowBase):
                     self.backgroundImage,
                     0.25,
                     Point3(
-                        (0.75 / self.getAspectRatio(self.win)) * (1280 / 720),
+                        (0.75 / self.getAspectRatio(self.win)) * IMAGESCALE,
                         1,
                         0.75,
                     ),
@@ -834,7 +913,7 @@ class Main(ShowBase):
                     self.backgroundImage,
                     0.25,
                     Point3(
-                        (0.25 / self.getAspectRatio(self.win)) * (1280 / 720),
+                        (0.25 / self.getAspectRatio(self.win)) * IMAGESCALE,
                         1,
                         0.25,
                     ),
@@ -886,12 +965,6 @@ class Main(ShowBase):
         self.backgroundToggle = True
         self.shuffleSongsToggle = False
         self.lastSongTime = 0
-
-        # Audio
-
-        fp = FilterProperties()
-        fp.addSfxreverb(0.6, 0.5, 0.1, 0.1, 0.1)
-        self.musicManager.configureFilters(fp)
 
     def winEvent(self, window):
         if window.isClosed():
@@ -968,7 +1041,7 @@ class Main(ShowBase):
             image = OnscreenImage(
                 parent=frame,
                 image=self.loader.loadTexture(song["imagePath"]),
-                scale=(0.05 / self.getAspectRatio(self.win) * (1280 / 720), 1, 0.05),
+                scale=(0.05 / self.getAspectRatio(self.win) * IMAGESCALE, 1, 0.05),
                 pos=(-0.36, 0, 0),
             )
         except:
@@ -995,6 +1068,9 @@ class Main(ShowBase):
             if obj["object"].length() < 1:
                 self.songList.remove(obj)
         for songId in range(len(self.songList)):
+            global IMAGESCALE
+            refImage = PIL.Image.open(self.songList[songId]["imagePath"])
+            IMAGESCALE = refImage.width / refImage.height
             songPanel = self.makeSongPanel(songId)
             self.songListFrameOffset.setZ(((songId) / 10) * 1.5 - 0.9)
             self.songList[songId]["nodePath"] = songPanel
@@ -1013,7 +1089,7 @@ class Main(ShowBase):
         self.backgroundImage = OnscreenImage(
             parent=self.render2d,
             image=self.loader.loadTexture("src/textures/404.png"),
-            scale=((0.25 / self.getAspectRatio(self.win)) * (1280 / 720), 1, 0.25),
+            scale=((0.25 / self.getAspectRatio(self.win)) * IMAGESCALE, 1, 0.25),
             pos=(0.65, 0, -0.5),
         )
         self.backgroundImage.setBin("foreground", 5000)

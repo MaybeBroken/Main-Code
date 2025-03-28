@@ -21,15 +21,15 @@ exampleOutput = """{
   poToken: ''
 }"""
 
+
+visitorData = ""
+poToken = ""
 data = result.stdout.splitlines()
 for s in data[1:-1]:
     if "visitorData" in s:
         visitorData = s.split(": ")[1].split(",")[0].strip("'")
     elif "poToken" in s:
         poToken = s.split(": ")[1].split(",")[0].strip("'")
-    else:
-        visitorData = ""
-        poToken = ""
 
 os.chdir("youtubeDownloader")
 with open("spoofedToken.json", "w") as f:
