@@ -344,7 +344,9 @@ class Main(ShowBase):
                 and self.songList[self.songIndex]["object"].status() != 1
             ):
                 current_time = self.songList[self.songIndex]["object"].get_time() * 1000
-                start_sample = int(current_time * self.activeSongElement.frame_rate / 1000)
+                start_sample = int(
+                    current_time * self.activeSongElement.frame_rate / 1000
+                )
 
                 end_sample = int(start_sample + self.activeSongElement.frame_rate // 20)
                 audio_data = np.array(
@@ -530,6 +532,7 @@ class Main(ShowBase):
             self.main = main
             self.graph = NodePath("waveformGraph")
             self.graph.reparentTo(parent)
+            self.graph.setPos(0, 0, -0.78)
 
         def setData(self, data):
             self.graph.node().removeAllChildren()
@@ -715,7 +718,7 @@ class Main(ShowBase):
             relief=DGG.FLAT,
             frameColor=(0, 0, 0, 0),
         )
-        self.audioWaveform = self.audioWaveformVis(self, self.render2d)
+        self.audioWaveform = self.audioWaveformVis(self, self.controlBar)
 
         self.scaledItemList.append(self.pausePlayButton)
         self.scaledItemList.append(self.arrowLeftButton)
