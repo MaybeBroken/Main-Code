@@ -24,8 +24,9 @@ from panda3d.core import (
     loadPrcFile,
     ConfigVariableString,
     AudioSound,
-    NodePath,
     TextNode,
+    LineSegs,
+    NodePath,
     TransparencyAttrib,
     Point3,
     AudioManager,
@@ -44,7 +45,7 @@ import scipy.fftpack as fft
 try:
     CORE = CORE()
 except:
-    print("YT Downlaoder failed to load")
+    print("YT Downloader failed to load")
 import clipboard
 
 if sys.platform == "darwin":
@@ -134,6 +135,8 @@ class Main(ShowBase):
         self.buildGui()
         self.setupControls()
         Thread(target=self.checkForUpdatedLists).start()
+        self.activeSongElement = None
+        Thread(target=self.updateAudioWaveform).start()
         self.downloaderSongs: list[YouTube, NodePath] = []
         registerCallbackFunction(self.downloadCallback())
         registerInitalizeCallbackFunction(self.initalizeCallback())
@@ -333,6 +336,38 @@ class Main(ShowBase):
                     else:
                         song["nodePath"].show()
 
+    def updateAudioWaveform(self):
+        while True:
+            t.sleep(0.01)  # Increase the sample rate for real-time updates
+            if (
+                self.activeSongElement is not None
+                and self.songList[self.songIndex]["object"].status() != 1
+            ):
+                current_time = self.songList[self.songIndex]["object"].get_time() * 1000
+                start_sample = int(current_time * self.activeSongElement.frame_rate / 1000)
+
+                end_sample = int(start_sample + self.activeSongElement.frame_rate // 20)
+                audio_data = np.array(
+                    self.activeSongElement.get_array_of_samples()[
+                        start_sample:end_sample
+                    ]
+                )
+                if len(audio_data) > 0:
+                    fft_data = fft.fft(audio_data)
+                    magnitude = np.abs(
+                        fft_data[: len(fft_data) // 2]
+                    )  # Use only positive frequencies
+                    normalized_magnitude = (
+                        magnitude / np.max(magnitude)
+                        if np.max(magnitude) > 0
+                        else magnitude
+                    )
+                    # Ensure normalized_magnitude is scaled between 0 and 1
+                    normalized_magnitude = np.clip(normalized_magnitude, 0, 1)
+
+                    # Update the graph with properly scaled data
+                    self.audioWaveform.setData(normalized_magnitude)
+
     def setupControls(self):
         self.lastBackTime = t.time()
         self.paused = True
@@ -488,6 +523,33 @@ class Main(ShowBase):
                     )
                     self.listStartY -= 0.075
                     self.playlists.append([button, divider, icon])
+
+    class audioWaveformVis:
+        def __init__(self, main: "Main.audioWaveformVis", parent):
+            self.parent = parent
+            self.main = main
+            self.graph = NodePath("waveformGraph")
+            self.graph.reparentTo(parent)
+
+        def setData(self, data):
+            self.graph.node().removeAllChildren()
+            if data.any():
+                line_segs = LineSegs()
+                line_segs.setThickness(2)
+                line_segs.setColor(0.2, 0.8, 0.2, 1)
+
+                max_value = max(data)
+                num_points = len(data)
+                for i, value in enumerate(data):
+                    x = -0.9 + (1.8 * i / num_points)
+                    y = 0
+                    z = (value / max_value) * 0.5 if max_value > 0 else 0
+                    if i == 0:
+                        line_segs.moveTo(x, y, z)
+                    else:
+                        line_segs.drawTo(x, y, z)
+
+                self.graph.attachNewNode(line_segs.create())
 
     def buildGui(self):
         self.scaledItemList = []
@@ -653,6 +715,7 @@ class Main(ShowBase):
             relief=DGG.FLAT,
             frameColor=(0, 0, 0, 0),
         )
+        self.audioWaveform = self.audioWaveformVis(self, self.render2d)
 
         self.scaledItemList.append(self.pausePlayButton)
         self.scaledItemList.append(self.arrowLeftButton)
@@ -764,6 +827,10 @@ class Main(ShowBase):
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
+        self.activeSongElement: AudioSegment = AudioSegment.from_file(
+            self.songList[self.songIndex]["path"],
+            format=self.songList[self.songIndex]["path"].split(".")[-1],
+        )
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -779,6 +846,10 @@ class Main(ShowBase):
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
+        self.activeSongElement: AudioSegment = AudioSegment.from_file(
+            self.songList[self.songIndex]["path"],
+            format=self.songList[self.songIndex]["path"].split(".")[-1],
+        )
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -793,7 +864,10 @@ class Main(ShowBase):
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
-
+        self.activeSongElement: AudioSegment = AudioSegment.from_file(
+            self.songList[self.songIndex]["path"],
+            format=self.songList[self.songIndex]["path"].split(".")[-1],
+        )
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -809,6 +883,10 @@ class Main(ShowBase):
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
+        self.activeSongElement: AudioSegment = AudioSegment.from_file(
+            self.songList[self.songIndex]["path"],
+            format=self.songList[self.songIndex]["path"].split(".")[-1],
+        )
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -829,6 +907,10 @@ class Main(ShowBase):
         self.songList[self.songIndex]["object"].play()
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
+        self.activeSongElement: AudioSegment = AudioSegment.from_file(
+            self.songList[self.songIndex]["path"],
+            format=self.songList[self.songIndex]["path"].split(".")[-1],
+        )
         self.setBackgroundImage(
             self.songList[self.songIndex]["imagePath"],
             self.backgroundToggle,
@@ -1070,6 +1152,10 @@ class Main(ShowBase):
             self.taskMgr.add(self.syncProgress, "syncProgress")
             Thread(target=self.cullSongPanels).start()
             self.doneInitialSetup = True
+        self.activeSongElement: AudioSegment = AudioSegment.from_file(
+            self.songList[self.songIndex]["path"],
+            format=self.songList[self.songIndex]["path"].split(".")[-1],
+        )
         self.togglePlay()
 
     def registerFolder(self, path):
@@ -1109,35 +1195,11 @@ class Main(ShowBase):
                             "nodePath": None,
                             "played": 0,
                             "imagePath": f"{path}img{pathSeparator}{imagePath}",
-                            "mediaFile": audio_path,
                         }
                     )
                 else:
                     ...
         Thread(target=self.registerSongs).start()
-
-    def analyzeMediaFile(self, mediaFile):
-        """
-        Analyzes the given media file using FFT and returns the frequency spectrum.
-
-        :param mediaFile: AudioSegment object representing the media file.
-        :return: Tuple of (frequencies, magnitudes).
-        """
-        # Convert audio to raw data (mono and 16-bit PCM)
-        samples = np.array(mediaFile.get_array_of_samples())
-        if mediaFile.channels > 1:
-            samples = samples.reshape((-1, mediaFile.channels)).mean(
-                axis=1
-            )  # Convert to mono
-
-        # Perform FFT
-        fft_result = fft.fft(samples)
-        freqs = fft.fftfreq(len(samples), d=1.0 / mediaFile.frame_rate)
-
-        # Return positive frequencies and their magnitudes
-        positive_freqs = freqs[: len(freqs) // 2]
-        magnitudes = np.abs(fft_result[: len(fft_result) // 2])
-        return positive_freqs, magnitudes
 
 
 def fadeOutGuiElement(
