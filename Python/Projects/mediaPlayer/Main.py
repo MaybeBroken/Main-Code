@@ -7,6 +7,7 @@ import os
 import PIL
 import PIL.Image
 import PIL.ImageOps
+from cv2 import magnitude
 import src.scripts.vars as Wvars
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
@@ -136,7 +137,6 @@ class Main(ShowBase):
         self.setupControls()
         Thread(target=self.checkForUpdatedLists).start()
         self.activeSongElement = None
-        Thread(target=self.updateAudioWaveform).start()
         self.downloaderSongs: list[YouTube, NodePath] = []
         registerCallbackFunction(self.downloadCallback())
         registerInitalizeCallbackFunction(self.initalizeCallback())
@@ -323,6 +323,7 @@ class Main(ShowBase):
         except:
             ...
         self.scrollBar.setValue(self.songListFrameOffset.getZ())
+        self.updateAudioWaveform()
         return task.cont
 
     def cullSongPanels(self):
@@ -337,38 +338,23 @@ class Main(ShowBase):
                         song["nodePath"].show()
 
     def updateAudioWaveform(self):
-        while True:
-            t.sleep(0.01)  # Increase the sample rate for real-time updates
-            if (
-                self.activeSongElement is not None
-                and self.songList[self.songIndex]["object"].status() != 1
-            ):
-                current_time = self.songList[self.songIndex]["object"].get_time() * 1000
-                start_sample = int(
-                    current_time * self.activeSongElement.frame_rate / 1000
+        if (
+            self.activeSongElement is not None
+            and self.songList[self.songIndex]["object"].status() != 1
+        ):
+            current_time = self.songList[self.songIndex]["object"].get_time()
+            start_sample = int(current_time * self.activeSongElement.frame_rate)
+            end_sample = start_sample + int(self.activeSongElement.frame_rate // 100)
+            audio_data = np.array(
+                self.activeSongElement.get_array_of_samples()[start_sample:end_sample]
+            )
+            if len(audio_data) > 0:
+                audio_data = np.pad(
+                    audio_data, (0, (1024) - len(audio_data)), "constant"
                 )
-
-                end_sample = int(start_sample + self.activeSongElement.frame_rate // 20)
-                audio_data = np.array(
-                    self.activeSongElement.get_array_of_samples()[
-                        start_sample:end_sample
-                    ]
-                )
-                if len(audio_data) > 0:
-                    fft_data = fft.fft(audio_data)
-                    magnitude = np.abs(
-                        fft_data[: len(fft_data) // 2]
-                    )  # Use only positive frequencies
-                    normalized_magnitude = (
-                        magnitude / np.max(magnitude)
-                        if np.max(magnitude) > 0
-                        else magnitude
-                    )
-                    # Ensure normalized_magnitude is scaled between 0 and 1
-                    normalized_magnitude = np.clip(normalized_magnitude, 0, 1)
-
-                    # Update the graph with properly scaled data
-                    self.audioWaveform.setData(normalized_magnitude)
+                fft_data = np.abs(fft.fft(audio_data))
+                fft_data = fft_data[0 : (len(fft_data) // 10)]
+                self.audioWaveform.setData(fft_data)
 
     def setupControls(self):
         self.lastBackTime = t.time()
@@ -533,26 +519,38 @@ class Main(ShowBase):
             self.graph = NodePath("waveformGraph")
             self.graph.reparentTo(parent)
             self.graph.setPos(0, 0, -0.78)
+            self.line_segs = LineSegs()
+            self.line_segs.setThickness(1)
+            self.line_segs.setColor(1, 1, 1, 1)
+            self.graph.attachNewNode(self.line_segs.create())
+            self.floating_lines = [0] * 1024
 
         def setData(self, data):
-            self.graph.node().removeAllChildren()
-            if data.any():
-                line_segs = LineSegs()
-                line_segs.setThickness(2)
-                line_segs.setColor(0.2, 0.8, 0.2, 1)
-
-                max_value = max(data)
+            if len(data) > 0:
+                current_max = float(np.max(data))
                 num_points = len(data)
+                self.line_segs.reset()
                 for i, value in enumerate(data):
-                    x = -0.9 + (1.8 * i / num_points)
+                    value = float(np.max(value))
+                    x1 = -0.95 + (1.9 * (i / num_points))
+                    x2 = -0.95 + (1.9 * ((i + 1) / num_points))
                     y = 0
-                    z = (value / max_value) * 0.5 if max_value > 0 else 0
-                    if i == 0:
-                        line_segs.moveTo(x, y, z)
+                    z = (value / current_max) * 0.5 if current_max > 0 else 0
+                    z *= 0.5
+                    if z > self.floating_lines[i]:
+                        self.floating_lines[i] = z
                     else:
-                        line_segs.drawTo(x, y, z)
+                        self.floating_lines[i] -= 0.005
+                    self.line_segs.moveTo(x1, y, 0)
+                    self.line_segs.drawTo(x1, y, z)
+                    self.line_segs.drawTo(x2, y, z)
+                    self.line_segs.drawTo(x2, y, 0)
+                    self.line_segs.drawTo(x1, y, 0)
+                    self.line_segs.moveTo(x1, y, self.floating_lines[i])
+                    self.line_segs.drawTo(x2, y, self.floating_lines[i])
 
-                self.graph.attachNewNode(line_segs.create())
+                self.graph.node().removeAllChildren()
+                self.graph.attachNewNode(self.line_segs.create())
 
     def buildGui(self):
         self.scaledItemList = []
@@ -828,6 +826,7 @@ class Main(ShowBase):
             item["object"].stop()
             item["nodePath"].setColorScale((1, 1, 1, 1))
         self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["object"].set_time(0)
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         self.activeSongElement: AudioSegment = AudioSegment.from_file(
@@ -847,6 +846,7 @@ class Main(ShowBase):
             item["object"].stop()
             item["nodePath"].setColorScale((1, 1, 1, 1))
         self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["object"].set_time(0)
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         self.activeSongElement: AudioSegment = AudioSegment.from_file(
@@ -865,6 +865,7 @@ class Main(ShowBase):
         if self.songIndex + 1 < len(self.songList):
             self.songIndex += 1
         self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["object"].set_time(0)
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         self.activeSongElement: AudioSegment = AudioSegment.from_file(
@@ -884,6 +885,7 @@ class Main(ShowBase):
         if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime < 3.5:
             self.songIndex -= 1
         self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["object"].set_time(0)
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         self.activeSongElement: AudioSegment = AudioSegment.from_file(
@@ -908,6 +910,7 @@ class Main(ShowBase):
         if songId < len(self.songList) and songId >= 0:
             self.songIndex = songId
         self.songList[self.songIndex]["object"].play()
+        self.songList[self.songIndex]["object"].set_time(0)
         self.songList[self.songIndex]["played"] = 1
         self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
         self.activeSongElement: AudioSegment = AudioSegment.from_file(
@@ -1137,6 +1140,8 @@ class Main(ShowBase):
             Point3(0, 0, -0.2),
             blendType="easeInOut",
         ).start()
+        if IMAGESCALE is None:
+            IMAGESCALE = 1280 / 720
         self.backgroundImage = OnscreenImage(
             parent=self.render2d,
             image=self.loader.loadTexture("src/textures/404.png"),
