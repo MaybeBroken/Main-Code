@@ -344,7 +344,7 @@ class Main(ShowBase):
         ):
             current_time = self.songList[self.songIndex]["object"].get_time()
             start_sample = int(current_time * self.activeSongElement.frame_rate)
-            end_sample = start_sample + int(self.activeSongElement.frame_rate // 100)
+            end_sample = start_sample + int(self.activeSongElement.frame_rate // 50)
             audio_data = np.array(
                 self.activeSongElement.get_array_of_samples()[start_sample:end_sample]
             )
