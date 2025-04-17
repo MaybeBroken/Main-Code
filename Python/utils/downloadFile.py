@@ -17,6 +17,3 @@ def fetch_file(url: str, local_filename: str) -> None:
         print(f"File downloaded successfully: {local_filename}")
     except requests.RequestException as e:
         print(f"Error downloading file: {e}")
-
-
-fetch_file("https://www.newgrounds.com/audio/download/223466", "223466.mp3")

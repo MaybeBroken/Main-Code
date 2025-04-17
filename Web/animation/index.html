@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<style>
+  body {
+    background-color: #000000;
+    color: white;
+    font-family: Arial, sans-serif;
+  }
+  header {
+    background-color: #000000;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    border-radius: 8px;
+    border-color: white;
+    border-width: 1px;
+    border-style: solid;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: color 0.1s ease, background-color 0.1s ease, transform 0.1s ease;
+  }
+  header:hover {
+    background-color: #1b1b1b;
+    color: #ffffff;
+    transform: scale(1.01);
+  }
+  header:active {
+    background-color: #444444;
+    color: #ffffff;
+    transform: scale(0.99);
+  }
+</style>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Animation</title>
+  </head>
+  <body>
+    <header>
+      <h1>Animation</h1>
+    </header>
+  </body>
+</html>
+
+<script>
+  const container = document.createElement('div')
+  container.style.position = 'relative'
+  container.style.width = '100%'
+  container.style.height = '100vh'
+  container.style.overflow = 'hidden'
+  document.body.appendChild(container)
+
+  const getRandomColor = () => {
+    return `#${Math.floor(Math.random() * 16777215).toString(16)}`
+  }
+
+  const squares = []
+
+  container.addEventListener('click', event => {
+    const square = document.createElement('div')
+    square.style.position = 'absolute'
+    square.style.width = '90px'
+    square.style.height = '90px'
+    square.style.backgroundColor = getRandomColor()
+
+    const containerRect = container.getBoundingClientRect()
+    square.style.left = `${event.clientX - containerRect.left - 25}px`
+    square.style.top = `${event.clientY - containerRect.top - 25}px`
+
+    square.velocityX = Math.random() * 4 - 2 // Random velocity between -2 and 2
+    square.velocityY = Math.random() * 4 - 2
+
+    container.appendChild(square)
+    squares.push(square)
+  })
+
+  const checkCollision = (a, b) => {
+    const rectA = a.getBoundingClientRect()
+    const rectB = b.getBoundingClientRect()
+    const overlapX = Math.max(
+      0,
+      Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left)
+    )
+    const overlapY = Math.max(
+      0,
+      Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top)
+    )
+    return overlapX > 0 && overlapY > 0
+  }
+
+  const resolveOverlap = (a, b) => {
+    const rectA = a.getBoundingClientRect()
+    const rectB = b.getBoundingClientRect()
+    const overlapX = Math.max(
+      0,
+      Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left)
+    )
+    const overlapY = Math.max(
+      0,
+      Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top)
+    )
+
+    if (overlapX > 0 && overlapY > 0) {
+      const moveX = overlapX / 2
+      const moveY = overlapY / 2
+
+      if (rectA.left < rectB.left) {
+        a.style.left = `${parseFloat(a.style.left) - moveX}px`
+        b.style.left = `${parseFloat(b.style.left) + moveX}px`
+      } else {
+        a.style.left = `${parseFloat(a.style.left) + moveX}px`
+        b.style.left = `${parseFloat(b.style.left) - moveX}px`
+      }
+
+      if (rectA.top < rectB.top) {
+        a.style.top = `${parseFloat(a.style.top) - moveY}px`
+        b.style.top = `${parseFloat(b.style.top) + moveY}px`
+      } else {
+        a.style.top = `${parseFloat(a.style.top) + moveY}px`
+        b.style.top = `${parseFloat(b.style.top) - moveY}px`
+      }
+    }
+  }
+
+  const updateSquares = () => {
+    squares.forEach(square => {
+      const rect = square.getBoundingClientRect()
+      const containerRect = container.getBoundingClientRect()
+
+      // Bounce off walls
+      if (
+        rect.left <= containerRect.left ||
+        rect.right >= containerRect.right
+      ) {
+        square.velocityX *= -1
+      }
+      if (
+        rect.top <= containerRect.top ||
+        rect.bottom >= containerRect.bottom
+      ) {
+        square.velocityY *= -1
+      }
+
+      // Update position
+      square.style.left = `${
+        parseFloat(square.style.left) + square.velocityX
+      }px`
+      square.style.top = `${parseFloat(square.style.top) + square.velocityY}px`
+
+      // Check collisions with other squares
+      squares.forEach(otherSquare => {
+        if (otherSquare !== square && checkCollision(square, otherSquare)) {
+          resolveOverlap(square, otherSquare)
+          square.velocityX *= -1
+          square.velocityY *= -1
+          otherSquare.velocityX *= -1
+          otherSquare.velocityY *= -1
+
+          // Change to random colors on collision
+          square.style.backgroundColor = getRandomColor()
+          otherSquare.style.backgroundColor = getRandomColor()
+        }
+      })
+    })
+
+    requestAnimationFrame(updateSquares)
+  }
+
+  updateSquares()
+</script>
