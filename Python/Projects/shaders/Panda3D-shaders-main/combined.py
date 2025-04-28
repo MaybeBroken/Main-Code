@@ -5,6 +5,7 @@ from panda3d.core import Shader
 configVars = """
 win-size 1280 720
 show-frame-rate-meter 1
+gl-version 3 3
 """
 
 loadPrcFileData("", configVars)

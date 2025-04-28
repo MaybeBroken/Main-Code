@@ -5,6 +5,7 @@ from panda3d.core import Shader
 configVars = """
 win-size 1280 720
 show-frame-rate-meter 1
+gl-version 3 3
 """
 
 loadPrcFileData("", configVars)
@@ -15,6 +16,7 @@ class MyGame(ShowBase):
         super().__init__()
         self.set_background_color(0, 0, 0, 1)
         # self.wireframeOn()
+        self.disableMouse()
         self.cam.setPos(0, -4, 0)
 
         my_shader = Shader.load(Shader.SL_GLSL,
