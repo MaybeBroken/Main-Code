@@ -63,8 +63,7 @@ def checkValidLink(link: str):
     retVal = False
     if link.startswith("http://") or link.startswith("https://"):
         if "youtube.com" in link or "youtu.be" in link:
-            if "playlist" in link or "list=" in link:
-                retVal = True
+            retVal = True
 
     return retVal
 
@@ -197,165 +196,182 @@ class CORE:
     downloadingActive = False
 
     def downloadVideo(self, link):
+        if checkValidLink(link) is False:
+            print(Color.RED + "Invalid Link" + Color.RESET)
+            return
+        else:
+            print(Color.GREEN + "Valid Link" + Color.RESET)
+
         self.downloadingActive = True
-
-        def _th():
-            try:
-                yt = YouTube(
-                    link,
-                    client="WEB",
-                    token_file="spoofedToken.json",
-                )
-                ys = yt.streams.get_highest_resolution()
-                title = pathSafe(f"{len(os.listdir('Videos'))} - {yt.title}", True)
-                base_callback(
-                    video=yt,
-                    id=len(os.listdir("Videos")),
-                    title=title,
-                    list=[yt],
-                    status=["Queued"],
-                )
-                print(f"Downloading {Color.CYAN}{title}{Color.RESET}")
-                ys.on_progress_for_chunks = downloadCallbackFunction(
-                    video=yt,
-                    id=len(os.listdir("Videos")),
-                    title=title,
-                    list=[yt],
-                    status=["Downloading"],
-                )
-                ys.download(
-                    "Videos",
-                    filename=title + ".mp4",
-                )
-                base_callback(
-                    video=yt,
-                    id=len(os.listdir("Videos")),
-                    title=title,
-                    list=[yt],
-                    progress=100,
-                    status=["Finished"],
-                )
-                print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
-            except exceptions.VideoUnavailable:
-                print(Color.RED + "Video is unavailable" + Color.RESET)
-            except exceptions.VideoPrivate:
-                print(Color.RED + "Video is private" + Color.RESET)
-            except exceptions.VideoRegionBlocked:
-                print(Color.RED + "Video is blocked in your region" + Color.RESET)
-            except Exception as e:
-                print(e)
-            self.downloadingActive = False
-
-        thread = _Thread(target=_th)
-        thread.start()
+        try:
+            yt = YouTube(
+                link,
+                client="WEB",
+                token_file="spoofedToken.json",
+            )
+            title = pathSafe(f"0 - {yt.title}", True) + ".mp4"
+            print(f"| - {Color.YELLOW}Downloading{Color.RESET} {title}")
+            base_callback(
+                video=yt,
+                id=0,
+                title=title,
+                list=[yt],
+                status=["Queued"],
+            )
+            ys = yt.streams.get_highest_resolution()
+            ys.on_progress_for_chunks = downloadCallbackFunction(
+                video=yt,
+                id=0,
+                title=title,
+                list=[yt],
+                status=["Downloading"],
+            )
+            ys.download(
+                output_path="Videos",
+                filename=title,
+            )
+            print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
+            base_callback(
+                video=yt,
+                id=0,
+                title=title,
+                list=[yt],
+                progress=100,
+                status=["Finished"],
+            )
+        except exceptions.VideoUnavailable:
+            print(Color.RED + "Video is unavailable" + Color.RESET)
+        except exceptions.VideoPrivate:
+            print(Color.RED + "Video is private" + Color.RESET)
+        except exceptions.VideoRegionBlocked:
+            print(Color.RED + "Video is blocked in your region" + Color.RESET)
+        except Exception as e:
+            print(e)
+        self.downloadingActive = False
 
     def downloadSong(self, link):
+        if checkValidLink(link) is False:
+            print(Color.RED + "Invalid Link" + Color.RESET)
+            return
+        else:
+            print(Color.GREEN + "Valid Link" + Color.RESET)
+
         self.downloadingActive = True
-
-        def _th():
-            try:
-                yt = YouTube(
-                    link,
-                    client="WEB",
-                    token_file="spoofedToken.json",
-                )
-                ys = yt.streams.get_audio_only()
-                title = pathSafe(f"{len(os.listdir("Songs"))} - {title}", True) + ".m4a"
-                ys.on_progress_for_chunks = downloadCallbackFunction(
-                    video=yt,
-                    id=len(os.listdir("Songs")),
-                    title=title,
-                    list=[yt],
-                    status=["Downloading"],
-                )
-                ys.download(
-                    output_path="Songs",
-                    filename=title,
-                )
-                print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
-                base_callback(
-                    video=yt,
-                    id=len(os.listdir("Songs")),
-                    title=title,
-                    list=[yt],
-                    progress=100,
-                    status=["Finished"],
-                )
-
-                apply_cover_image(yt.thumbnail_url, os.path.join("Songs", "img"), title)
-                print(f"Downloaded {Color.GREEN}{title}{Color.RESET}")
-            except exceptions.VideoUnavailable:
-                print(Color.RED + "Video is unavailable" + Color.RESET)
-            except exceptions.VideoPrivate:
-                print(Color.RED + "Video is private" + Color.RESET)
-            except exceptions.VideoRegionBlocked:
-                print(Color.RED + "Video is blocked in your region" + Color.RESET)
-            except Exception as e:
-                print(e)
-            self.downloadingActive = False
-
-        thread = _Thread(target=_th)
-        thread.start()
+        try:
+            yt = YouTube(
+                link,
+                client="WEB",
+                token_file="spoofedToken.json",
+            )
+            title = pathSafe(f"0 - {yt.title}", True) + ".m4a"
+            print(f"| - {Color.YELLOW}Downloading{Color.RESET} {title}")
+            base_callback(
+                video=yt,
+                id=0,
+                title=title,
+                list=[yt],
+                status=["Queued"],
+            )
+            ys = yt.streams.get_audio_only()
+            ys.on_progress_for_chunks = downloadCallbackFunction(
+                video=yt,
+                id=0,
+                title=title,
+                list=[yt],
+                status=["Downloading"],
+            )
+            ys.download(
+                output_path="Songs",
+                filename=title,
+            )
+            print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
+            apply_cover_image(yt.thumbnail_url, os.path.join("Songs", "img"), title)
+            base_callback(
+                video=yt,
+                id=0,
+                title=title,
+                list=[yt],
+                progress=100,
+                status=["Finished"],
+            )
+        except exceptions.VideoUnavailable:
+            print(Color.RED + "Video is unavailable" + Color.RESET)
+        except exceptions.VideoPrivate:
+            print(Color.RED + "Video is private" + Color.RESET)
+        except exceptions.VideoRegionBlocked:
+            print(Color.RED + "Video is blocked in your region" + Color.RESET)
+        except Exception as e:
+            print(e)
+        self.downloadingActive = False
 
     def downloadPlaylist_V(self, link):
-        self.downloadingActive = True
+        if checkValidLink(link) is False:
+            print(Color.RED + "Invalid Link" + Color.RESET)
+            return
+        else:
+            print(Color.GREEN + "Valid Link" + Color.RESET)
 
-        session = requests.Session()
+        self.downloadingActive = True
         pl = Playlist(
             url=link,
-            client="WEB",
             token_file="spoofedToken.json",
-            session=session,
+            allow_oauth_cache=False,
         )
-        os.mkdir(path=pathSafe(pl.title))
+        print(f"starting download of playlist {pl.title}:")
         initalize_callback(pl)
-        vId = 0
-        for video in pl.videos:
-            time.sleep(0.15)
+        print(f"Downloading {Color.CYAN}{pl.title}{Color.RESET}")
+        try:
+            os.mkdir(path=pathSafe(pl.title))
+        except FileExistsError:
+            print(
+                f"{Color.YELLOW}Folder {pl.title} already exists{Color.RESET}, downloading into {os.path.abspath(os.curdir)}"
+            )
+        index = 0
+        for _video in pl.videos:
+            time.sleep(0.05)
+            _title = _video.title
+            print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
 
-            def _inThread(vId, video: YouTube):
+            def _inThread(title, video: YouTube):
+                title = pathSafe(f"{index} - {title}", True) + ".mp4"
+                base_callback(
+                    video=video,
+                    id=index,
+                    title=title,
+                    list=pl.videos,
+                    status=["Queued"],
+                )
                 try:
-                    title = pathSafe(f"{vId} - {video.title}", True)
-                    base_callback(
-                        video=video,
-                        id=vId,
-                        title=title,
-                        list=pl.videos,
-                        status=["Queued"],
-                    )
                     ys = video.streams.get_highest_resolution()
                     ys.on_progress_for_chunks = downloadCallbackFunction(
                         video=video,
-                        id=vId,
+                        id=index,
                         title=title,
                         list=pl.videos,
                         status=["Downloading"],
                     )
                     ys.download(
-                        output_path=pathSafe(name=pl.title),
-                        filename=title + ".mp4",
+                        output_path=pathSafe(pl.title),
+                        filename=title,
                     )
+                    print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
                     base_callback(
                         video=video,
-                        id=vId,
+                        id=index,
                         title=title,
                         list=pl.videos,
                         progress=100,
                         status=["Finished"],
                     )
-                    print(f"| - Downloaded {Color.CYAN}{title}{Color.RESET}")
                 except exceptions.VideoUnavailable:
                     print(Color.RED + "Video is unavailable" + Color.RESET)
                 except exceptions.VideoPrivate:
                     print(Color.RED + "Video is private" + Color.RESET)
                 except exceptions.VideoRegionBlocked:
                     print(Color.RED + "Video is blocked in your region" + Color.RESET)
-                except Exception as e:
-                    print(e)
 
-            _Thread(target=_inThread, args=(vId, video)).start()
-            vId += 1
-
+            _Thread(target=_inThread, args=(_title, _video)).start()
+            index += 1
         print(
             f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
         )
@@ -390,7 +406,7 @@ class CORE:
             print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
 
             def _inThread(title, video: YouTube):
-                title = pathSafe(f"{index} - {title}", True)
+                title = pathSafe(f"{index} - {title}", True) + ".m4a"
                 base_callback(
                     video=video,
                     id=index,
@@ -409,13 +425,13 @@ class CORE:
                     )
                     ys.download(
                         output_path=pathSafe(pl.title),
-                        filename=title + ".m4a",
+                        filename=title,
                     )
                     print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
                     apply_cover_image(
                         video.thumbnail_url,
                         pathSafe(pl.title) + os.path.sep + "img",
-                        title + ".m4a",
+                        title,
                     )
                     base_callback(
                         video=video,
@@ -440,46 +456,19 @@ class CORE:
         self.downloadingActive = False
 
     def downloadArtist_V(self, link):
+        if checkValidLink(link) is False:
+            print(Color.RED + "Invalid Link" + Color.RESET)
+            return
+        else:
+            print(Color.GREEN + "Valid Link" + Color.RESET)
+
+        self.downloadingActive = True
         ch = Channel(
             url=link,
             client="WEB",
             token_file="spoofedToken.json",
         )
-        os.mkdir(path=pathSafe(ch.channel_name))
-        for _list in ch.home:
-            for video in _list.videos:
-                time.sleep(0.15)
-
-                def _inThread():
-                    try:
-                        title = video.title
-                        video.streams.get_highest_resolution().download(
-                            output_path=pathSafe(name=ch.channel_name),
-                            filename=pathSafe(title) + ".mp4",
-                        )
-                        print(f"| - Downloaded {Color.CYAN}{title}{Color.RESET}")
-                    except exceptions.VideoUnavailable:
-                        print(Color.RED + "Video is unavailable" + Color.RESET)
-                    except exceptions.VideoPrivate:
-                        print(Color.RED + "Video is private" + Color.RESET)
-                    except exceptions.VideoRegionBlocked:
-                        print(
-                            Color.RED + "Video is blocked in your region" + Color.RESET
-                        )
-                    except Exception as e:
-                        print(e)
-
-                _Thread(target=_inThread).start()
-
-            print(f"Downloaded {Color.GREEN}{ch.channel_name}{Color.RESET}")
-
-    def downloadArtist_S(self, link):
-        ch = Channel(
-            url=link,
-            client="WEB",
-            token_file="spoofedToken.json",
-        )
-        print(f"starting download of playlist {ch.channel_name}:")
+        print(f"starting download of artist {ch.channel_name}:")
         try:
             os.mkdir(path=pathSafe(ch.channel_name))
         except FileExistsError:
@@ -489,30 +478,126 @@ class CORE:
         index = 0
         for _list in ch.home:
             for _video in _list.videos:
-                index += 1
                 time.sleep(0.05)
                 _title = _video.title
                 print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
 
-                def _inThread(title, video):
+                def _inThread(title, video: YouTube):
+                    title = pathSafe(f"{index} - {title}", True) + ".mp4"
+                    base_callback(
+                        video=video,
+                        id=index,
+                        title=title,
+                        list=_list.videos,
+                        status=["Queued"],
+                    )
                     try:
-                        video.streams.get_audio_only().download(
+                        ys = video.streams.get_highest_resolution()
+                        ys.on_progress_for_chunks = downloadCallbackFunction(
+                            video=video,
+                            id=index,
+                            title=title,
+                            list=_list.videos,
+                            status=["Downloading"],
+                        )
+                        ys.download(
                             output_path=pathSafe(ch.channel_name),
-                            filename=f"{index} - {pathSafe(name=title)}" + ".m4a",
+                            filename=title,
                         )
                         print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
+                        base_callback(
+                            video=video,
+                            id=index,
+                            title=title,
+                            list=_list.videos,
+                            progress=100,
+                            status=["Finished"],
+                        )
                     except exceptions.VideoUnavailable:
                         print(Color.RED + "Video is unavailable" + Color.RESET)
                     except exceptions.VideoPrivate:
                         print(Color.RED + "Video is private" + Color.RESET)
                     except exceptions.VideoRegionBlocked:
-                        print(
-                            Color.RED + "Video is blocked in your region" + Color.RESET
-                        )
-                    except Exception as e:
-                        print(e)
+                        print(Color.RED + "Video is blocked in your region" + Color.RESET)
 
-                _Thread(target=_inThread, args=(_title, _video), daemon=True).start()
+                _Thread(target=_inThread, args=(_title, _video)).start()
+                index += 1
+        print(
+            f"Downloaded {Color.GREEN}{ch.channel_name}{Color.RESET} --  awaiting stragglers"
+        )
+        self.downloadingActive = False
+
+    def downloadArtist_S(self, link):
+        if checkValidLink(link) is False:
+            print(Color.RED + "Invalid Link" + Color.RESET)
+            return
+        else:
+            print(Color.GREEN + "Valid Link" + Color.RESET)
+
+        self.downloadingActive = True
+        ch = Channel(
+            url=link,
+            client="WEB",
+            token_file="spoofedToken.json",
+        )
+        print(f"starting download of artist {ch.channel_name}:")
+        try:
+            os.mkdir(path=pathSafe(ch.channel_name))
+        except FileExistsError:
+            print(
+                f"{Color.YELLOW}Folder {ch.channel_name} already exists{Color.RESET}, downloading into {os.path.abspath(os.curdir)}"
+            )
+        index = 0
+        for _list in ch.home:
+            for _video in _list.videos:
+                time.sleep(0.05)
+                _title = _video.title
+                print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
+
+                def _inThread(title, video: YouTube):
+                    title = pathSafe(f"{index} - {title}", True) + ".m4a"
+                    base_callback(
+                        video=video,
+                        id=index,
+                        title=title,
+                        list=_list.videos,
+                        status=["Queued"],
+                    )
+                    try:
+                        ys = video.streams.get_audio_only()
+                        ys.on_progress_for_chunks = downloadCallbackFunction(
+                            video=video,
+                            id=index,
+                            title=title,
+                            list=_list.videos,
+                            status=["Downloading"],
+                        )
+                        ys.download(
+                            output_path=pathSafe(ch.channel_name),
+                            filename=title,
+                        )
+                        print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
+                        base_callback(
+                            video=video,
+                            id=index,
+                            title=title,
+                            list=_list.videos,
+                            progress=100,
+                            status=["Finished"],
+                        )
+                    except exceptions.VideoUnavailable:
+                        print(Color.RED + "Video is unavailable" + Color.RESET)
+                    except exceptions.VideoPrivate:
+                        print(Color.RED + "Video is private" + Color.RESET)
+                    except exceptions.VideoRegionBlocked:
+                        print(Color.RED + "Video is blocked in your region" + Color.RESET)
+
+                _Thread(target=_inThread, args=(_title, _video)).start()
+                index += 1
+        print(
+            f"Downloaded {Color.GREEN}{ch.channel_name}{Color.RESET} --  awaiting stragglers"
+        )
+        self.downloadingActive = False
 
 
 if __name__ == "__main__":

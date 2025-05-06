@@ -107,17 +107,27 @@ def start_http_server(local_folder: str) -> None:
 
 if __name__ == "__main__":
     while True:
-        url = input("Enter the URL of the page to download (or 'exit' to quit): ")
-        if url.lower() == "exit":
-            break
-        local_folder = input("Enter the local folder to save the files: ")
-        download_all_files(url, local_folder)
+        try:
+            url = input("Enter the URL of the page to download (or 'exit' to quit): ")
+            if url.lower() == "exit":
+                break
+            local_folder = input("Enter the local folder to save the files: ")
+            download_all_files(url, local_folder)
 
-        # Start the HTTP server in a separate thread
-        server_thread = threading.Thread(
-            target=start_http_server, args=(local_folder,), daemon=True
-        )
-        server_thread.start()
-
-        input("Press Enter to stop the server and exit...")
-        break
+            # Start the HTTP server in a separate thread
+            server_thread = threading.Thread(
+                target=start_http_server, args=(local_folder,), daemon=True
+            )
+            server_thread.start()
+            print("HTTP server started. Press Ctrl+C to stop it.")
+        except KeyboardInterrupt:
+            print("\nStopping the HTTP server and clearing files...")
+            server_thread.join(timeout=1)
+            local_folder = "../" + local_folder
+            if os.path.exists(local_folder):
+                os.system(f'rm -rf "{local_folder}"')
+                print(f"Cleared the folder: {local_folder}")
+            else:
+                print(f"Folder {local_folder} does not exist.")
+        except Exception as e:
+            print(f"Error starting HTTP server: {e}")

@@ -6,8 +6,6 @@ import sys
 import os
 import PIL
 import PIL.Image
-import PIL.ImageOps
-from cv2 import magnitude
 import src.scripts.vars as Wvars
 from screeninfo import get_monitors
 from direct.showbase.ShowBase import ShowBase
