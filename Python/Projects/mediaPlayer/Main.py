@@ -17,6 +17,7 @@ from __YOUTUBEDOWNLOADER import (
     Playlist,
     registerCallbackFunction,
     registerInitalizeCallbackFunction,
+    registerFinalizeCallbackFunction,
 )
 from panda3d.core import (
     FilterProperties,
@@ -159,65 +160,8 @@ class Main(ShowBase):
     def initalizeCallback(self):
 
         def _callback(playlist: Playlist):
-            item = playlist.title
-            print(item)
-            button = DirectButton(
-                parent=self.optionBar,
-                text=item[:28] + "..." if len(item) > 28 else item,
-                scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-                pos=(-0.95, 0, self.listStartY),
-                text_align=TextNode.ALeft,
-                relief=DGG.FLAT,
-                geom=None,
-                text_fg=self.hexToRgb("#ffffff"),
-                frameColor=(1, 1, 1, 0.15),
-            )
-            self.scaledItemList.append(button)
-            divider = DirectFrame(
-                parent=self.optionBar,
-                frameSize=(
-                    -0.95,
-                    ((len(item) if len(item) < 28 else 31) * 0.012) - 0.9,
-                    0,
-                    0.004,
-                ),
-                frameColor=self.hexToRgb("#8f8f8f"),
-                pos=(0, 0, self.listStartY - 0.0275),
-            )
-            self.listStartY -= 0.075
-            self.songListFrameOffset.setZ(0)
-            print("created playlist object")
-
-            for songId in range(len(self.songList)):
-                if self.songList[songId]["object"]:
-                    self.songList[songId]["object"].stop()
-                if self.songList[songId]["nodePath"] is not None:
-                    self.songList[songId]["nodePath"].destroy()
-
-            del self.songList[:]
-            LerpPosInterval(
-                self.controlBar,
-                0.5,
-                Point3(0, 0, 0),
-                Point3(0, 0, -0.2),
-                blendType="easeInOut",
-            ).start()
-            index = 0
-            for video in playlist.videos_generator():
-                self.songList.append(
-                    {
-                        "name": video.title,
-                        "nodePath": None,
-                    }
-                )
-                self.makeDownloaderPanel(index)
-                if ((len(self.songList) - 1) / 10) * 1.5 > 1:
-                    self.scrollBar.setValue(self.songListFrameOffset.getZ())
-                    self.scrollBar["range"] = [0, ((len(self.songList) - 1) / 10) * 1.5]
-                    self.scrollBar.setRange()
-                    self.scrollBar.show()
-                index += 1
-            print("created song panels")
+            title = playlist.title
+            notify(f"Playlist: {title} has been initialized")
 
         return _callback
 

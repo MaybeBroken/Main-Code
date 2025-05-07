@@ -6,7 +6,8 @@ import threading as th
 import time
 import subprocess
 import music_tag
-from typing import Callable, Any
+from typing import Callable, Any, overload
+import json
 
 os.chdir(os.path.dirname(__file__))
 
@@ -110,7 +111,7 @@ def get_cover_image(url: str, dest_folder: str, dest_name: str):
             )
         return file_path
     except FileExistsError:
-        return None
+        return "EXISTS"
     except:
         get_cover_image(url, dest_folder, dest_name)
 
@@ -137,13 +138,17 @@ def apply_cover_image(url, dest_folder, songName, level=0):
             )
         else:
             print(f"| {Color.RED}File {songPath} does not exist{Color.RESET}")
+    elif file_path == "EXISTS":
+        print(f"| {Color.YELLOW}Cover image already exists{Color.RESET}")
+        return "EXISTS"
     else:
         print(f"| {Color.RED}Failed to download cover image{Color.RESET}")
         return apply_cover_image(url, dest_folder, songName, level + 1)
 
 
 base_callback_addon = lambda *args, **kwargs: ...
-initalize_callback = lambda *args, **kwargs: print("Callback not registered")
+initalize_callback = lambda *args, **kwargs: print("INIT Callback not registered")
+finalize_callback = lambda *args, **kwargs: print("POST Callback not registered")
 
 
 def registerCallbackFunction(callback: Callable[[Any], Any]):
@@ -156,11 +161,17 @@ def registerInitalizeCallbackFunction(callback: Callable[[Any], Any]):
     initalize_callback = callback
 
 
+def registerFinalizeCallbackFunction(callback: Callable[[Any], Any]):
+    global finalize_callback
+    finalize_callback = callback
+
+
 def base_callback(
     video,
     id,
     title,
     list,
+    chunk: bytes = b"",
     progress: float = 0,
     status: list = ["Queued", "Downloading", "finished"],
 ):
@@ -169,6 +180,7 @@ def base_callback(
         id=id,
         title=title,
         list=list,
+        chunk=chunk,
         progress=progress,
         status=status,
     )
@@ -185,11 +197,40 @@ def downloadCallbackFunction(video, id, title, list, status):
             id=id,
             title=title,
             list=list,
+            chunk=chunk,
             progress=progress,
             status=status,
         )
 
     return download_callback
+
+
+def writeJson(title, objects: list[YouTube], path: str, o_type: str = "s|v"):
+    content = {
+        "title": title,
+        "objects": [
+            {
+                "title": obj.title,
+                "url": obj.watch_url,
+                "description": obj.description,
+                "length": obj.length,
+                "author": obj.author,
+                "views": obj.views,
+                "thumbnail_url": obj.thumbnail_url,
+                "likes": obj.likes,
+                "rating": obj.rating,
+                "keywords": obj.keywords,
+                "channel_id": obj.channel_id,
+                "channel_url": obj.channel_url,
+                "publish_date": str(obj.publish_date),
+            }
+            for obj in objects
+        ],
+        "type": o_type,
+    }
+    with open(path, "w") as json_file:
+        json.dump(content, json_file, indent=4)
+    print(f"Playlist {title} written to {path}")
 
 
 class CORE:
@@ -327,6 +368,7 @@ class CORE:
                 f"{Color.YELLOW}Folder {pl.title} already exists{Color.RESET}, downloading into {os.path.abspath(os.curdir)}"
             )
         index = 0
+        sucessfulVideos = []
         for _video in pl.videos:
             time.sleep(0.05)
             _title = _video.title
@@ -363,6 +405,7 @@ class CORE:
                         progress=100,
                         status=["Finished"],
                     )
+                    sucessfulVideos.append(video)
                 except exceptions.VideoUnavailable:
                     print(Color.RED + "Video is unavailable" + Color.RESET)
                 except exceptions.VideoPrivate:
@@ -375,6 +418,14 @@ class CORE:
         print(
             f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
         )
+        if len(sucessfulVideos) > 0:
+            writeJson(
+                title=pl.title,
+                objects=sucessfulVideos,
+                path=os.path.join(pathSafe(pl.title), "metadata.json"),
+                o_type="v",
+            )
+        finalize_callback(pl)
         self.downloadingActive = False
 
     def downloadPlaylist_S(self, link):
@@ -400,6 +451,7 @@ class CORE:
                 f"{Color.YELLOW}Folder {pl.title} already exists{Color.RESET}, downloading into {os.path.abspath(os.curdir)}"
             )
         index = 0
+        sucessfulVideos = []
         for _video in pl.videos:
             time.sleep(0.05)
             _title = _video.title
@@ -441,6 +493,7 @@ class CORE:
                         progress=100,
                         status=["Finished"],
                     )
+                    sucessfulVideos.append(video)
                 except exceptions.VideoUnavailable:
                     print(Color.RED + "Video is unavailable" + Color.RESET)
                 except exceptions.VideoPrivate:
@@ -453,6 +506,14 @@ class CORE:
         print(
             f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
         )
+        if len(sucessfulVideos) > 0:
+            writeJson(
+                title=pl.title,
+                objects=sucessfulVideos,
+                path=os.path.join(pathSafe(pl.title), "metadata.json"),
+                o_type="s",
+            )
+        finalize_callback(pl)
         self.downloadingActive = False
 
     def downloadArtist_V(self, link):
@@ -518,7 +579,9 @@ class CORE:
                     except exceptions.VideoPrivate:
                         print(Color.RED + "Video is private" + Color.RESET)
                     except exceptions.VideoRegionBlocked:
-                        print(Color.RED + "Video is blocked in your region" + Color.RESET)
+                        print(
+                            Color.RED + "Video is blocked in your region" + Color.RESET
+                        )
 
                 _Thread(target=_inThread, args=(_title, _video)).start()
                 index += 1
@@ -590,7 +653,9 @@ class CORE:
                     except exceptions.VideoPrivate:
                         print(Color.RED + "Video is private" + Color.RESET)
                     except exceptions.VideoRegionBlocked:
-                        print(Color.RED + "Video is blocked in your region" + Color.RESET)
+                        print(
+                            Color.RED + "Video is blocked in your region" + Color.RESET
+                        )
 
                 _Thread(target=_inThread, args=(_title, _video)).start()
                 index += 1
