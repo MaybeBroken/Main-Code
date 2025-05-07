@@ -139,12 +139,16 @@ class Main(ShowBase):
         self.downloaderSongs: list[YouTube, NodePath] = []
         registerCallbackFunction(self.downloadCallback())
         registerInitalizeCallbackFunction(self.initalizeCallback())
+        registerFinalizeCallbackFunction(self.finalizeCallback())
+        global appGuiFrame
+        appGuiFrame = self.aspect2d
 
     def downloadCallback(self):
 
         def _callback(
             video: YouTube,
             id: int,
+            chunk: None,
             title: str,
             list: list[YouTube],
             progress: float = 0,
@@ -162,6 +166,15 @@ class Main(ShowBase):
         def _callback(playlist: Playlist):
             title = playlist.title
             notify(f"Playlist: {title} has been initialized")
+
+        return _callback
+
+    def finalizeCallback(self):
+        def _callback(playlist: Playlist):
+            title = playlist.title
+            notify(f"Playlist: {title} has been downloaded")
+            os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
+            self.refreshPlaylists()
 
         return _callback
 
@@ -453,6 +466,10 @@ class Main(ShowBase):
                     )
                     self.listStartY -= 0.075
                     self.playlists.append([button, divider, icon])
+                else:
+                    print(
+                        f"Error: {os.path.abspath(os.path.join(".", f"youtubeDownloader{pathSeparator}", item),)} does not contain songs."
+                    )
 
     class audioWaveformVis:
         def __init__(self, main: "Main.audioWaveformVis", parent):
@@ -545,11 +562,9 @@ class Main(ShowBase):
             cursorKeys=1,
             focus=0,
         )
-        self.downloadSongPromptEntry.hide()
-        self.downloadSongPrompt.hide()
-        # self.accept("control-c", self.copySong)
-        # self.accept("control-v", self.pasteFromClipboard)
-        # self.pasteFromClipboard()
+        self.accept("control-c", self.copySong)
+        self.accept("control-v", self.pasteFromClipboard)
+        self.pasteFromClipboard()
 
         self.controlBar = DirectFrame(
             parent=self.guiFrame,
@@ -1109,6 +1124,7 @@ class Main(ShowBase):
         self.togglePlay()
 
     def registerFolder(self, path):
+        os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
         self.paused = True
         del self.songList[:]
         self.songIndex = 0

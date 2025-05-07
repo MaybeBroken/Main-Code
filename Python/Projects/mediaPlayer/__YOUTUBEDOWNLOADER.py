@@ -87,6 +87,16 @@ def pathSafe(name: str, replace: bool = False):
             ...
     if replace:
         name = f"{"0"*(3-len(name.split(" - ")[0]))}{name.split(' - ')[0]} - {" - ".join(name.split(' - ')[1:])}"
+        parts = name.split(" - ")
+        while (
+            len(parts) > 1
+            and parts[0].isdigit()
+            and parts[1].isdigit()
+            and len(parts[0]) == 3
+            and len(parts[1]) == 3
+        ):
+            parts = parts[0] + parts[2:]
+            name = " - ".join(parts)
     return name
 
 
@@ -124,7 +134,7 @@ def apply_cover_image(url, dest_folder, songName, level=0):
         return False
     songName = songName.replace(".m4a", ".png")
     file_path = get_cover_image(url=url, dest_folder=dest_folder, dest_name=songName)
-    if file_path is not None:
+    if file_path is not None and file_path != "EXISTS":
         songPath = os.path.join(
             dest_folder.split("/")[0], songName.replace(".png", ".m4a")
         ).replace("\\img\\", "\\")
@@ -205,32 +215,213 @@ def downloadCallbackFunction(video, id, title, list, status):
     return download_callback
 
 
-def writeJson(title, objects: list[YouTube], path: str, o_type: str = "s|v"):
+def diff(pl: Playlist, mtd: dict):
+    pl_title = pl.title
+    mtd_title = mtd["title"]
+    if pl_title == pathSafe(mtd_title):
+        pl_vids = []
+        th_queue: list[_Thread] = []
+        for _obj in pl.videos:
+
+            def inFunc(obj: YouTube):
+                print(f"Checking {obj.title}")
+                pl_vids.append(
+                    {
+                        "title": obj.title,
+                        "url": obj.watch_url,
+                        "thumbnail_url": obj.thumbnail_url,
+                        "channel_id": obj.channel_id,
+                        "channel_url": obj.channel_url,
+                        "publish_date": str(obj.publish_date),
+                    }
+                )
+
+            th_queue.append(_Thread(target=inFunc, args=(_obj,)))
+        for thread in th_queue:
+            thread.start()
+        for thread in th_queue:
+            thread.join()
+        if pl_vids == mtd["objects"]:
+            return False
+        else:
+            old = pl_vids
+            new = mtd["objects"]
+            removed = []
+            added = []
+            for obj in old:
+                if obj not in new:
+                    removed.append(obj)
+            for obj in new:
+                if obj not in old:
+                    added.append(obj)
+
+            return [added, removed]
+
+
+def writeJson(
+    title,
+    pl: Playlist,
+    objects: list[YouTube],
+    path: str,
+    o_type: str = "s|v",
+):
     content = {
         "title": title,
-        "objects": [
-            {
-                "title": obj.title,
-                "url": obj.watch_url,
-                "description": obj.description,
-                "length": obj.length,
-                "author": obj.author,
-                "views": obj.views,
-                "thumbnail_url": obj.thumbnail_url,
-                "likes": obj.likes,
-                "rating": obj.rating,
-                "keywords": obj.keywords,
-                "channel_id": obj.channel_id,
-                "channel_url": obj.channel_url,
-                "publish_date": str(obj.publish_date),
-            }
-            for obj in objects
-        ],
+        "playlist": {
+            "title": pl.title,
+            "url": pl.playlist_url,
+            "length": pl.length,
+            "views": pl.views,
+            "thumbnail_url": pl.thumbnail_url,
+        },
+        "objects": [],
         "type": o_type,
     }
+    th_queue: list[_Thread] = []
+    for _obj in objects:
+
+        def inFunc(obj: YouTube):
+            print(f"Writing {obj.title} to json")
+            content["objects"].append(
+                {
+                    "title": obj.title,
+                    "url": obj.watch_url,
+                    "thumbnail_url": obj.thumbnail_url,
+                    "channel_id": obj.channel_id,
+                    "channel_url": obj.channel_url,
+                    "publish_date": str(obj.publish_date),
+                }
+            )
+
+        th_queue.append(_Thread(target=inFunc, args=(_obj,)))
+    for thread in th_queue:
+        thread.start()
+    for thread in th_queue:
+        thread.join()
     with open(path, "w") as json_file:
         json.dump(content, json_file, indent=4)
     print(f"Playlist {title} written to {path}")
+
+
+def renameSongs(folder):
+    fileSet = set()
+    for root, dirs, files in os.walk(folder):
+        for file in files:
+            if file.endswith(".m4a"):
+                fileSet.add(file)
+    fileSet = sorted(fileSet)
+    for index, file in enumerate(fileSet):
+        newName = pathSafe(f"{index} - {' - '.join(file.split(' - ')[1:])}", True)
+        oldPath = os.path.join(folder, file)
+        newPath = os.path.join(folder, newName)
+        if not os.path.exists(newPath):
+            os.rename(oldPath, newPath)
+            print(f"Renamed {file} to {newName}")
+        else:
+            print(f"File {newName} already exists, skipping rename")
+
+
+def deleteByName(folder, name):
+    for root, dirs, files in os.walk(folder):
+        for file in files:
+            if name in file:
+                os.remove(os.path.join(root, file))
+                print(f"Deleted {file}")
+
+
+class UPDATE:
+    def updatePlaylist(self, metadata: dict):
+        if metadata["type"] == "s":
+            print(f"Updating {Color.CYAN}{metadata['title']}{Color.RESET}")
+            pl = Playlist(
+                url=metadata["playlist"]["url"],
+                token_file="spoofedToken.json",
+                allow_oauth_cache=False,
+            )
+            _diff = diff(pl, metadata)
+            if _diff is False or (len(_diff[0]) == 0 and len(_diff[1]) == 0):
+                print(f"{Color.GREEN}No changes detected{Color.RESET}")
+                return
+            else:
+                print(f"{Color.YELLOW}Changes detected{Color.RESET}")
+                print(f"Removed: {Color.RED}{len(_diff[0])}{Color.RESET}")
+                print(f"Added: {Color.GREEN}{len(_diff[1])}{Color.RESET}")
+                index = 0
+                for obj in _diff[0]:
+                    deleteByName(pathSafe(pl.title), obj["title"])
+                    print(f"| - {Color.RED}Removed{Color.RESET} {obj['title']}")
+                for obj in _diff[1]:
+                    _video = YouTube(
+                        url=obj["url"],
+                        token_file="spoofedToken.json",
+                        allow_oauth_cache=False,
+                    )
+                    time.sleep(0.05)
+                    _title = _video.title
+                    print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
+
+                    def _inThread(title, video: YouTube):
+                        title = pathSafe(f"{index} - {title}", True) + ".m4a"
+                        base_callback(
+                            video=video,
+                            id=index,
+                            title=title,
+                            list=pl.videos,
+                            status=["Queued"],
+                        )
+                        try:
+                            ys = video.streams.get_audio_only()
+                            ys.on_progress_for_chunks = downloadCallbackFunction(
+                                video=video,
+                                id=index,
+                                title=title,
+                                list=pl.videos,
+                                status=["Downloading"],
+                            )
+                            ys.download(
+                                output_path=pathSafe(pl.title),
+                                filename=title,
+                            )
+                            print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
+                            apply_cover_image(
+                                video.thumbnail_url,
+                                pathSafe(pl.title) + os.path.sep + "img",
+                                title,
+                            )
+                            base_callback(
+                                video=video,
+                                id=index,
+                                title=title,
+                                list=pl.videos,
+                                progress=100,
+                                status=["Finished"],
+                            )
+                        except exceptions.VideoUnavailable:
+                            print(Color.RED + "Video is unavailable" + Color.RESET)
+                        except exceptions.VideoPrivate:
+                            print(Color.RED + "Video is private" + Color.RESET)
+                        except exceptions.VideoRegionBlocked:
+                            print(
+                                Color.RED
+                                + "Video is blocked in your region"
+                                + Color.RESET
+                            )
+
+                    _Thread(target=_inThread, args=(_title, _video)).start()
+                    index += 1
+                    print(
+                        f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
+                    )
+                    finalize_callback(pl)
+                    self.downloadingActive = False
+                renameSongs(pathSafe(pl.title))
+                writeJson(
+                    title=pl.title,
+                    pl=pl,
+                    objects=pl.videos,
+                    path=os.path.join(pathSafe(pl.title), "metadata.json"),
+                    o_type="s",
+                )
 
 
 class CORE:
@@ -369,6 +560,7 @@ class CORE:
             )
         index = 0
         sucessfulVideos = []
+        threadQueue: list[_Thread] = []
         for _video in pl.videos:
             time.sleep(0.05)
             _title = _video.title
@@ -413,14 +605,17 @@ class CORE:
                 except exceptions.VideoRegionBlocked:
                     print(Color.RED + "Video is blocked in your region" + Color.RESET)
 
-            _Thread(target=_inThread, args=(_title, _video)).start()
+            threadQueue.append(_Thread(target=_inThread, args=(_title, _video)))
             index += 1
-        print(
-            f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
-        )
+        for thread in threadQueue:
+            thread.start()
+        for thread in threadQueue:
+            thread.join()
+        print(f"Downloaded {Color.GREEN}{pl.title}{Color.RESET}")
         if len(sucessfulVideos) > 0:
             writeJson(
                 title=pl.title,
+                pl=pl,
                 objects=sucessfulVideos,
                 path=os.path.join(pathSafe(pl.title), "metadata.json"),
                 o_type="v",
@@ -429,6 +624,7 @@ class CORE:
         self.downloadingActive = False
 
     def downloadPlaylist_S(self, link):
+        os.chdir("youtubeDownloader")
         if checkValidLink(link) is False:
             print(Color.RED + "Invalid Link" + Color.RESET)
             return
@@ -452,12 +648,13 @@ class CORE:
             )
         index = 0
         sucessfulVideos = []
+        threadQueue: list[_Thread] = []
         for _video in pl.videos:
             time.sleep(0.05)
             _title = _video.title
             print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
 
-            def _inThread(title, video: YouTube):
+            def _inThread(title, video: YouTube, index: int):
                 title = pathSafe(f"{index} - {title}", True) + ".m4a"
                 base_callback(
                     video=video,
@@ -501,20 +698,24 @@ class CORE:
                 except exceptions.VideoRegionBlocked:
                     print(Color.RED + "Video is blocked in your region" + Color.RESET)
 
-            _Thread(target=_inThread, args=(_title, _video)).start()
+            threadQueue.append(_Thread(target=_inThread, args=(_title, _video, index)))
             index += 1
-        print(
-            f"Downloaded {Color.GREEN}{pl.title}{Color.RESET} --  awaiting stragglers"
-        )
+        for thread in threadQueue:
+            thread.start()
+        for thread in threadQueue:
+            thread.join()
+        print(f"Downloaded {Color.GREEN}{pl.title}{Color.RESET}")
         if len(sucessfulVideos) > 0:
             writeJson(
                 title=pl.title,
+                pl=pl,
                 objects=sucessfulVideos,
                 path=os.path.join(pathSafe(pl.title), "metadata.json"),
                 o_type="s",
             )
         finalize_callback(pl)
         self.downloadingActive = False
+        os.chdir("..")
 
     def downloadArtist_V(self, link):
         if checkValidLink(link) is False:
@@ -591,6 +792,7 @@ class CORE:
         self.downloadingActive = False
 
     def downloadArtist_S(self, link):
+        os.chdir("youtubeDownloader")
         if checkValidLink(link) is False:
             print(Color.RED + "Invalid Link" + Color.RESET)
             return
@@ -610,14 +812,14 @@ class CORE:
             print(
                 f"{Color.YELLOW}Folder {ch.channel_name} already exists{Color.RESET}, downloading into {os.path.abspath(os.curdir)}"
             )
-        index = 0
+        _index = 0
         for _list in ch.home:
             for _video in _list.videos:
                 time.sleep(0.05)
                 _title = _video.title
                 print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
 
-                def _inThread(title, video: YouTube):
+                def _inThread(title, video: YouTube, index: int):
                     title = pathSafe(f"{index} - {title}", True) + ".m4a"
                     base_callback(
                         video=video,
@@ -657,8 +859,8 @@ class CORE:
                             Color.RED + "Video is blocked in your region" + Color.RESET
                         )
 
-                _Thread(target=_inThread, args=(_title, _video)).start()
-                index += 1
+                _Thread(target=_inThread, args=(_title, _video, _index)).start()
+                _index += 1
         print(
             f"Downloaded {Color.GREEN}{ch.channel_name}{Color.RESET} --  awaiting stragglers"
         )
@@ -669,7 +871,15 @@ if __name__ == "__main__":
     while True:
         try:
             print(
-                f"\n{Color.YELLOW}YouTube Downloader{Color.RESET}\n\n{Color.BLUE}1.{Color.RESET} Download Video\n{Color.BLUE}2.{Color.RESET} Download Song\n{Color.BLUE}3.{Color.RESET} Download Playlist (Videos)\n{Color.BLUE}4.{Color.RESET} Download Playlist (Songs)\n{Color.BLUE}5.{Color.RESET} Download Artist (Videos)\n{Color.BLUE}6.{Color.RESET} Download Artist (Songs)\n\n{Color.RED}0.{Color.RESET} Exit"
+                f"\n{Color.YELLOW}YouTube Downloader{Color.RESET}\n\n{Color.BLUE}\
+1.{Color.RESET} Download Video\n{Color.BLUE}\
+2.{Color.RESET} Download Song\n{Color.BLUE}\
+3.{Color.RESET} Download Playlist (Videos)\n{Color.BLUE}\
+4.{Color.RESET} Download Playlist (Songs)\n{Color.BLUE}\
+5.{Color.RESET} Download Artist (Videos)\n{Color.BLUE}\
+6.{Color.RESET} Download Artist (Songs)\n{Color.BLUE}\
+7.{Color.RESET} Update Playlist\n\n{Color.RED}\
+0.{Color.RESET} Exit"
             )
             option = input(f"\n{Color.GREEN}> {Color.RESET}")
             if option == "1":
@@ -690,15 +900,39 @@ if __name__ == "__main__":
             elif option == "6":
                 link = input(f"{Color.GREEN}url> {Color.RESET}")
                 CORE().downloadArtist_S(link)
+            elif option == "7":
+                print(
+                    "\n".join(
+                        os.listdir(
+                            os.path.join(os.path.dirname(__file__), "youtubeDownloader")
+                        )
+                    )
+                )
+                path = input(f"{Color.GREEN}path> {Color.RESET}")
+                playlist_data = json.load(
+                    open(
+                        os.path.join(
+                            os.path.dirname(__file__),
+                            "youtubeDownloader",
+                            path,
+                            "metadata.json",
+                        ),
+                        "r",
+                    )
+                )
+                UPDATE().updatePlaylist(playlist_data)
             elif option == "0":
                 exit()
         except KeyboardInterrupt:
             exit()
-        except Exception as e:
-            print(Color.RED + f"Something Went Wrong:\n" + Color.RESET + str(e))
+        # except Exception as e:
+        #     print(Color.RED + f"Something Went Wrong:\n" + Color.RESET + str(e))
 
         time.sleep(1)
 
         for thread in th.enumerate():
             if thread is not th.main_thread():
+                print(
+                    f"{Color.YELLOW}Thread {thread.name} still running{Color.RESET}, waiting for it to finish..."
+                )
                 thread.join()
