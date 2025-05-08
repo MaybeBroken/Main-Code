@@ -96,11 +96,11 @@ if Wvars.winMode == "full":
 
 if Wvars.winMode == "win":
     ConfigVariableString(
-        "win-size",
-        str(int(monitor[0].width / 2)) + " " + str(int(monitor[0].height / 2)),
-    ).setValue(str(int(monitor[0].width / 2)) + " " + str(int(monitor[0].height / 2)))
+        "win-size", str(monitor[0].width // 2) + " " + str(monitor[0].height // 2)
+    ).setValue(str(monitor[0].width // 2) + " " + str(monitor[0].height // 2))
     ConfigVariableString("fullscreen", "false").setValue("false")
     ConfigVariableString("undecorated", "false").setValue("false")
+    ConfigVariableString("win-origin", "100 100").setValue("100 100")
 
 
 def divide(num, divisor) -> list[2]:
@@ -206,6 +206,8 @@ class Main(ShowBase):
         )
 
         self.scaledItemList.append(nameText)
+        self.scaledItemList.append(frameHighlight)
+        self.scaledItemList.append(frame)
         return frame
 
     def startPlaylistDownloader(self, url):
@@ -699,11 +701,17 @@ class Main(ShowBase):
                         ".aac",
                     ),
                 ):
+                    backgroundFrame = DirectFrame(
+                        parent=self.optionBar,
+                        frameSize=(-1, -0.5, 0.075, -0.075),
+                        frameColor=(0.3, 0.3, 0.3, 1),
+                        pos=(0, 0, self.listStartY),
+                    )
                     button = DirectButton(
                         parent=self.optionBar,
                         text=item[:28] + "..." if len(item) > 28 else item,
                         scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-                        pos=(-0.95, 0, self.listStartY),
+                        pos=(-0.95, 0, self.listStartY+0.015),
                         command=self.registerFolder,
                         extraArgs=[item],
                         text_align=TextNode.ALeft,
@@ -722,7 +730,7 @@ class Main(ShowBase):
                             0.004,
                         ),
                         frameColor=self.hexToRgb("#8f8f8f"),
-                        pos=(0, 0, self.listStartY - 0.0275),
+                        pos=(0, 0, self.listStartY),
                     )
                     icon = OnscreenImage(
                         image="src/textures/playlist.png",
@@ -730,7 +738,8 @@ class Main(ShowBase):
                         scale=(0.025 / self.getAspectRatio(self.win), 0.025, 0.025),
                         pos=(-0.975, 0, self.listStartY + 0.0025),
                     )
-                    self.listStartY -= 0.075
+                    self.scaledItemList.append(icon)
+                    self.listStartY -= 0.01
                     self.playlists.append([button, divider, icon])
 
         self.scrollBar = DirectScrollBar(
