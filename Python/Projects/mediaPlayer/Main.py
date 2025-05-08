@@ -13,11 +13,13 @@ from clipboard import copy
 from direct.interval.LerpInterval import *
 from __YOUTUBEDOWNLOADER import (
     CORE,
+    UPDATE,
     YouTube,
     Playlist,
     registerCallbackFunction,
     registerInitalizeCallbackFunction,
     registerFinalizeCallbackFunction,
+    checkValidLink,
 )
 from panda3d.core import (
     FilterProperties,
@@ -96,8 +98,11 @@ if Wvars.winMode == "full":
 
 if Wvars.winMode == "win":
     ConfigVariableString(
-        "win-size", str(monitor[0].width // 2) + " " + str(monitor[0].height // 2)
-    ).setValue(str(monitor[0].width // 2) + " " + str(monitor[0].height // 2))
+        "win-size",
+        str(int(monitor[0].width / 5) * 4) + " " + str(int(monitor[0].height / 5) * 4),
+    ).setValue(
+        str(int(monitor[0].width / 5) * 4) + " " + str(int(monitor[0].height / 5) * 4)
+    )
     ConfigVariableString("fullscreen", "false").setValue("false")
     ConfigVariableString("undecorated", "false").setValue("false")
     ConfigVariableString("win-origin", "100 100").setValue("100 100")
@@ -128,6 +133,8 @@ class Main(ShowBase):
         self.backfaceCullingOn()
         self.disableMouse()
         self.viewMode = 0
+        self.downloaderFrameVisible = False
+        self.internalClipboard = None
         self.favoritesToggle = False
         self.favoritesList = []
         self.rootListPath = os.path.join(".", f"youtubeDownloader{pathSeparator}")
@@ -210,14 +217,21 @@ class Main(ShowBase):
         self.scaledItemList.append(frame)
         return frame
 
-    def startPlaylistDownloader(self, url):
-        Thread(target=CORE.downloadPlaylist_S, args=(url,)).start()
-
-    def startSongDownloader(self, url):
-        try:
+    def startSongDownloader(self, mode, url):
+        if url is None:
+            url = self.pasteFromClipboard()
+        if url is None:
+            return
+        if mode == "s":
             CORE.downloadSong(url)
-        except Exception as e:
-            print(e)
+        elif mode == "ps":
+            CORE.downloadPlaylist_S(url)
+        elif mode == "v":
+            CORE.downloadVideo(url)
+        elif mode == "pv":
+            CORE.downloadPlaylist_V(url)
+        elif mode == "u":
+            UPDATE().updatePlaylist(url)
 
     def syncProgress(self, task):
         try:
@@ -350,20 +364,12 @@ class Main(ShowBase):
         )
 
     def pasteFromClipboard(self):
-        self.downloadSongPromptEntry.destroy()
         initial_text = clipboard.paste()
-        self.downloadSongPromptEntry = DirectEntry(
-            parent=self.topBar,
-            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-            pos=(-0.95, 0, 0.9),
-            frameColor=(0, 0, 0, 0),
-            text_fg=self.hexToRgb("#f6f6f6"),
-            width=50,
-            command=self.startPlaylistDownloader,
-            cursorKeys=1,
-            initialText=initial_text,
-            focus=1,
-        )
+        if initial_text is not None and checkValidLink(initial_text):
+            self.internalClipboard = initial_text
+            return initial_text
+        else:
+            notify("Invalid URL")
 
     def checkForUpdatedLists(self):
         self.lastDir = []
@@ -513,6 +519,58 @@ class Main(ShowBase):
                 self.graph.node().removeAllChildren()
                 self.graph.attachNewNode(self.line_segs.create())
 
+    def openDownloaderPanel(self):
+        if not self.downloaderFrameVisible:
+            self.downloaderPanel = DirectFrame(
+                self.aspect2d,
+                frameColor=(0.8, 0.8, 0.8, 0.7),
+                frameSize=(-0.3, 0.3, 0.4, -0.4),
+                pos=(-1.2, 0, 0.45),
+            )
+            infoText = OnscreenText(
+                text="Copy the link to the clipboard, then click which type below you would like to download",
+                parent=self.downloaderPanel,
+                scale=0.04,
+                wordwrap=15,
+                pos=(0, 0.35),
+            )
+            downloadSongButton = DirectButton(
+                parent=self.downloaderPanel,
+                text="Download Song",
+                scale=0.05,
+                pos=(-0.1, 0, 0.2),
+                command=self.startSongDownloader,
+                extraArgs=["s", None],
+            )
+            downloadPlaylistButton = DirectButton(
+                parent=self.downloaderPanel,
+                text="Download Playlist (s)",
+                scale=0.05,
+                pos=(-0.1, 0, 0.1),
+                command=self.startSongDownloader,
+                extraArgs=["ps", None],
+            )
+            downloadVideoButton = DirectButton(
+                parent=self.downloaderPanel,
+                text="Download Video",
+                scale=0.05,
+                pos=(-0.1, 0, 0),
+                command=self.startSongDownloader,
+                extraArgs=["v", None],
+            )
+            downloadPlaylistVideoButton = DirectButton(
+                parent=self.downloaderPanel,
+                text="Download Playlist (v)",
+                scale=0.05,
+                pos=(-0.1, 0, -0.1),
+                command=self.startSongDownloader,
+                extraArgs=["pv", None],
+            )
+            self.downloaderFrameVisible = True
+        else:
+            self.downloaderPanel.removeNode()
+            self.downloaderFrameVisible = False
+
     def buildGui(self):
         self.scaledItemList = []
         self.guiFrame = DirectFrame(
@@ -545,28 +603,14 @@ class Main(ShowBase):
         )
         self.topBarHighlight.setBin("background", 3001)
 
-        self.downloadSongPrompt = OnscreenText(
-            text="Enter the URL of the playlist to download:",
+        self.downloaderButton = DirectButton(
             parent=self.topBar,
-            pos=(-0.95, 0.95),
-            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-            fg=self.hexToRgb("#f6f6f6"),
-            align=TextNode.ALeft,
+            text="Download from Youtube",
+            pos=(-0.7, 0, 0.8775),
+            scale=0.07,
+            command=self.openDownloaderPanel,
         )
-        self.downloadSongPromptEntry = DirectEntry(
-            parent=self.topBar,
-            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-            pos=(-0.95, 0, 0.9),
-            frameColor=(0, 0, 0, 0),
-            text_fg=self.hexToRgb("#f6f6f6"),
-            width=50,
-            command=self.startPlaylistDownloader,
-            cursorKeys=1,
-            focus=0,
-        )
-        self.accept("control-c", self.copySong)
-        self.accept("control-v", self.pasteFromClipboard)
-        self.pasteFromClipboard()
+        self.scaledItemList.append(self.downloaderButton)
 
         self.controlBar = DirectFrame(
             parent=self.guiFrame,
@@ -758,6 +802,7 @@ class Main(ShowBase):
         )
         self.scrollBar.setBin("background", 1900)
         self.scrollBar.hide()
+        self.winEvent(None)
 
     def checkFolderForSongs(self, path, formatList):
         for file in os.listdir(path):
@@ -984,8 +1029,11 @@ class Main(ShowBase):
         self.lastSongTime = 0
 
     def winEvent(self, window):
-        if window.isClosed():
-            sys.exit()
+        try:
+            if window.isClosed():
+                sys.exit()
+        except:
+            None
         for item in self.scaledItemList:
             try:
                 item.setScale(
@@ -1227,33 +1275,36 @@ def fadeInGuiElement(
 
 
 def notify(message: str, pos=(0.8, 0, -0.5), scale=0.75):
-    global appGuiFrame
+    try:
+        global appGuiFrame
 
-    def fade(none):
-        timeToFade = 20
-        newMessage.setTransparency(True)
+        def fade(none):
+            timeToFade = 5
+            newMessage.setTransparency(True)
 
-        def _internalThread():
-            for i in range(timeToFade):
-                val = 1 - (1 / timeToFade) * (i + 1)
-                newMessage.setAlphaScale(val)
-                t.sleep(0.01)
-            newMessage.destroy()
-            # newMessage.cleanup()
+            def _internalThread():
+                for i in range(timeToFade):
+                    val = 1 - (1 / timeToFade) * (i + 1)
+                    newMessage.setAlphaScale(val)
+                    t.sleep(0.01)
+                newMessage.destroy()
+                # newMessage.cleanup()
 
-        Thread(target=_internalThread).start()
+            Thread(target=_internalThread).start()
 
-    newMessage = OkDialog(
-        parent=appGuiFrame,
-        text=message,
-        pos=pos,
-        scale=scale,
-        frameColor=(0.5, 0.5, 0.5, 0.25),
-        text_fg=(1, 1, 1, 1),
-        command=fade,
-        pad=[0.02, 0.02, 0.02, 0.02],
-    )
-    return newMessage
+        newMessage = OkDialog(
+            parent=appGuiFrame,
+            text=message,
+            pos=pos,
+            scale=scale,
+            frameColor=(0.5, 0.5, 0.5, 0.25),
+            text_fg=(1, 1, 1, 1),
+            command=fade,
+            pad=[0.02, 0.02, 0.02, 0.02],
+        )
+        return newMessage
+    except Exception as e:
+        print(f"Error: {e}")
 
 
 app = Main()
