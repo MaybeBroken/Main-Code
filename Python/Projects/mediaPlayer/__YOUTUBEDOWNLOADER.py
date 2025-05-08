@@ -8,6 +8,7 @@ import subprocess
 import music_tag
 from typing import Callable, Any, overload
 import json
+from tkinter import *
 
 os.chdir(os.path.dirname(__file__))
 
@@ -428,6 +429,7 @@ class CORE:
     downloadingActive = False
 
     def downloadVideo(self, link):
+        os.chdir("youtubeDownloader")
         if checkValidLink(link) is False:
             print(Color.RED + "Invalid Link" + Color.RESET)
             return
@@ -438,9 +440,10 @@ class CORE:
         try:
             yt = YouTube(
                 link,
-                client="WEB",
+                client="WEB_EMBED",
                 token_file="spoofedToken.json",
             )
+            initalize_callback(yt)
             title = pathSafe(f"0 - {yt.title}", True) + ".mp4"
             print(f"| - {Color.YELLOW}Downloading{Color.RESET} {title}")
             base_callback(
@@ -478,10 +481,12 @@ class CORE:
         except exceptions.VideoRegionBlocked:
             print(Color.RED + "Video is blocked in your region" + Color.RESET)
         except Exception as e:
-            print(e)
+            print(f"Error downloading video: {e}")
         self.downloadingActive = False
+        finalize_callback(link)
 
     def downloadSong(self, link):
+        os.chdir("youtubeDownloader")
         if checkValidLink(link) is False:
             print(Color.RED + "Invalid Link" + Color.RESET)
             return
@@ -492,9 +497,10 @@ class CORE:
         try:
             yt = YouTube(
                 link,
-                client="WEB",
+                client="WEB_EMBED",
                 token_file="spoofedToken.json",
             )
+            initalize_callback(yt)
             title = pathSafe(f"0 - {yt.title}", True) + ".m4a"
             print(f"| - {Color.YELLOW}Downloading{Color.RESET} {title}")
             base_callback(
@@ -533,10 +539,12 @@ class CORE:
         except exceptions.VideoRegionBlocked:
             print(Color.RED + "Video is blocked in your region" + Color.RESET)
         except Exception as e:
-            print(e)
+            print(f"Error downloading song: {e}")
         self.downloadingActive = False
+        finalize_callback(link)
 
     def downloadPlaylist_V(self, link):
+        os.chdir("youtubeDownloader")
         if checkValidLink(link) is False:
             print(Color.RED + "Invalid Link" + Color.RESET)
             return
@@ -546,11 +554,12 @@ class CORE:
         self.downloadingActive = True
         pl = Playlist(
             url=link,
+            client="WEB_EMBED",
             token_file="spoofedToken.json",
             allow_oauth_cache=False,
         )
-        print(f"starting download of playlist {pl.title}:")
         initalize_callback(pl)
+        print(f"starting download of playlist {pl.title}:")
         print(f"Downloading {Color.CYAN}{pl.title}{Color.RESET}")
         try:
             os.mkdir(path=pathSafe(pl.title))
@@ -604,6 +613,8 @@ class CORE:
                     print(Color.RED + "Video is private" + Color.RESET)
                 except exceptions.VideoRegionBlocked:
                     print(Color.RED + "Video is blocked in your region" + Color.RESET)
+                except Exception as e:
+                    print(f"Error downloading video: {e}")
 
             threadQueue.append(_Thread(target=_inThread, args=(_title, _video)))
             index += 1
@@ -634,11 +645,12 @@ class CORE:
         self.downloadingActive = True
         pl = Playlist(
             url=link,
+            client="WEB_EMBED",
             token_file="spoofedToken.json",
             allow_oauth_cache=False,
         )
-        print(f"starting download of playlist {pl.title}:")
         initalize_callback(pl)
+        print(f"starting download of playlist {pl.title}:")
         print(f"Downloading {Color.CYAN}{pl.title}{Color.RESET}")
         try:
             os.mkdir(path=pathSafe(pl.title))
@@ -715,7 +727,6 @@ class CORE:
             )
         finalize_callback(pl)
         self.downloadingActive = False
-        os.chdir("..")
 
     def downloadArtist_V(self, link):
         if checkValidLink(link) is False:
@@ -727,7 +738,7 @@ class CORE:
         self.downloadingActive = True
         ch = Channel(
             url=link,
-            client="WEB",
+            client="WEB_EMBED",
             token_file="spoofedToken.json",
         )
         print(f"starting download of artist {ch.channel_name}:")
@@ -802,7 +813,7 @@ class CORE:
         self.downloadingActive = True
         ch = Channel(
             url=link,
-            client="WEB",
+            client="WEB_EMBED",
             token_file="spoofedToken.json",
         )
         print(f"starting download of artist {ch.channel_name}:")
@@ -936,3 +947,14 @@ if __name__ == "__main__":
                     f"{Color.YELLOW}Thread {thread.name} still running{Color.RESET}, waiting for it to finish..."
                 )
                 thread.join()
+else:
+    GLOBAL_NOTIFY = []
+
+    def print(msg: str, *args: Any, **kwargs: Any) -> None:
+        msg = msg.encode("ascii", "ignore").decode("ascii")
+        filtered_msg = "".join(
+            c
+            for c in str(msg)
+            if c.isalnum() or c.isspace() or c in ["-", "_", ":", ".", ",", "(", ")"]
+        )
+        GLOBAL_NOTIFY.append(filtered_msg)

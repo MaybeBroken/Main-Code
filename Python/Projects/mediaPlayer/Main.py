@@ -4,6 +4,8 @@ import shutil
 import time as t
 import sys
 import os
+from tkinter import Tk
+from typing import Callable
 import PIL
 import PIL.Image
 import src.scripts.vars as Wvars
@@ -20,18 +22,17 @@ from __YOUTUBEDOWNLOADER import (
     registerInitalizeCallbackFunction,
     registerFinalizeCallbackFunction,
     checkValidLink,
+    GLOBAL_NOTIFY,
 )
 from panda3d.core import (
-    FilterProperties,
     loadPrcFile,
     ConfigVariableString,
-    AudioSound,
     TextNode,
     LineSegs,
     NodePath,
     TransparencyAttrib,
     Point3,
-    AudioManager,
+    GraphicsEngine,
 )
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPM
@@ -44,10 +45,16 @@ from pydub import AudioSegment
 import numpy as np
 import scipy.fftpack as fft
 
+if sys.platform == "win32":
+    from src.scripts.win32_win_interface import (
+        win32_SYS_Interface as SYS_Interface,
+        win32_WIN_Interface as Win_Interface,
+    )
+
 try:
     CORE = CORE()
-except:
-    print("YT Downloader failed to load")
+except Exception as e:
+    print(f"YT Downloader failed to load: {e}")
 import clipboard
 
 if sys.platform == "darwin":
@@ -149,6 +156,19 @@ class Main(ShowBase):
         registerFinalizeCallbackFunction(self.finalizeCallback())
         global appGuiFrame
         appGuiFrame = self.aspect2d
+        self.taskMgr.add(self.initUpdate, "initUpdate")
+        if sys.platform == "win32":
+            GraphicsEngine.get_global_ptr().render_frame()
+            self.win_interface = Win_Interface(
+                self.win.getWindowHandle().getIntHandle()
+            )
+            self.win_interface.setForegroundWindow()
+            self.win_interface.setMaximized()
+            print("Win32 Interface Loaded")
+
+    def initUpdate(self, task):
+        MouseOverManager.update()
+        return task.cont
 
     def downloadCallback(self):
 
@@ -168,20 +188,55 @@ class Main(ShowBase):
 
         return _callback
 
+    def createDownloaderPanel(self):
+        self.downloaderNotifyPanel = DirectFrame(
+            parent=self.aspect2d,
+            frameColor=(0.1, 0.1, 0.1, 0.8),
+            frameSize=(-0.6, 0.6, 0.5, -0.5),
+            pos=(1, 0, 0.45),
+        )
+        self.downloaderNotifyPanelText = OnscreenText(
+            text="Downloading...",
+            parent=self.downloaderNotifyPanel,
+            fg=(1, 1, 1, 1),
+            scale=0.03,
+            wordwrap=25,
+            pos=(0, 0.35),
+        )
+        self.taskMgr.add(
+            lambda t: [
+                self.downloaderNotifyPanelText.setText(
+                    "\n\n".join(GLOBAL_NOTIFY)
+                    if len(GLOBAL_NOTIFY) < 10
+                    else "\n\n".join(GLOBAL_NOTIFY[-10:])
+                ),
+                t.cont,
+            ][1],
+            "downloaderNotifyPanel",
+        )
+
+    def destroyDownloaderPanel(self, t):
+        if hasattr(self, "downloaderNotifyPanel"):
+            self.downloaderNotifyPanel.removeNode()
+            del self.downloaderNotifyPanel
+        if hasattr(self, "downloaderNotifyPanelText"):
+            self.downloaderNotifyPanelText.removeNode()
+            del self.downloaderNotifyPanelText
+        self.taskMgr.remove("downloaderNotifyPanel")
+        GLOBAL_NOTIFY.clear()
+
     def initalizeCallback(self):
 
-        def _callback(playlist: Playlist):
-            title = playlist.title
-            notify(f"Playlist: {title} has been initialized")
+        def _callback(object):
+            self.createDownloaderPanel()
 
         return _callback
 
     def finalizeCallback(self):
-        def _callback(playlist: Playlist):
-            title = playlist.title
-            notify(f"Playlist: {title} has been downloaded")
+        def _callback(object):
             os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
             self.refreshPlaylists()
+            self.doMethodLater(1, self.destroyDownloaderPanel, "destroyPanel")
 
         return _callback
 
@@ -218,20 +273,32 @@ class Main(ShowBase):
         return frame
 
     def startSongDownloader(self, mode, url):
-        if url is None:
-            url = self.pasteFromClipboard()
-        if url is None:
-            return
-        if mode == "s":
-            CORE.downloadSong(url)
-        elif mode == "ps":
-            CORE.downloadPlaylist_S(url)
-        elif mode == "v":
-            CORE.downloadVideo(url)
-        elif mode == "pv":
-            CORE.downloadPlaylist_V(url)
-        elif mode == "u":
-            UPDATE().updatePlaylist(url)
+        def th(url):
+            if url is None:
+                url = self.pasteFromClipboard()
+            if url is None:
+                return
+            try:
+                if mode == "s":
+                    CORE.downloadSong(url)
+                elif mode == "ps":
+                    CORE.downloadPlaylist_S(url)
+                elif mode == "v":
+                    CORE.downloadVideo(url)
+                elif mode == "pv":
+                    CORE.downloadPlaylist_V(url)
+                elif mode == "u":
+                    UPDATE().updatePlaylist(url)
+            except Exception as e:
+                print(f"Error: {e}")
+                notify("Error: " + str(e))
+                try:
+                    self.doMethodLater(1, self.destroyDownloaderPanel, "destroyPanel")
+                except:
+                    pass
+            os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
+
+        Thread(target=th, args=[url]).start()
 
     def syncProgress(self, task):
         try:
@@ -393,28 +460,33 @@ class Main(ShowBase):
         while True:
             t.sleep(0.2)
             currentDir = []
-            for item in os.listdir(
-                os.path.join(".", f"youtubeDownloader{pathSeparator}")
-            ):
-                if os.path.isdir(
-                    os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
+            try:
+                for item in os.listdir(
+                    os.path.join(".", f"youtubeDownloader{pathSeparator}")
                 ):
-                    if self.checkFolderForSongs(
-                        os.path.join(".", f"youtubeDownloader{pathSeparator}", item),
-                        (
-                            ".m4a",
-                            ".mp3",
-                            ".wav",
-                            ".ogg",
-                            ".flac",
-                            ".wma",
-                            ".aac",
-                        ),
+                    if os.path.isdir(
+                        os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
                     ):
-                        currentDir.append(item)
-            if len(currentDir) != len(self.lastDir):
-                self.refreshPlaylists()
-            self.lastDir = currentDir
+                        if self.checkFolderForSongs(
+                            os.path.join(
+                                ".", f"youtubeDownloader{pathSeparator}", item
+                            ),
+                            (
+                                ".m4a",
+                                ".mp3",
+                                ".wav",
+                                ".ogg",
+                                ".flac",
+                                ".wma",
+                                ".aac",
+                            ),
+                        ):
+                            currentDir.append(item)
+                if len(currentDir) != len(self.lastDir):
+                    self.refreshPlaylists()
+                self.lastDir = currentDir
+            except FileNotFoundError:
+                t.sleep(1)
 
     def refreshPlaylists(self):
         for elem in self.playlists:
@@ -422,62 +494,7 @@ class Main(ShowBase):
                 if li in self.scaledItemList:
                     self.scaledItemList.remove(li)
                 li.removeNode()
-        self.playlists.clear()
-        self.listStartY = 0.7
-        self.playlists = []
-        for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
-            if os.path.isdir(
-                os.path.join(".", f"youtubeDownloader{pathSeparator}", item)
-            ):
-                if self.checkFolderForSongs(
-                    os.path.join(".", f"youtubeDownloader{pathSeparator}", item),
-                    (
-                        ".m4a",
-                        ".mp3",
-                        ".wav",
-                        ".ogg",
-                        ".flac",
-                        ".wma",
-                        ".aac",
-                    ),
-                ):
-                    button = DirectButton(
-                        parent=self.optionBar,
-                        text=item[:28] + "..." if len(item) > 28 else item,
-                        scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-                        pos=(-0.95, 0, self.listStartY),
-                        command=self.registerFolder,
-                        extraArgs=[item],
-                        text_align=TextNode.ALeft,
-                        relief=DGG.FLAT,
-                        geom=None,
-                        text_fg=self.hexToRgb("#ffffff"),
-                        frameColor=(0, 0, 0, 0),
-                    )
-                    self.scaledItemList.append(button)
-                    divider = DirectFrame(
-                        parent=self.optionBar,
-                        frameSize=(
-                            -0.95,
-                            ((len(item) if len(item) < 28 else 31) * 0.012) - 0.9,
-                            0,
-                            0.004,
-                        ),
-                        frameColor=self.hexToRgb("#8f8f8f"),
-                        pos=(0, 0, self.listStartY - 0.0275),
-                    )
-                    icon = OnscreenImage(
-                        image="src/textures/playlist.png",
-                        parent=self.optionBar,
-                        scale=(0.025 / self.getAspectRatio(self.win), 0.025, 0.025),
-                        pos=(-0.975, 0, self.listStartY + 0.0025),
-                    )
-                    self.listStartY -= 0.075
-                    self.playlists.append([button, divider, icon])
-                else:
-                    print(
-                        f"Error: {os.path.abspath(os.path.join(".", f"youtubeDownloader{pathSeparator}", item),)} does not contain songs."
-                    )
+        self.buildPlaylists()
 
     class audioWaveformVis:
         def __init__(self, main: "Main.audioWaveformVis", parent):
@@ -538,7 +555,7 @@ class Main(ShowBase):
                 parent=self.downloaderPanel,
                 text="Download Song",
                 scale=0.05,
-                pos=(-0.1, 0, 0.2),
+                pos=(0, 0, 0.2),
                 command=self.startSongDownloader,
                 extraArgs=["s", None],
             )
@@ -546,7 +563,7 @@ class Main(ShowBase):
                 parent=self.downloaderPanel,
                 text="Download Playlist (s)",
                 scale=0.05,
-                pos=(-0.1, 0, 0.1),
+                pos=(0, 0, 0.1),
                 command=self.startSongDownloader,
                 extraArgs=["ps", None],
             )
@@ -554,7 +571,7 @@ class Main(ShowBase):
                 parent=self.downloaderPanel,
                 text="Download Video",
                 scale=0.05,
-                pos=(-0.1, 0, 0),
+                pos=(0, 0, 0),
                 command=self.startSongDownloader,
                 extraArgs=["v", None],
             )
@@ -562,7 +579,7 @@ class Main(ShowBase):
                 parent=self.downloaderPanel,
                 text="Download Playlist (v)",
                 scale=0.05,
-                pos=(-0.1, 0, -0.1),
+                pos=(0, 0, -0.1),
                 command=self.startSongDownloader,
                 extraArgs=["pv", None],
             )
@@ -720,13 +737,34 @@ class Main(ShowBase):
             frameColor=(0, 0, 0, 0),
         )
         self.audioWaveform = self.audioWaveformVis(self, self.controlBar)
-
         self.scaledItemList.append(self.pausePlayButton)
         self.scaledItemList.append(self.arrowLeftButton)
         self.scaledItemList.append(self.arrowRightButton)
         self.scaledItemList.append(self.progressText)
         self.scaledItemList.append(self.songName)
+        self.scrollBar = DirectScrollBar(
+            parent=self.topBar,
+            range=[0, ((len(self.songList) - 1) / 10) * 1.5],
+            value=0,
+            thumb_relief=DGG.FLAT,
+            thumb_clickSound=None,
+            command=lambda: self.songListFrameOffset.setZ(self.scrollBar["value"]),
+            orientation=DGG.VERTICAL,
+            pos=(0.765, 0, 0),
+            frameSize=(0.1, 0.12, -0.82, 0.82),
+            frameColor=(0.6, 0.6, 0.6, 0.5),
+            relief=DGG.FLAT,
+            pageSize=1,
+        )
+        self.scrollBar.setBin("background", 1900)
+        self.scrollBar.hide()
+        self.winEvent(None)
+        self.buildPlaylists()
 
+    def mouseOverPlaylist(self, v, frame):
+        frame.setColorScale((0.5, 0.5, 0.5, 1) if v else (1, 1, 1, 1))
+
+    def buildPlaylists(self):
         self.listStartY = 0.7
         self.playlists = []
         for item in os.listdir(os.path.join(".", f"youtubeDownloader{pathSeparator}")):
@@ -747,15 +785,21 @@ class Main(ShowBase):
                 ):
                     backgroundFrame = DirectFrame(
                         parent=self.optionBar,
-                        frameSize=(-1, -0.5, 0.075, -0.075),
+                        frameSize=(-0.25, 0.25, 0.075, -0.075),
                         frameColor=(0.3, 0.3, 0.3, 1),
-                        pos=(0, 0, self.listStartY),
+                        pos=(-0.75, 0, self.listStartY),
+                    )
+                    MouseOverManager.registerElement(
+                        element=backgroundFrame,
+                        hitbox_scale=[1.1, 0.9],
+                        callback=self.mouseOverPlaylist,
+                        frame=backgroundFrame,
                     )
                     button = DirectButton(
                         parent=self.optionBar,
                         text=item[:28] + "..." if len(item) > 28 else item,
                         scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-                        pos=(-0.95, 0, self.listStartY+0.015),
+                        pos=(-0.95, 0, self.listStartY + 0.015),
                         command=self.registerFolder,
                         extraArgs=[item],
                         text_align=TextNode.ALeft,
@@ -782,27 +826,37 @@ class Main(ShowBase):
                         scale=(0.025 / self.getAspectRatio(self.win), 0.025, 0.025),
                         pos=(-0.975, 0, self.listStartY + 0.0025),
                     )
+                    deleteButton = DirectButton(
+                        parent=self.optionBar,
+                        text="X",
+                        scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
+                        pos=(-0.6, 0, self.listStartY + 0.0025),
+                        command=self.deletePlaylist,
+                        extraArgs=[item],
+                        text_align=TextNode.ALeft,
+                        relief=DGG.FLAT,
+                        geom=None,
+                        text_fg=self.hexToRgb("#ffffff"),
+                        frameColor=(0, 0, 0, 0),
+                    )
                     self.scaledItemList.append(icon)
-                    self.listStartY -= 0.01
-                    self.playlists.append([button, divider, icon])
+                    self.listStartY -= 0.165
+                    self.playlists.append(
+                        [button, divider, icon, deleteButton, backgroundFrame]
+                    )
 
-        self.scrollBar = DirectScrollBar(
-            parent=self.topBar,
-            range=[0, ((len(self.songList) - 1) / 10) * 1.5],
-            value=0,
-            thumb_relief=DGG.FLAT,
-            thumb_clickSound=None,
-            command=lambda: self.songListFrameOffset.setZ(self.scrollBar["value"]),
-            orientation=DGG.VERTICAL,
-            pos=(0.765, 0, 0),
-            frameSize=(0.1, 0.12, -0.82, 0.82),
-            frameColor=(0.6, 0.6, 0.6, 0.5),
-            relief=DGG.FLAT,
-            pageSize=1,
-        )
-        self.scrollBar.setBin("background", 1900)
-        self.scrollBar.hide()
-        self.winEvent(None)
+    def deletePlaylist(self, playlistName):
+        playlistPath = os.path.join(self.rootListPath, playlistName)
+        if os.path.exists(playlistPath):
+            try:
+                shutil.rmtree(playlistPath)  # Use shutil.rmtree to delete directories
+                self.refreshPlaylists()
+            except PermissionError as e:
+                notify(f"Permission denied: {e}")
+            except Exception as e:
+                notify(f"Error deleting playlist: {e}")
+        else:
+            notify(f'Playlist "{playlistName}" does not exist')
 
     def checkFolderForSongs(self, path, formatList):
         for file in os.listdir(path):
@@ -939,7 +993,10 @@ class Main(ShowBase):
         try:
             self.backgroundImage.setImage(imageName)
         except Exception as e:
-            self.backgroundImage.setImage("src/textures/404.png")
+            try:
+                self.backgroundImage.setImage("src/textures/404.png")
+            except Exception as e:
+                print(f"Error: {e}")
 
     def setBackgroundBin(self):
         if self.viewMode == 0:
@@ -1030,10 +1087,11 @@ class Main(ShowBase):
 
     def winEvent(self, window):
         try:
-            if window.isClosed():
-                sys.exit()
-        except:
-            None
+            if window is not None:
+                if window.isClosed():
+                    sys.exit()
+        except Exception as e:
+            print(f"Error: {e}")
         for item in self.scaledItemList:
             try:
                 item.setScale(
@@ -1143,7 +1201,10 @@ class Main(ShowBase):
             self.songListFrameOffset.setZ(((songId) / 10) * 1.5 - 0.9)
             self.songList[songId]["nodePath"] = songPanel
 
-        self.scrollBar["range"] = [0, ((len(self.songList) - 1) / 10) * 1.5]
+        if len(self.songList) == 0:
+            return
+
+        self.scrollBar["range"] = [0, ((len(self.songList)) / 10) * 1.5]
         self.scrollBar.setRange()
         self.scrollBar.setValue(0)
         self.scrollBar.show()
@@ -1156,6 +1217,8 @@ class Main(ShowBase):
         ).start()
         if IMAGESCALE is None:
             IMAGESCALE = 1280 / 720
+        if hasattr(self, "backgroundImage"):
+            self.backgroundImage.destroy()
         self.backgroundImage = OnscreenImage(
             parent=self.render2d,
             image=self.loader.loadTexture("src/textures/404.png"),
@@ -1306,6 +1369,67 @@ def notify(message: str, pos=(0.8, 0, -0.5), scale=0.75):
     except Exception as e:
         print(f"Error: {e}")
 
+
+class MouseOverManager:
+    def __init__(self):
+        self.elements = []
+        self.activeElements = []
+
+    def registerElement(
+        self, element, hitbox_scale: tuple[2], callback: Callable, *args, **kwargs
+    ):
+        """
+        Registers an element with a callback to be triggered when the mouse is over the element.
+        :param element: The NodePath or DirectGUI element to monitor.
+        :param callback: The function to call when the mouse is over the element.
+        """
+        self.elements.append((element, hitbox_scale, callback, args, kwargs))
+
+    def update(self):
+        """
+        Checks if the mouse is over any registered elements and triggers the corresponding callbacks.
+        """
+        if base.mouseWatcherNode.hasMouse():  # type: ignore
+            mouse_pos = base.mouseWatcherNode.getMouse()  # type: ignore
+            for element, hitbox_scale, callback, args, kwargs in self.elements:
+                try:
+                    if not element or element.isEmpty() or element.isHidden():
+                        self.elements.remove(
+                            (element, hitbox_scale, callback, args, kwargs)
+                        )
+                        continue
+                except:
+                    self.elements.remove(
+                        (element, hitbox_scale, callback, args, kwargs)
+                    )
+                    continue
+                bounds = element.getBounds()
+                xmin, xmax, ymin, ymax = bounds
+                transform = element.getTransform(base.render2d)  # type: ignore
+                pos: tuple[3] = transform.getPos()
+                scale: tuple[3] = element.getScale()
+                xmin *= scale[0] * hitbox_scale[0]
+                xmax *= scale[0] * hitbox_scale[0]
+                ymin *= scale[2] * hitbox_scale[1]
+                ymax *= scale[2] * hitbox_scale[1]
+
+                xmin += pos[0]
+                xmax += pos[0]
+                ymin += pos[2]
+                ymax += pos[2]
+
+                bounds = (xmin, xmax, ymin, ymax)
+                if xmin <= mouse_pos.x <= xmax and ymin <= mouse_pos.y <= ymax:
+                    if element not in self.activeElements:
+                        self.activeElements.append(element)
+                        callback(True, *args, **kwargs)
+                else:
+                    if element in self.activeElements:
+                        self.activeElements.remove(element)
+                        callback(False, *args, **kwargs)
+
+
+MouseOverManager = MouseOverManager()
 
 app = Main()
 app.run()
