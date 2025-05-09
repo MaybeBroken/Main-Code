@@ -1,13 +1,31 @@
 import sys
-import time
+import subprocess
 import logging
 
 if not sys.platform.startswith("win"):
     raise OSError("This module is only available on Windows.")
-import win32gui  # type: ignore
-import win32con  # type: ignore
-import win32api  # type: ignore
-import win32process  # type: ignore
+
+
+def install_and_import(package):
+    try:
+        __import__(package)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        __import__(package)
+        print(f"Installed and imported {package} successfully.")
+
+
+try:
+    import win32gui  # type: ignore
+    import win32con  # type: ignore
+    import win32api  # type: ignore
+    import win32process  # type: ignore
+except ImportError:
+    install_and_import("pywin32")
+    import win32gui  # type: ignore
+    import win32con  # type: ignore
+    import win32api  # type: ignore
+    import win32process  # type: ignore
 
 # Configure logging to handle exceptions gracefully
 logging.basicConfig(

@@ -1,14 +1,63 @@
-from pytubefix import YouTube, Playlist, exceptions, Channel, Search
+import sys
+import subprocess
+
+
+def install_and_import(package):
+    try:
+        __import__(package)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        __import__(package)
+        print(f"Installed {package} successfully.")
+
+
+def update_package(package):
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--upgrade", package]
+        )
+        print(f"Updated {package} successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to update {package}: {e}")
+
+
+try:
+    from pytubefix import YouTube, Playlist, exceptions, Channel, Search
+except ImportError:
+    install_and_import("pytubefix")
+    from pytubefix import YouTube, Playlist, exceptions, Channel, Search
+
+update_package("pytubefix")
+
+
+try:
+    import requests
+except ImportError:
+    install_and_import("requests")
+    import requests
+
 import os
-import requests
 from threading import Thread as _Thread
 import threading as th
 import time
-import subprocess
-import music_tag
-from typing import Callable, Any, overload
-import json
-from tkinter import *
+
+try:
+    import music_tag
+except ImportError:
+    install_and_import("music-tag")
+    import music_tag
+
+try:
+    from typing import Callable, Any, overload
+except ImportError:
+    install_and_import("typing")
+    from typing import Callable, Any, overload
+
+try:
+    import json
+except ImportError:
+    install_and_import("json")
+    import json
 
 os.chdir(os.path.dirname(__file__))
 
@@ -35,6 +84,8 @@ for s in data[1:-1]:
     elif "poToken" in s:
         poToken = s.split(": ")[1].split(",")[0].strip("'")
 
+if not os.path.exists("youtubeDownloader"):
+    os.mkdir("youtubeDownloader")
 os.chdir("youtubeDownloader")
 with open("spoofedToken.json", "w") as f:
     f.write(

@@ -1,18 +1,121 @@
-import json
-from random import randint, shuffle
-import shutil
-import time as t
 import sys
-import os
-from tkinter import Tk
-from typing import Callable
-import PIL
-import PIL.Image
+import subprocess
+
+
+def install_and_import(package):
+    try:
+        __import__(package)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        __import__(package)
+
+subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
+
+try:
+    import json
+except ImportError:
+    install_and_import("json")
+
+try:
+    from random import randint, shuffle
+except ImportError:
+    install_and_import("random")
+
+try:
+    import shutil
+except ImportError:
+    install_and_import("shutil")
+
+try:
+    import time as t
+except ImportError:
+    install_and_import("time")
+
+try:
+    import os
+except ImportError:
+    install_and_import("os")
+
+try:
+    from typing import Callable
+except ImportError:
+    install_and_import("typing")
+
+try:
+    from screeninfo import get_monitors
+except ImportError:
+    install_and_import("screeninfo")
+
+try:
+    from direct.showbase.ShowBase import ShowBase
+except ImportError:
+    install_and_import("panda3d")
+
+try:
+    from clipboard import copy
+except ImportError:
+    install_and_import("clipboard")
+
+try:
+    from direct.interval.LerpInterval import *
+except ImportError:
+    install_and_import("panda3d")
+
+try:
+    from panda3d.core import (
+        loadPrcFile,
+        ConfigVariableString,
+        TextNode,
+        LineSegs,
+        NodePath,
+        TransparencyAttrib,
+        Point3,
+        GraphicsEngine,
+    )
+except ImportError:
+    install_and_import("panda3d")
+
+try:
+    from direct.gui.OnscreenImage import OnscreenImage
+except ImportError:
+    install_and_import("panda3d")
+
+try:
+    from direct.stdpy.threading import Thread
+except ImportError:
+    install_and_import("panda3d")
+
+try:
+    from direct.gui.DirectGui import *
+except ImportError:
+    install_and_import("panda3d")
+
+try:
+    from pydub import AudioSegment
+except ImportError:
+    install_and_import("pydub")
+
+try:
+    import numpy as np
+except ImportError:
+    install_and_import("numpy")
+
+try:
+    import scipy.fftpack as fft
+except ImportError:
+    install_and_import("scipy")
+
+try:
+    import clipboard
+except ImportError:
+    install_and_import("clipboard")
+
+if sys.platform == "win32":
+    from src.scripts.win32_win_interface import (
+        win32_SYS_Interface as SYS_Interface,
+        win32_WIN_Interface as Win_Interface,
+    )
 import src.scripts.vars as Wvars
-from screeninfo import get_monitors
-from direct.showbase.ShowBase import ShowBase
-from clipboard import copy
-from direct.interval.LerpInterval import *
 from __YOUTUBEDOWNLOADER import (
     CORE,
     UPDATE,
@@ -24,38 +127,11 @@ from __YOUTUBEDOWNLOADER import (
     checkValidLink,
     GLOBAL_NOTIFY,
 )
-from panda3d.core import (
-    loadPrcFile,
-    ConfigVariableString,
-    TextNode,
-    LineSegs,
-    NodePath,
-    TransparencyAttrib,
-    Point3,
-    GraphicsEngine,
-)
-from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPM
-from direct.gui.OnscreenImage import OnscreenImage
-from direct.stdpy.threading import Thread
-from direct.gui.DirectGui import *
-from reportlab.graphics.shapes import Drawing
-from reportlab.lib.colors import HexColor
-from pydub import AudioSegment
-import numpy as np
-import scipy.fftpack as fft
-
-if sys.platform == "win32":
-    from src.scripts.win32_win_interface import (
-        win32_SYS_Interface as SYS_Interface,
-        win32_WIN_Interface as Win_Interface,
-    )
 
 try:
     CORE = CORE()
 except Exception as e:
     print(f"YT Downloader failed to load: {e}")
-import clipboard
 
 if sys.platform == "darwin":
     pathSeparator = "/"
@@ -64,28 +140,6 @@ elif sys.platform == "win32":
 os.chdir(__file__.replace(__file__.split(pathSeparator)[-1], ""))
 
 IMAGESCALE: int = None
-
-
-def convertSvgToPng(svgPath, pngPath, dpi=800, bgColor="#212121"):
-    if os.path.exists(svgPath):
-        drawing = svg2rlg(svgPath)
-        # Change the color of the objects in the SVG
-        for obj in drawing.contents:
-            if isinstance(obj, Drawing):
-                for sub_obj in obj.contents:
-                    sub_obj.fillColor = HexColor(bgColor)
-
-        renderPM.drawToFile(
-            drawing,
-            pngPath,
-            fmt="PNG",
-            dpi=dpi,
-            bg=HexColor(bgColor),
-        )
-    else:
-        print(f"Error: {svgPath} does not exist.")
-    return pngPath
-
 
 monitor = get_monitors()
 loadPrcFile(f"src{pathSeparator}settings.prc")
@@ -145,6 +199,8 @@ class Main(ShowBase):
         self.favoritesToggle = False
         self.favoritesList = []
         self.rootListPath = os.path.join(".", f"youtubeDownloader{pathSeparator}")
+        if not os.path.exists(self.rootListPath):
+            os.makedirs(self.rootListPath)
         self.setupWorld()
         self.buildGui()
         self.setupControls()
@@ -1185,11 +1241,8 @@ class Main(ShowBase):
                 self.songList.remove(obj)
         for songId in range(len(self.songList)):
             global IMAGESCALE
-            try:
-                refImage = PIL.Image.open(self.songList[songId]["imagePath"])
-                IMAGESCALE = refImage.width / refImage.height
-            except:
-                IMAGESCALE = 1280 / 720
+
+            IMAGESCALE = 1280 / 720
             songPanel = self.makeSongPanel(songId)
             self.songListFrameOffset.setZ(((songId) / 10) * 1.5 - 0.9)
             self.songList[songId]["nodePath"] = songPanel
