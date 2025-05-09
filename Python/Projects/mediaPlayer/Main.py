@@ -109,25 +109,27 @@ try:
     import clipboard
 except ImportError:
     install_and_import("clipboard")
-
-if sys.platform == "win32":
-    from src.scripts.win32_win_interface import (
-        win32_SYS_Interface as SYS_Interface,
-        win32_WIN_Interface as Win_Interface,
+try:
+    if sys.platform == "win32":
+        from src.scripts.win32_win_interface import (
+            win32_SYS_Interface as SYS_Interface,
+            win32_WIN_Interface as Win_Interface,
+        )
+    import src.scripts.vars as Wvars
+    from __YOUTUBEDOWNLOADER import (
+        CORE,
+        UPDATE,
+        YouTube,
+        Playlist,
+        registerCallbackFunction,
+        registerInitalizeCallbackFunction,
+        registerFinalizeCallbackFunction,
+        checkValidLink,
+        GLOBAL_NOTIFY,
     )
-import src.scripts.vars as Wvars
-from __YOUTUBEDOWNLOADER import (
-    CORE,
-    UPDATE,
-    YouTube,
-    Playlist,
-    registerCallbackFunction,
-    registerInitalizeCallbackFunction,
-    registerFinalizeCallbackFunction,
-    checkValidLink,
-    GLOBAL_NOTIFY,
-)
-
+except ImportError:
+    print("YT Downloader failed to load: Your modules are corrupted.")
+    print(os.listdir())
 try:
     CORE = CORE()
 except Exception as e:
