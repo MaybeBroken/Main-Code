@@ -12,6 +12,8 @@ from tkinter import *
 
 os.chdir(os.path.dirname(__file__))
 
+semaphore = th.Semaphore(20)
+
 result = subprocess.run(
     ["node", "one-shot.js"],
     cwd="./po-token-generator/examples/",
@@ -39,23 +41,43 @@ with open("spoofedToken.json", "w") as f:
         '{\n\t"visitorData":"' + visitorData + '",\n\t"poToken":"' + poToken + '"\n}'
     )
 
+if __name__ == "__main__":
 
-class Color:
-    GREEN = "\033[92m"
-    LIGHT_GREEN = "\033[1;92m"
-    RED = "\033[91m"
-    YELLOW = "\033[93m"
-    BLUE = "\033[1;34m"
-    MAGENTA = "\033[1;35m"
-    BOLD = "\033[;1m"
-    CYAN = "\033[1;36m"
-    LIGHT_CYAN = "\033[1;96m"
-    LIGHT_GREY = "\033[1;37m"
-    DARK_GREY = "\033[1;90m"
-    BLACK = "\033[1;30m"
-    WHITE = "\033[1;97m"
-    INVERT = "\033[;7m"
-    RESET = "\033[0m"
+    class Color:
+        GREEN = "\033[92m"
+        LIGHT_GREEN = "\033[1;92m"
+        RED = "\033[91m"
+        YELLOW = "\033[93m"
+        BLUE = "\033[1;34m"
+        MAGENTA = "\033[1;35m"
+        BOLD = "\033[;1m"
+        CYAN = "\033[1;36m"
+        LIGHT_CYAN = "\033[1;96m"
+        LIGHT_GREY = "\033[1;37m"
+        DARK_GREY = "\033[1;90m"
+        BLACK = "\033[1;30m"
+        WHITE = "\033[1;97m"
+        INVERT = "\033[;7m"
+        RESET = "\033[0m"
+
+else:
+
+    class Color:
+        GREEN = ""
+        LIGHT_GREEN = ""
+        RED = ""
+        YELLOW = ""
+        BLUE = ""
+        MAGENTA = ""
+        BOLD = ""
+        CYAN = ""
+        LIGHT_CYAN = ""
+        LIGHT_GREY = ""
+        DARK_GREY = ""
+        BLACK = ""
+        WHITE = ""
+        INVERT = ""
+        RESET = ""
 
 
 pathSeparator = "\\"
@@ -571,12 +593,12 @@ class CORE:
         sucessfulVideos = []
         threadQueue: list[_Thread] = []
         for _video in pl.videos:
-            time.sleep(0.05)
-            _title = _video.title
-            print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
+            time.sleep(0.1)
 
-            def _inThread(title, video: YouTube):
-                title = pathSafe(f"{index} - {title}", True) + ".mp4"
+            def _inThread(video: YouTube, index: int):
+                print(f"Starting download for video {index}")
+                title = pathSafe(f"{index} - {video.title}", True) + ".mp4"
+                print(f"| - {Color.YELLOW}Downloading{Color.RESET} {title}")
                 base_callback(
                     video=video,
                     id=index,
@@ -616,7 +638,7 @@ class CORE:
                 except Exception as e:
                     print(f"Error downloading video: {e}")
 
-            threadQueue.append(_Thread(target=_inThread, args=(_title, _video)))
+            threadQueue.append(_Thread(target=_inThread, args=(_video, index)))
             index += 1
         for thread in threadQueue:
             thread.start()
@@ -662,12 +684,12 @@ class CORE:
         sucessfulVideos = []
         threadQueue: list[_Thread] = []
         for _video in pl.videos:
-            time.sleep(0.05)
-            _title = _video.title
-            print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
 
-            def _inThread(title, video: YouTube, index: int):
-                title = pathSafe(f"{index} - {title}", True) + ".m4a"
+            def _inThread(video: YouTube, index: int):
+                print(f"Starting download for video {index}")
+                title = video.title
+                print(f"| - {Color.YELLOW}Downloading{Color.RESET} {title}")
+                title = pathSafe(f"{index} - {video.title}", True) + ".m4a"
                 base_callback(
                     video=video,
                     id=index,
@@ -688,7 +710,7 @@ class CORE:
                         output_path=pathSafe(pl.title),
                         filename=title,
                     )
-                    print(f"| - {Color.GREEN}Downloaded{Color.RESET} {title}")
+                    print(f"| - {Color.GREEN}Finished downloading{Color.RESET} {title}")
                     apply_cover_image(
                         video.thumbnail_url,
                         pathSafe(pl.title) + os.path.sep + "img",
@@ -704,15 +726,22 @@ class CORE:
                     )
                     sucessfulVideos.append(video)
                 except exceptions.VideoUnavailable:
-                    print(Color.RED + "Video is unavailable" + Color.RESET)
+                    print(Color.RED + f"Video {video} is unavailable" + Color.RESET)
                 except exceptions.VideoPrivate:
-                    print(Color.RED + "Video is private" + Color.RESET)
+                    print(Color.RED + f"Video {video} is private" + Color.RESET)
                 except exceptions.VideoRegionBlocked:
-                    print(Color.RED + "Video is blocked in your region" + Color.RESET)
+                    print(
+                        Color.RED
+                        + f"Video {video} is blocked in your region"
+                        + Color.RESET
+                    )
+                except Exception as e:
+                    print(f"Error downloading video: {e}")
 
-            threadQueue.append(_Thread(target=_inThread, args=(_title, _video, index)))
+            threadQueue.append(_Thread(target=_inThread, args=(_video, index)))
             index += 1
         for thread in threadQueue:
+            time.sleep(0.5)
             thread.start()
         for thread in threadQueue:
             thread.join()
@@ -827,10 +856,10 @@ class CORE:
         for _list in ch.home:
             for _video in _list.videos:
                 time.sleep(0.05)
-                _title = _video.title
-                print(f"| - {Color.YELLOW}Downloading{Color.RESET} {_title}")
 
-                def _inThread(title, video: YouTube, index: int):
+                def _inThread(video: YouTube, index: int):
+                    title = video.title
+                    print(f"| - {Color.YELLOW}Downloading{Color.RESET} {title}")
                     title = pathSafe(f"{index} - {title}", True) + ".m4a"
                     base_callback(
                         video=video,
@@ -870,7 +899,7 @@ class CORE:
                             Color.RED + "Video is blocked in your region" + Color.RESET
                         )
 
-                _Thread(target=_inThread, args=(_title, _video, _index)).start()
+                _Thread(target=_inThread, args=(_video, _index)).start()
                 _index += 1
         print(
             f"Downloaded {Color.GREEN}{ch.channel_name}{Color.RESET} --  awaiting stragglers"
@@ -955,6 +984,39 @@ else:
         filtered_msg = "".join(
             c
             for c in str(msg)
-            if c.isalnum() or c.isspace() or c in ["-", "_", ":", ".", ",", "(", ")"]
+            if c.isalnum()
+            or c.isspace()
+            or c
+            in [
+                "-",
+                "_",
+                ":",
+                ".",
+                ",",
+                "(",
+                ")",
+                "!",
+                "?",
+                "'",
+                '"',
+                "=",
+                "+",
+                "&",
+                "%",
+                "$",
+                "#",
+                "@",
+                "^",
+                "*",
+                ">",
+                "<",
+                "/",
+                "\\",
+                "|",
+                "{",
+                "}",
+                "[",
+                "]",
+            ]
         )
         GLOBAL_NOTIFY.append(filtered_msg)

@@ -200,15 +200,16 @@ class Main(ShowBase):
             parent=self.downloaderNotifyPanel,
             fg=(1, 1, 1, 1),
             scale=0.03,
-            wordwrap=25,
-            pos=(0, 0.35),
+            wordwrap=40,
+            pos=(-0.55, 0.45),
+            align=TextNode.ALeft,
         )
         self.taskMgr.add(
             lambda t: [
                 self.downloaderNotifyPanelText.setText(
-                    "\n\n".join(GLOBAL_NOTIFY)
-                    if len(GLOBAL_NOTIFY) < 10
-                    else "\n\n".join(GLOBAL_NOTIFY[-10:])
+                    "\n".join(GLOBAL_NOTIFY)
+                    if len(GLOBAL_NOTIFY) < 30
+                    else "\n".join(GLOBAL_NOTIFY[-30:])
                 ),
                 t.cont,
             ][1],
@@ -239,38 +240,6 @@ class Main(ShowBase):
             self.doMethodLater(1, self.destroyDownloaderPanel, "destroyPanel")
 
         return _callback
-
-    def makeDownloaderPanel(self, songId):
-        song = self.songList[songId]
-        y = 0.7 + ((-songId) / 10) * 1.5
-        frame = DirectFrame(
-            parent=self.songListFrameOffset,
-            frameSize=(-0.45, 0.85, -0.06, 0.06),
-            frameColor=self.hexToRgb("#030303"),
-            pos=(0, 0, y),
-        )
-        frame.setBin("background", 1000)
-        frame.setTag("songId", str(songId))
-        nameText = OnscreenText(
-            text=song["name"][:55] + "..." if len(song["name"]) > 55 else song["name"],
-            parent=frame,
-            scale=(0.05 / self.getAspectRatio(self.win), 0.05, 0.05),
-            fg=self.hexToRgb("#f6f6f6"),
-            pos=(-0.3, 0, 0),
-            align=TextNode.ALeft,
-        )
-        nameText.setBin("background", 1001)
-        frameHighlight = DirectFrame(
-            parent=frame,
-            frameSize=(-0.45, 0.85, -0.005, 0),
-            frameColor=self.hexToRgb("#1e1e1e"),
-            pos=(0, 0, -0.065),
-        )
-
-        self.scaledItemList.append(nameText)
-        self.scaledItemList.append(frameHighlight)
-        self.scaledItemList.append(frame)
-        return frame
 
     def startSongDownloader(self, mode, url):
         def th(url):
@@ -781,6 +750,7 @@ class Main(ShowBase):
                         ".flac",
                         ".wma",
                         ".aac",
+                        ".mp4",
                     ),
                 ):
                     backgroundFrame = DirectFrame(
@@ -884,110 +854,130 @@ class Main(ShowBase):
         copy(self.songList[self.songIndex]["path"])
 
     def shuffleSongs(self):
-        self.baseSongList = self.songList.copy()
-        shuffle(self.songList)
-        self.songIndex = 0
-        for item in self.songList:
-            item["object"].stop()
-            item["nodePath"].setColorScale((1, 1, 1, 1))
-        self.songList[self.songIndex]["object"].play()
-        self.songList[self.songIndex]["object"].set_time(0)
-        self.songList[self.songIndex]["played"] = 1
-        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
-        self.activeSongElement: AudioSegment = AudioSegment.from_file(
-            self.songList[self.songIndex]["path"],
-            format=self.songList[self.songIndex]["path"].split(".")[-1],
-        )
-        self.setBackgroundImage(
-            self.songList[self.songIndex]["imagePath"],
-            self.backgroundToggle,
-            self.backgroundToggle,
-        )
+        try:
+            self.baseSongList = self.songList.copy()
+            shuffle(self.songList)
+            self.songIndex = 0
+            for item in self.songList:
+                item["object"].stop()
+                item["nodePath"].setColorScale((1, 1, 1, 1))
+            self.songList[self.songIndex]["object"].play()
+            self.songList[self.songIndex]["object"].set_time(0)
+            self.songList[self.songIndex]["played"] = 1
+            self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
+            self.activeSongElement: AudioSegment = AudioSegment.from_file(
+                self.songList[self.songIndex]["path"],
+                format=self.songList[self.songIndex]["path"].split(".")[-1],
+            )
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"],
+                self.backgroundToggle,
+                self.backgroundToggle,
+            )
+        except Exception as e:
+            print(f"Error: {e}")
+            notify("Error: " + str(e))
 
     def sortSongs(self):
-        self.songList = self.baseSongList.copy()
-        self.songIndex = 0
-        for item in self.songList:
-            item["object"].stop()
-            item["nodePath"].setColorScale((1, 1, 1, 1))
-        self.songList[self.songIndex]["object"].play()
-        self.songList[self.songIndex]["object"].set_time(0)
-        self.songList[self.songIndex]["played"] = 1
-        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
-        self.activeSongElement: AudioSegment = AudioSegment.from_file(
-            self.songList[self.songIndex]["path"],
-            format=self.songList[self.songIndex]["path"].split(".")[-1],
-        )
-        self.setBackgroundImage(
-            self.songList[self.songIndex]["imagePath"],
-            self.backgroundToggle,
-            self.backgroundToggle,
-        )
+        try:
+            self.songList = self.baseSongList.copy()
+            self.songIndex = 0
+            for item in self.songList:
+                item["object"].stop()
+                item["nodePath"].setColorScale((1, 1, 1, 1))
+            self.songList[self.songIndex]["object"].play()
+            self.songList[self.songIndex]["object"].set_time(0)
+            self.songList[self.songIndex]["played"] = 1
+            self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
+            self.activeSongElement: AudioSegment = AudioSegment.from_file(
+                self.songList[self.songIndex]["path"],
+                format=self.songList[self.songIndex]["path"].split(".")[-1],
+            )
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"],
+                self.backgroundToggle,
+                self.backgroundToggle,
+            )
+        except Exception as e:
+            print(f"Error: {e}")
+            notify("Error: " + str(e))
 
     def nextSong(self):
-        self.songList[self.songIndex]["object"].stop()
-        self.songList[self.songIndex]["nodePath"].setColorScale((1, 1, 1, 1))
-        if self.songIndex + 1 < len(self.songList):
-            self.songIndex += 1
-        self.songList[self.songIndex]["object"].play()
-        self.songList[self.songIndex]["object"].set_time(0)
-        self.songList[self.songIndex]["played"] = 1
-        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
-        self.activeSongElement: AudioSegment = AudioSegment.from_file(
-            self.songList[self.songIndex]["path"],
-            format=self.songList[self.songIndex]["path"].split(".")[-1],
-        )
-        self.setBackgroundImage(
-            self.songList[self.songIndex]["imagePath"],
-            self.backgroundToggle,
-            self.backgroundToggle,
-        )
-        self.paused = False
+        try:
+            self.songList[self.songIndex]["object"].stop()
+            self.songList[self.songIndex]["nodePath"].setColorScale((1, 1, 1, 1))
+            if self.songIndex + 1 < len(self.songList):
+                self.songIndex += 1
+            self.songList[self.songIndex]["object"].play()
+            self.songList[self.songIndex]["object"].set_time(0)
+            self.songList[self.songIndex]["played"] = 1
+            self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
+            self.activeSongElement: AudioSegment = AudioSegment.from_file(
+                self.songList[self.songIndex]["path"],
+                format=self.songList[self.songIndex]["path"].split(".")[-1],
+            )
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"],
+                self.backgroundToggle,
+                self.backgroundToggle,
+            )
+            self.paused = False
+        except Exception as e:
+            print(f"Error: {e}")
+            notify("Error: " + str(e))
 
     def prevSong(self):
-        self.songList[self.songIndex]["object"].stop()
-        self.songList[self.songIndex]["nodePath"].setColorScale((1, 1, 1, 1))
-        if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime < 3.5:
-            self.songIndex -= 1
-        self.songList[self.songIndex]["object"].play()
-        self.songList[self.songIndex]["object"].set_time(0)
-        self.songList[self.songIndex]["played"] = 1
-        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
-        self.activeSongElement: AudioSegment = AudioSegment.from_file(
-            self.songList[self.songIndex]["path"],
-            format=self.songList[self.songIndex]["path"].split(".")[-1],
-        )
-        self.setBackgroundImage(
-            self.songList[self.songIndex]["imagePath"],
-            self.backgroundToggle,
-            self.backgroundToggle,
-        )
-        self.paused = False
-        self.lastBackTime = t.time()
+        try:
+            self.songList[self.songIndex]["object"].stop()
+            self.songList[self.songIndex]["nodePath"].setColorScale((1, 1, 1, 1))
+            if self.songIndex - 1 >= 0 and t.time() - self.lastBackTime < 3.5:
+                self.songIndex -= 1
+            self.songList[self.songIndex]["object"].play()
+            self.songList[self.songIndex]["object"].set_time(0)
+            self.songList[self.songIndex]["played"] = 1
+            self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
+            self.activeSongElement: AudioSegment = AudioSegment.from_file(
+                self.songList[self.songIndex]["path"],
+                format=self.songList[self.songIndex]["path"].split(".")[-1],
+            )
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"],
+                self.backgroundToggle,
+                self.backgroundToggle,
+            )
+            self.paused = False
+            self.lastBackTime = t.time()
+        except Exception as e:
+            print(f"Error: {e}")
+            notify("Error: " + str(e))
 
     def goToSong(self, songId):
-        if self.shuffleSongsToggle:
-            self.sortSongs()
-            self.shuffleSongsToggle = False
-            self.toggleSongShuffleButton.setColor((1, 1, 1, 1))
-        self.songList[self.songIndex]["object"].stop()
-        self.songList[self.songIndex]["nodePath"].setColorScale((1, 1, 1, 1))
-        if songId < len(self.songList) and songId >= 0:
-            self.songIndex = songId
-        self.songList[self.songIndex]["object"].play()
-        self.songList[self.songIndex]["object"].set_time(0)
-        self.songList[self.songIndex]["played"] = 1
-        self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
-        self.activeSongElement: AudioSegment = AudioSegment.from_file(
-            self.songList[self.songIndex]["path"],
-            format=self.songList[self.songIndex]["path"].split(".")[-1],
-        )
-        self.setBackgroundImage(
-            self.songList[self.songIndex]["imagePath"],
-            self.backgroundToggle,
-            self.backgroundToggle,
-        )
-        self.paused = False
+        try:
+            if self.shuffleSongsToggle:
+                self.sortSongs()
+                self.shuffleSongsToggle = False
+                self.toggleSongShuffleButton.setColor((1, 1, 1, 1))
+            self.songList[self.songIndex]["object"].stop()
+            self.songList[self.songIndex]["nodePath"].setColorScale((1, 1, 1, 1))
+            if songId < len(self.songList) and songId >= 0:
+                self.songIndex = songId
+            self.songList[self.songIndex]["object"].stop()
+            self.songList[self.songIndex]["object"].set_time(0)
+            self.songList[self.songIndex]["played"] = 1
+            self.songList[self.songIndex]["nodePath"].setColorScale((0.65, 1, 0.7, 1))
+            self.activeSongElement: AudioSegment = AudioSegment.from_file(
+                self.songList[self.songIndex]["path"],
+                format=self.songList[self.songIndex]["path"].split(".")[-1],
+            )
+            self.setBackgroundImage(
+                self.songList[self.songIndex]["imagePath"],
+                self.backgroundToggle,
+                self.backgroundToggle,
+            )
+            self.togglePlay(True)
+        except Exception as e:
+            print(f"Error: {e}")
+            notify("Error: " + str(e))
 
     def setBackgroundImage(self, imageName, blur, background):
         try:
@@ -997,6 +987,7 @@ class Main(ShowBase):
                 self.backgroundImage.setImage("src/textures/404.png")
             except Exception as e:
                 print(f"Error: {e}")
+                notify("Error: " + str(e))
 
     def setBackgroundBin(self):
         if self.viewMode == 0:
@@ -1043,7 +1034,7 @@ class Main(ShowBase):
                     (0, 0, 0, 0),
                 ).start()
 
-    def togglePlay(self):
+    def togglePlay(self, init=False):
         if len(self.songList) > 0:
             self.pausePlayButton["image"] = self.loader.loadTexture(
                 "src/textures/play.png"
@@ -1055,7 +1046,9 @@ class Main(ShowBase):
                 self.songList[self.songIndex]["object"].stop()
                 self.paused = True
             elif self.songList[self.songIndex]["object"].status() == 1:
-                self.songList[self.songIndex]["object"].set_time(self.currentTime)
+                self.songList[self.songIndex]["object"].set_time(
+                    self.currentTime if not init else 0
+                )
                 self.songList[self.songIndex]["object"].play()
                 self.paused = False
 
@@ -1089,7 +1082,7 @@ class Main(ShowBase):
         try:
             if window is not None:
                 if window.isClosed():
-                    sys.exit()
+                    os._exit(0)
         except Exception as e:
             print(f"Error: {e}")
         for item in self.scaledItemList:
@@ -1340,18 +1333,30 @@ def fadeInGuiElement(
 def notify(message: str, pos=(0.8, 0, -0.5), scale=0.75):
     try:
         global appGuiFrame
+        if len(message) > 60:
+            message = message[:60] + "..."
 
         def fade(none):
-            timeToFade = 5
+            timeToFade = 25
+            try:
+                if newMessage is None:
+                    return
+            except Exception as e:
+                print(f"Error: {e}")
+                return
             newMessage.setTransparency(True)
 
             def _internalThread():
                 for i in range(timeToFade):
                     val = 1 - (1 / timeToFade) * (i + 1)
+                    if newMessage is None:
+                        return
                     newMessage.setAlphaScale(val)
                     t.sleep(0.01)
-                newMessage.destroy()
-                # newMessage.cleanup()
+                if newMessage is None:
+                    return
+                else:
+                    newMessage.destroy()
 
             Thread(target=_internalThread).start()
 
@@ -1362,9 +1367,11 @@ def notify(message: str, pos=(0.8, 0, -0.5), scale=0.75):
             scale=scale,
             frameColor=(0.5, 0.5, 0.5, 0.25),
             text_fg=(1, 1, 1, 1),
+            text_wordwrap=20,
             command=fade,
             pad=[0.02, 0.02, 0.02, 0.02],
         )
+        base.doMethodLater(5, fade, "fade", extraArgs=[None])  # type: ignore
         return newMessage
     except Exception as e:
         print(f"Error: {e}")
