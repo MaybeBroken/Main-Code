@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Three & Electron demo page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f5f5f5;
+            background-color: #000000;
+            cursor: crosshair;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            background: rgba(0, 0, 0, 0);
+        }
+
+        #webgl-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            background: #000000;
+            z-index: -1000;
+        }
+    </style>
+    <!-- Load THREE.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
+</head>
+
+<body>
+    <canvas id="webgl-canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('webgl-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas });
+        function resizeRenderer() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height, false);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        window.addEventListener('resize', resizeRenderer);
+        resizeRenderer();
+
+        // Pointer Lock on click
+        canvas.addEventListener('click', (ev) => {
+            if (canvas.requestPointerLock) {
+                canvas.requestPointerLock();
+            }
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+    <video id="intro-video-0" autoplay muted playsinline class="overlay"
+        style="object-fit: cover; z-index: 100; cursor: none;">
+        <source src="src/movies/intro.mov" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <div class="overlay" style="z-index: 0; display: none; align-items: center; justify-content: center; cursor: none;"
+        id="intro-overlay-0">
+        <h1 style="color: white; text-align: center; margin: 0;" id="intro-title-0">Cool stuff here, idk</h1>
+    </div>
+    <script>
+        const video = document.getElementById('intro-video-0');
+        const overlay = document.getElementById('intro-overlay-0');
+        const introTitle = document.getElementById('intro-title-0');
+
+        video.addEventListener('ended', () => {
+            overlay.style.display = 'flex';
+            video.style.display = 'none';
+        });
+    </script>
+</body>
+
+</html>
