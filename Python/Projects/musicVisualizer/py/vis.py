@@ -37,13 +37,16 @@ class MusicVisualizer:
         self.low_energy_history = []
         self.high_energy_history = []
         self.low_band = (self.freqs >= 20) & (self.freqs <= 200)
-        self.high_band = (self.freqs >= 2000) & (self.freqs <= 8000)
-        self.low_energy_history_size = 20
-        self.high_energy_history_size = 20
+        self.high_band = (self.freqs >= 4000) & (self.freqs <= 10000)
+        self.low_energy_history_size = 15
+        self.high_energy_history_size = 15
 
         self.beat_display_frames = 5
         self.low_beat_frames = 0
         self.high_beat_frames = 0
+
+        # --- Initialize beat detection histories with max values for instant detection ---
+        self._init_beat_histories()
 
         # Device selection
         self.STAR_FILE = os.path.join(os.path.dirname(__file__), "starred_device.txt")
@@ -293,9 +296,50 @@ class MusicVisualizer:
         high_energy = np.sum(fft_vals[self.high_band])
         avg_low = np.mean(self.low_energy_history) if self.low_energy_history else 0
         avg_high = np.mean(self.high_energy_history) if self.high_energy_history else 0
-        low_beat = avg_low > 0 and low_energy > 1.3 * avg_low
-        high_beat = avg_high > 0 and high_energy > 1.3 * avg_high
+        low_beat = avg_low > 0 and low_energy > 1.2 * avg_low
+        high_beat = avg_high > 0 and high_energy > 1.2 * avg_high
         return low_beat, high_beat
+
+    def get_mood_energy(self):
+        """
+        Returns a tuple (mood, energy_level) where:
+        - mood: 'calm', 'neutral', or 'energetic'
+        - energy_level: float in [0, 1], higher means more energetic
+        """
+        # Compute spectral centroid (brightness) and volume (RMS)
+        window = np.hanning(len(self.waveform_buffer))
+        windowed = self.waveform_buffer * window
+        scale = np.sum(window) / 2
+        fft_vals = np.abs(np.fft.rfft(windowed)) / scale
+        fft_vals = np.maximum(fft_vals, np.finfo(float).eps)
+        freqs = self.freqs
+
+        # Spectral centroid (weighted mean frequency)
+        centroid = np.sum(freqs * fft_vals) / np.sum(fft_vals)
+        # Normalize centroid to [0, 1] (20Hz-15kHz)
+        centroid_norm = (centroid - 20) / (15000 - 20)
+        centroid_norm = np.clip(centroid_norm, 0, 1)
+
+        # Volume (RMS), normalized to a reasonable range
+        volume = np.sqrt(np.mean(self.waveform_buffer ** 2))
+        volume_norm = np.clip(volume / 0.2, 0, 1)  # 0.2 is a typical loud RMS
+
+        # Combine for energy
+        energy_level = 0.6 * centroid_norm + 0.4 * volume_norm
+
+        # Mood classification
+        if energy_level < 0.33:
+            mood = 'calm'
+        elif energy_level > 0.66:
+            mood = 'energetic'
+        else:
+            mood = 'neutral'
+        return mood, float(energy_level)
+
+    def _init_beat_histories(self):
+        # Fill histories with high values to allow instant beat detection
+        self.low_energy_history = [1e6] * self.low_energy_history_size
+        self.high_energy_history = [1e6] * self.high_energy_history_size
 
 # --- Example usage as script or module ---
 if __name__ == "__main__":
