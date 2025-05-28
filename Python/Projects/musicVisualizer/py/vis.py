@@ -143,8 +143,11 @@ class MusicVisualizer:
             self.ani = None
 
     def _setup_matplotlib(self):
+        import matplotlib.pyplot as plt
+
+        plt.ion()  # Ensure interactive mode is on
         self.fig, self.ax = plt.subplots()
-        plt.subplots_adjust(left=0.1)
+        plt.subplots_adjust(left=0.1, bottom=0.18)  # Leave space for button at bottom
         (self.line,) = self.ax.plot(self.freqs_plot, np.zeros_like(self.freqs_plot))
         self.ax.set_xlim(20, 15000)
         self.ax.set_ylim(-100, 0)
@@ -156,34 +159,39 @@ class MusicVisualizer:
     def _setup_device_button(self):
         from matplotlib.widgets import Button
 
-        button_ax = self.fig.add_axes([0.01, 0.92, 0.08, 0.06])
+        # Place button at bottom center, below the plot
+        button_ax = self.fig.add_axes([0.4, 0.05, 0.2, 0.07])
         device_button = Button(button_ax, "Devices")
 
-        def on_device_button(event):
-            threading.Thread(target=self.show_device_selector, daemon=True).start()
+        # Store a reference to avoid garbage collection
+        self._device_button = device_button
 
+        def on_device_button(event):
+            print("Opening device selector...")
+            self.show_device_selector()
+            plt.pause(0.01)
+
+        # Use Button's .on_clicked method, but ensure the reference is kept
         device_button.on_clicked(on_device_button)
 
     def show_device_selector(self):
-        def on_select(event=None):
-            idx = combo.current()
-            if idx >= 0:
-                device_idx = self.device_indices[idx]
-                self.start_stream(device_idx)
+        import tkinter as tk
+        from tkinter import ttk
 
-        def on_star():
-            idx = combo.current()
-            if idx >= 0:
-                device_idx = self.device_indices[idx]
-                self.save_starred_device(device_idx)
-                star_btn.config(text="Starred!", state="disabled")
+        # Use Toplevel if a root window exists, else create root
+        root = None
+        try:
+            root = tk._default_root
+        except Exception:
+            pass
+        if root is None:
+            root = tk.Tk()
+            root.withdraw()  # Hide the root window
 
-        win = tk.Tk()
+        win = tk.Toplevel(root)
         win.title("Select Input Device")
         tk.Label(win, text="Input Device:").pack(padx=10, pady=5)
-        maxlen = (
-            max(len(name) for name in self.device_names) if self.device_names else 20
-        )
+        maxlen = max((len(name) for name in self.device_names), default=20)
         combo = ttk.Combobox(
             win, values=self.device_names, state="readonly", width=maxlen
         )
@@ -192,11 +200,35 @@ class MusicVisualizer:
             combo.current(self.device_indices.index(self.current_device_idx))
         else:
             combo.current(0)
-        combo.bind("<<ComboboxSelected>>", on_select)
-        star_btn = tk.Button(win, text="Star", command=on_star)
+
+        star_btn = tk.Button(win, text="Star")
         star_btn.pack(pady=5)
-        tk.Button(win, text="OK", command=win.destroy).pack(pady=5)
-        win.mainloop()
+
+        def on_select(event=None):
+            idx = combo.current()
+            if idx >= 0:
+                device_idx = self.device_indices[idx]
+                self.start_stream(device_idx)
+                star_btn.config(text="Star", state="normal")
+
+        def on_star():
+            idx = combo.current()
+            if idx >= 0:
+                device_idx = self.device_indices[idx]
+                self.save_starred_device(device_idx)
+                star_btn.config(text="Starred!", state="disabled")
+
+        combo.bind("<<ComboboxSelected>>", on_select)
+        star_btn.config(command=on_star)
+
+        def on_ok():
+            win.destroy()
+
+        tk.Button(win, text="OK", command=on_ok).pack(pady=5)
+        win.transient(root)
+        win.grab_set()
+        win.focus_set()
+        # Do not call win.wait_window(); let the window be non-blocking
 
     def _setup_beat_window(self):
         self.beat_win, self.beat_labels = self.create_beat_window()
@@ -318,8 +350,13 @@ class MusicVisualizer:
         print("Recording system audio... (Press Ctrl+C to stop)")
         self.start_stream(self.current_device_idx)
         if self.show_windows:
-            threading.Thread(target=self.beat_win.mainloop, daemon=True).start()
+            # Run both Tk and Matplotlib in the main thread, non-threaded
+            self.beat_win.after(100, lambda: None)  # Ensure Tk is processing events
             plt.show()
+            try:
+                self.beat_win.mainloop()
+            except Exception:
+                pass
 
     # --- API methods for headless use ---
     def get_spectrum(self):
