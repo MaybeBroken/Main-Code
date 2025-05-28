@@ -14,6 +14,7 @@ from direct.interval.IntervalGlobal import LerpFunc
 vis = MusicVisualizer(show_windows=False)
 vis.start_stream()
 
+
 def get_current_monitor():
     x, y = mouse.get_position()
     for idx, m in enumerate(get_monitors()):
@@ -21,20 +22,21 @@ def get_current_monitor():
             return idx
     return 0  # Default to primary if not found
 
+
 monitor = get_monitors()[get_current_monitor()]
 monitor_width = monitor.width
 monitor_height = monitor.height - 49  # Leave some space for the taskbar
 aspect_ratio = monitor_width / monitor_height
 
 # Enable transparency and remove window frame
-loadPrcFileData('', 'framebuffer-alpha true')
-loadPrcFileData('', 'win-size ' + str(monitor_width) + ' ' + str(monitor_height))
-loadPrcFileData('', 'win-origin 0 0')
-loadPrcFileData('', 'window-type onscreen')
-loadPrcFileData('', 'undecorated true')
-loadPrcFileData('', 'background-color 0 0 0 0')
-loadPrcFileData('', 'active-display-region true')
-loadPrcFileData('', 'sync-video false')
+loadPrcFileData("", "framebuffer-alpha true")
+loadPrcFileData("", "win-size " + str(monitor_width) + " " + str(monitor_height))
+loadPrcFileData("", "win-origin 0 0")
+loadPrcFileData("", "window-type onscreen")
+loadPrcFileData("", "undecorated true")
+loadPrcFileData("", "background-color 0 0 0 0")
+loadPrcFileData("", "active-display-region true")
+loadPrcFileData("", "sync-video false")
 
 if sys.platform == "win32":
     import win32con
@@ -43,11 +45,15 @@ if sys.platform == "win32":
     import pystray
     from PIL import Image
     import ctypes
+
     ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
     import asyncio
-    from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as GSMTCSessionManager
+    from winrt.windows.media.control import (
+        GlobalSystemMediaTransportControlsSessionManager as GSMTCSessionManager,
+    )
 from PIL import Image
 import io
+
 
 async def get_windows_media_info():
     manager = await GSMTCSessionManager.request_async()
@@ -66,11 +72,14 @@ async def get_windows_media_info():
     }
     return metadata
 
+
 # To call from sync code:
 def get_media_info_sync():
     return asyncio.run(get_windows_media_info())
 
+
 print("Using Windows Media API for metadata:\n", get_media_info_sync())
+
 
 class TransparentApp(ShowBase):
     def __init__(self):
@@ -86,7 +95,7 @@ class TransparentApp(ShowBase):
             self.create_tray_icon()
 
         # Create four thin cards, one on each edge of the render2d screen
-        card_maker = CardMaker('card')
+        card_maker = CardMaker("card")
         thickness = 0.0075  # Thickness in render2d units
 
         self.cards = []
@@ -104,13 +113,17 @@ class TransparentApp(ShowBase):
         self.cards.append(top_card)
 
         # Left edge (x = -1)
-        card_maker.setFrame(-1, -1 + thickness/aspect_ratio, -1 + thickness, 1 - thickness)
+        card_maker.setFrame(
+            -1, -1 + thickness / aspect_ratio, -1 + thickness, 1 - thickness
+        )
         left_card = self.render2d.attachNewNode(card_maker.generate())
         left_card.setColor(0.6, 0.5, 0.6, 0.8)
         self.cards.append(left_card)
 
         # Right edge (x = 1)
-        card_maker.setFrame(1 - thickness/aspect_ratio, 1, -1 + thickness, 1 - thickness)
+        card_maker.setFrame(
+            1 - thickness / aspect_ratio, 1, -1 + thickness, 1 - thickness
+        )
         right_card = self.render2d.attachNewNode(card_maker.generate())
         right_card.setColor(0.8, 0.5, 0.4, 0.8)
         self.cards.append(right_card)
@@ -121,8 +134,8 @@ class TransparentApp(ShowBase):
         self.prev_high = None
         self.lerp_intervals = [None, None, None, None]
         # --- End move ---
-        self.taskMgr.add(self.update, 'update_music_visualizer')
-    
+        self.taskMgr.add(self.update, "update_music_visualizer")
+
     def update(self, task):
         # Update the music visualizer
         vis.update_plot()
@@ -134,27 +147,25 @@ class TransparentApp(ShowBase):
         def start_lerp(card, idx, start_color, end_color, duration=0.05):
             if self.lerp_intervals[idx]:
                 self.lerp_intervals[idx].finish()
+
             def lerp_color(t):
                 color = start_color * (1 - t) + end_color * t
                 card.setColor(color)
+
             self.lerp_intervals[idx] = LerpFunc(
-                lerp_color,
-                fromData=0.0,
-                toData=1.0,
-                duration=duration
+                lerp_color, fromData=0.0, toData=1.0, duration=duration
             )
             self.lerp_intervals[idx].start()
-            
 
         # Define target colors
-        bottom_on = (0.2, 0.5, 1.0, energy+0.3)
-        bottom_off = (0.1, 0.3, 0.5, energy+0.3)
-        top_on = (0.4, 0.5, 0.8, energy+0.3)
-        top_off = (0.2, 0.3, 0.5, energy+0.3)
-        left_on = (0.6, 0.5, 0.6, energy+0.3)
-        left_off = (0.4, 0.3, 0.4, energy+0.3)
-        right_on = (0.8, 0.5, 0.4, energy+0.3)
-        right_off = (0.5, 0.3, 0.2, energy+0.3)
+        bottom_on = (0.2, 0.5, 1.0, energy + 0.3)
+        bottom_off = (0.1, 0.3, 0.5, energy + 0.3)
+        top_on = (0.4, 0.5, 0.8, energy + 0.3)
+        top_off = (0.2, 0.3, 0.5, energy + 0.3)
+        left_on = (0.6, 0.5, 0.6, energy + 0.3)
+        left_off = (0.4, 0.3, 0.4, energy + 0.3)
+        right_on = (0.8, 0.5, 0.4, energy + 0.3)
+        right_off = (0.5, 0.3, 0.2, energy + 0.3)
 
         # Only trigger lerp when state changes
         if self.prev_low is None or low != self.prev_low:
@@ -173,12 +184,14 @@ class TransparentApp(ShowBase):
             start_lerp(self.cards[3], 3, start, end)
 
         # Always update alpha to match energy, even if state didn't change
-        for idx, (on_col, off_col) in enumerate([
-            (bottom_on, bottom_off),
-            (top_on, top_off),
-            (left_on, left_off),
-            (right_on, right_off)
-        ]):
+        for idx, (on_col, off_col) in enumerate(
+            [
+                (bottom_on, bottom_off),
+                (top_on, top_off),
+                (left_on, left_off),
+                (right_on, right_off),
+            ]
+        ):
             col = on_col if ((idx < 2 and low) or (idx >= 2 and high)) else off_col
             prev = self.cards[idx].getColor()
             # Only update alpha if it changed
@@ -189,21 +202,27 @@ class TransparentApp(ShowBase):
         self.prev_high = high
         return task.cont
 
-
     def make_window_transparent(self):
         # Get Panda3D window handle
         hwnd = self.win.getWindowHandle().getIntHandle()
         # Set layered style
         styles = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-        win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, styles | win32con.WS_EX_LAYERED)
+        win32gui.SetWindowLong(
+            hwnd, win32con.GWL_EXSTYLE, styles | win32con.WS_EX_LAYERED
+        )
         # Set per-pixel alpha (0 = fully transparent, 255 = opaque)
-        win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(0,0,0), 0, win32con.LWA_COLORKEY)
+        win32gui.SetLayeredWindowAttributes(
+            hwnd, win32api.RGB(0, 0, 0), 0, win32con.LWA_COLORKEY
+        )
         # Make window always on top
         win32gui.SetWindowPos(
             hwnd,
             win32con.HWND_TOPMOST,
-            0, 0, 0, 0,
-            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE
+            0,
+            0,
+            0,
+            0,
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE,
         )
 
     def hide_from_taskbar(self):
@@ -219,15 +238,20 @@ class TransparentApp(ShowBase):
 
     def create_tray_icon(self):
         # Use a 16x16 or 32x32 PNG icon file, or create a simple one
-        image = Image.new('RGBA', (32, 32), (255, 0, 0, 255))  # Red square as placeholder
+        image = Image.new(
+            "RGBA", (32, 32), (255, 0, 0, 255)
+        )  # Red square as placeholder
+
         def on_quit(icon, item):
             icon.stop()
             os.kill(os.getpid(), 9)
-        menu = pystray.Menu(pystray.MenuItem('Quit', on_quit))
+
+        menu = pystray.Menu(pystray.MenuItem("Quit", on_quit))
         icon = pystray.Icon("musicVisualizer", image, "Music Visualizer", menu)
         # Run the icon in a separate thread so it doesn't block Panda3D
 
         threading.Thread(target=icon.run).start()
+
 
 app = TransparentApp()
 app.run()
