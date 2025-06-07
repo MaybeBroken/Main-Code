@@ -1,0 +1,62 @@
+//Cg
+// Second part of lens flare postprocess filter from this article http://www.john-chapman.net/content.php?id=18
+// Panda3d interpretation by 09th (rupanda3d@gmail.com)
+void vshader(
+    float4 vtx_position : POSITION,
+    float2 vtx_texcoord0 : TEXCOORD0,
+    out float4 l_position : POSITION,
+    out float2 l_texcoord0 : TEXCOORD0,
+    out float2 l_texcoord1 : TEXCOORD1,
+    uniform float4 texpad_tex1,
+    uniform float4x4 mat_modelproj)
+{
+    l_position=mul(mat_modelproj, vtx_position);
+    l_texcoord0 = vtx_position.xz * texpad_tex1.xy + texpad_tex1.xy;
+    //l_texcoord0 = vtx_position.xz + float2(0.4, 0.3);// * texpad_tex.xy + texpad_tex.xy;
+    l_texcoord1 = 1.0 - (vtx_position.xz * texpad_tex1.xy - texpad_tex1.xy);
+    
+}
+
+void fshader(float2 l_texcoord0 : TEXCOORD0,
+              float2 l_texcoord1 : TEXCOORD1,
+             out float4 o_color : COLOR,
+             uniform float4 texpad_tex1,
+             uniform float3 k_lf_settings,
+             uniform float k_lf_chroma_distort,
+             uniform sampler2D k_tex1 : TEXUNIT0,
+             uniform sampler2D k_tex2 : TEXUNIT1,
+             uniform sampler2D k_tex3 : TEXUNIT2,
+             uniform sampler2D k_tex4 : TEXUNIT3,
+             uniform sampler2D k_depth : TEXUNIT4)
+{
+    float3 CHROMA_DISTORT = float3(k_lf_chroma_distort, -k_lf_chroma_distort, 0.0);
+    int NSAMPLES = int(k_lf_settings.x);
+    float FLARE_HALO_WIDTH = k_lf_settings.y;
+    float FLARE_DISPERSAL = k_lf_settings.z;
+    float4 c = tex2D(k_tex1, l_texcoord0);
+
+    float4 total = float4(c.x, c.y, c.z, 1.0) + tex2D(k_tex3, -l_texcoord0) + tex2D(k_tex4, l_texcoord0);
+
+    // Apply chromatic aberration effect with zero offset in the center and full offset at the edges
+    float2 center_offset = abs(l_texcoord0 - 0.375);
+    float edge_factor = center_offset.x + center_offset.y;
+    float2 chroma_offset_r = l_texcoord0 + (CHROMA_DISTORT.x * edge_factor);
+    float2 chroma_offset_g = l_texcoord0 + (CHROMA_DISTORT.y * edge_factor);
+    float2 chroma_offset_b = l_texcoord0 + (CHROMA_DISTORT.z * edge_factor);
+
+    float4 chroma_color;
+    chroma_color.r = tex2D(k_tex1, chroma_offset_r).r;
+    chroma_color.g = tex2D(k_tex1, chroma_offset_g).g;
+    chroma_color.b = tex2D(k_tex1, chroma_offset_b).b;
+    chroma_color.a = 1.0;
+
+    total.rgb += chroma_color.rgb;
+
+    // Apply a simple vignette effect
+    float2 vignette_center = float2(0.365, 0.35);
+    float vignette_radius = 0.7;
+    float vignette_strength = 1.0 - smoothstep(0.7, vignette_radius, length(l_texcoord0 - vignette_center));
+    total.rgb *= vignette_strength;
+
+    o_color = total/1.8;
+}
