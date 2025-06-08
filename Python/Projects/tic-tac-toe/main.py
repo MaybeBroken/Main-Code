@@ -24,6 +24,7 @@ import random
 from typing import Callable
 from direct.filter.CommonFilters import CommonFilters
 from src.scripts.utils import *
+import math
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -201,14 +202,14 @@ class Window(ShowBase):
             if is_hovered:
                 LerpColorScaleInterval(
                     nodePath=self.start_button,
-                    duration=0.25,
+                    duration=0.15,
                     colorScale=Vec4(0.1, 1, 0.2, 1),
                     startColorScale=Vec4(1, 1, 1, 1),
                 ).start()
             else:
                 LerpColorScaleInterval(
                     nodePath=self.start_button,
-                    duration=0.25,
+                    duration=0.15,
                     colorScale=Vec4(1, 1, 1, 1),
                     startColorScale=Vec4(0.1, 1, 0.2, 1),
                 ).start()
@@ -255,7 +256,7 @@ class Window(ShowBase):
         LerpPosInterval(
             nodePath=self.sun,
             duration=1,
-            pos=(0, 2000, -10),
+            pos=(0, 2000, 0),
             startPos=(0, 2000, 50),
             blendType="easeInOut",
         ).start()
@@ -278,7 +279,7 @@ class Window(ShowBase):
                 LerpScaleInterval(
                     nodePath=self.sun,
                     duration=1.5,
-                    scale=(20, 20, 20),
+                    scale=(40, 40, 40),
                     startScale=(1, 1, 1),
                     blendType="easeInOut",
                 ).start(),
@@ -291,7 +292,7 @@ class Window(ShowBase):
                 ).start(),
                 LerpPosInterval(
                     nodePath=self.camera,
-                    duration=1.5,
+                    duration=0.6,
                     pos=(0, -8, 0),
                     startPos=(0, -8, 1),
                     blendType="easeInOut",
@@ -308,6 +309,183 @@ class Window(ShowBase):
             ][-1],
             "expand_sphere",
         )
+        self.doMethodLater(
+            2,
+            lambda task: self.generate_menu_buttons(),
+            "generate_menu_buttons",
+        )
+
+    def generate_menu_buttons(self):
+        # Parameters for hexagon layout
+        hex_radius = 0.61  # Distance from center to each button
+        center_offset = (0, 0)  # (x, z) offset for the center of the hexagon
+        rot_offset = -1
+
+        # Calculate positions for 6 buttons at the midpoints of the hexagon edges
+        hex_positions = []
+        for i in range(6):
+            # Find the midpoint between two adjacent corners
+            angle1 = ((i - rot_offset) / 6.0) * 2 * math.pi
+            angle2 = ((i + 1 - rot_offset) / 6.0) * 2 * math.pi
+            x = (
+                center_offset[0]
+                + hex_radius * (math.cos(angle1) + math.cos(angle2)) / 2
+            )
+            z = (
+                center_offset[1]
+                + hex_radius * (math.sin(angle1) + math.sin(angle2)) / 2
+            )
+            hex_positions.append((x, 0, z))
+        # Button definitions in the order of lst
+        button_defs = [
+            {
+                "name": "singleplayer_basic",
+                "image": "src/textures/singleplayer_basic.png",
+                "pos": hex_positions[0],
+            },
+            {
+                "name": "singleplayer_advanced",
+                "image": "src/textures/singleplayer_advanced.png",
+                "pos": hex_positions[5],
+            },
+            {
+                "name": "help_button",
+                "image": None,
+                "text": "H",
+                "pos": hex_positions[4],
+            },
+            {
+                "name": "settings_button",
+                "image": "src/textures/singleplayer_advanced.png",
+                "pos": hex_positions[3],
+            },
+            {
+                "name": "credit_button",
+                "image": "src/textures/singleplayer_advanced.png",
+                "pos": hex_positions[2],
+            },
+            {
+                "name": "multiplayer",
+                "image": "src/textures/singleplayer_advanced.png",
+                "pos": hex_positions[1],
+            },
+        ]
+
+        # Create buttons and assign to variables
+        buttons = {}
+        for btn_def in button_defs:
+            if "text" in btn_def:
+                button = DirectButton(
+                    text=btn_def["text"],
+                    scale=0.1,
+                    text_fg=(1, 1, 1, 1),
+                    color=(0, 0, 0, 0),
+                    geom=None,
+                    relief=DGG.FLAT,
+                    pos=btn_def["pos"],
+                    text_font=self.mfont,
+                )
+            else:
+                button = DirectButton(
+                    image=btn_def["image"],
+                    text_fg=(1, 1, 1, 1),
+                    geom=None,
+                    relief=None,
+                    pos=btn_def["pos"],
+                    text_font=self.mfont,
+                )
+            button.setTransparency(TransparencyAttrib.MAlpha)
+            buttons[btn_def["name"]] = button
+
+        singleplayer_basic = buttons["singleplayer_basic"]
+        singleplayer_advanced = buttons["singleplayer_advanced"]
+        help_button = buttons["help_button"]
+        settings_button = buttons["settings_button"]
+        credit_button = buttons["credit_button"]
+        multiplayer = buttons["multiplayer"]
+
+        center_text = OnscreenText(
+            text="",
+            scale=0.1,
+            fg=(1, 1, 1, 1),
+            bg=(0, 0, 0, 0),
+            mayChange=True,
+            parent=self.aspect2d,
+            align=TextNode.ACenter,
+            font=self.mfont,
+            wordwrap=8,
+        )
+        center_text.setTransparency(TransparencyAttrib.MAlpha)
+
+        def button_hover_effect(is_hovered, button):
+            if is_hovered:
+                LerpColorScaleInterval(
+                    nodePath=button,
+                    duration=0.15,
+                    colorScale=Vec4(0.1, 1, 0.2, 1),
+                    startColorScale=Vec4(1, 1, 1, 1),
+                ).start()
+                if button == singleplayer_basic:
+                    center_text.setText("Singleplayer Basic")
+                elif button == multiplayer:
+                    center_text.setText("Multiplayer")
+                elif button == singleplayer_advanced:
+                    center_text.setText("Singleplayer Advanced")
+                elif button == help_button:
+                    center_text.setText("Help")
+                elif button == credit_button:
+                    center_text.setText("Credits")
+                elif button == settings_button:
+                    center_text.setText("Settings")
+            else:
+                LerpColorScaleInterval(
+                    nodePath=button,
+                    duration=0.15,
+                    colorScale=Vec4(1, 1, 1, 1),
+                    startColorScale=Vec4(0.1, 1, 0.2, 1),
+                ).start()
+                center_text.setText("")
+
+        lst = [
+            singleplayer_basic,
+            singleplayer_advanced,
+            help_button,
+            settings_button,
+            credit_button,
+            multiplayer,
+        ]
+        for button in lst:
+            button.setColorScale(1, 1, 1, 0)
+            button.setScale(0.35)
+        for i, button in enumerate(lst):
+            self.doMethodLater(
+                0.1 + i * 0.2,
+                lambda task, b=button: [
+                    LerpColorScaleInterval(
+                        nodePath=b,
+                        duration=1.2,
+                        colorScale=Vec4(1, 1, 1, 1),
+                        startColorScale=Vec4(1, 1, 1, 0),
+                        blendType="easeInOut",
+                    ).start(),
+                    LerpScaleInterval(
+                        nodePath=b,
+                        duration=0.7,
+                        scale=(0.07, 0.07, 0.07),
+                        startScale=(0.35, 0.35, 0.35),
+                        blendType="easeInOut",
+                    ).start(),
+                    task.done,
+                ][-1],
+                "fade_in_button_" + button.getName(),
+            )
+            self.doMethodLater(
+                0.1 + i * 0.2 + 0.9,
+                lambda task, b=button: MouseOverManager.registerElement(
+                    b, (1, 1), button_hover_effect, b
+                ),
+                "register_button_hover_" + button.getName(),
+            )
 
     def generateGrid(self, grid_size=100, spacing=10):
         """Generate a 2D grid around the player that fades into transparency and places 'O' in each cell."""
