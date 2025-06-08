@@ -41,8 +41,8 @@ void fshader(float2 l_texcoord0 : TEXCOORD0,
     float2 center_offset = abs(l_texcoord0 - 0.375);
     float edge_factor = center_offset.x + center_offset.y;
     float2 chroma_offset_r = l_texcoord0 + (CHROMA_DISTORT.x * edge_factor);
-    float2 chroma_offset_g = l_texcoord0 + (CHROMA_DISTORT.y * edge_factor);
-    float2 chroma_offset_b = l_texcoord0 + (CHROMA_DISTORT.z * edge_factor);
+    float2 chroma_offset_b = l_texcoord0 + (CHROMA_DISTORT.y * edge_factor);
+    float2 chroma_offset_g = l_texcoord0 + (CHROMA_DISTORT.z * edge_factor);
 
     float4 chroma_color;
     chroma_color.r = tex2D(k_tex1, chroma_offset_r).r;

@@ -1,3 +1,4 @@
+from time import sleep
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import *
 from direct.stdpy.threading import Thread
@@ -15,6 +16,7 @@ from panda3d.core import (
     Texture,
     Shader,
     Vec3,
+    TextNode,
 )
 from direct.interval.IntervalGlobal import *
 import complexpbr
@@ -42,6 +44,8 @@ aspect_ratio = monitor_width / monitor_height
 loadPrcFileData("", "win-size " + str(monitor_width) + " " + str(monitor_height))
 loadPrcFileData("", "window-title Slipstream Client")
 loadPrcFileData("", "undecorated true")
+loadPrcFileData("", "show-frame-rate-meter true")
+loadPrcFileData("", "frame-rate-meter-update-interval 0.1")
 
 
 class shaderMgr:
@@ -97,7 +101,7 @@ class Window(ShowBase):
         self.disableMouse()
         self.setBackgroundColor(0, 0, 0, 1)
         self.mfont = self.loader.loadFont(
-            "src/fonts/AquireLight-YzE0o.otf", pixelsPerUnit=200
+            "src/fonts/AquireLight-YzE0o.otf", pixelsPerUnit=280
         )
         self.accept("q", self.userExit)
         self.filters = CommonFilters(self.win, self.cam)
@@ -129,7 +133,7 @@ class Window(ShowBase):
         self.sun.setPos(0, 2000, 50)
         self.sun.setHpr(0, 90, 0)
 
-        self.intro_grid = self.generateGrid(grid_size=200, spacing=1.5)
+        self.intro_grid = self.generateGrid(grid_size=100, spacing=1.5)
 
         self.camera.setPos(0, -8, 1)
         self.camLens.setFov(94)
@@ -188,7 +192,7 @@ class Window(ShowBase):
             geom=None,
             relief=DGG.FLAT,
             pos=(0, 0, 0.5),
-            command=self.start_game,
+            command=self.go_to_game_screen,
             text_font=self.mfont,
         )
         self.start_button.setTransparency(TransparencyAttrib.MAlpha)
@@ -197,14 +201,14 @@ class Window(ShowBase):
             if is_hovered:
                 LerpColorScaleInterval(
                     nodePath=self.start_button,
-                    duration=0.05,
+                    duration=0.25,
                     colorScale=Vec4(0.1, 1, 0.2, 1),
                     startColorScale=Vec4(1, 1, 1, 1),
                 ).start()
             else:
                 LerpColorScaleInterval(
                     nodePath=self.start_button,
-                    duration=0.075,
+                    duration=0.25,
                     colorScale=Vec4(1, 1, 1, 1),
                     startColorScale=Vec4(0.1, 1, 0.2, 1),
                 ).start()
@@ -232,7 +236,7 @@ class Window(ShowBase):
             "destroy_background_intro",
         )
 
-    def start_game(self):
+    def go_to_game_screen(self):
         self.start_button["state"] = (
             DGG.DISABLED
         )  # disable button to prevent double-clicks
@@ -299,14 +303,18 @@ class Window(ShowBase):
                     startHpr=(0, 0, 0),
                     blendType="easeInOut",
                 ).start(),
+                setattr(self, "destroy_grid_text_loop", True),
                 task.done,
             ][-1],
             "expand_sphere",
         )
 
     def generateGrid(self, grid_size=100, spacing=10):
-        """Generate a 2D grid around the player that fades into transparency."""
+        """Generate a 2D grid around the player that fades into transparency and places 'O' in each cell."""
         self.gridNode = self.render.attachNewNode("gridNode")
+        self.grid_text_objects = []  # List to store (OnscreenText, (x, y)) tuples
+
+        # Draw grid lines
         for x in range(-grid_size, grid_size + 1):
             line = LineSegs()
             line.setThickness(1.0)
@@ -326,6 +334,62 @@ class Window(ShowBase):
             line.drawTo(grid_size * spacing, y * spacing, 0)
             node = line.create()
             self.gridNode.attachNewNode(node)
+
+        # Place 'O' in the center of each grid square within a radius of 25
+        radius = 22
+        for x in range(-grid_size, grid_size):
+            for y in range(-grid_size, grid_size):
+                if (x**2 + y**2) ** 0.5 <= radius and y > -7:
+                    xpos = (x + 0.5) * spacing
+                    ypos = (y + 0.5) * spacing
+                    text = OnscreenText(
+                        text=["X", "O"][random.randint(0, 1)],
+                        scale=spacing * 0.8,
+                        fg=(1, 1, 1, 1),
+                        bg=(0, 0, 0, 0),
+                        mayChange=True,
+                        parent=self.gridNode,
+                        align=TextNode.ACenter,
+                        font=self.mfont,
+                    )
+                    text.setP(-90)
+                    text.setPos(xpos, ypos - 0.4)
+                    text.setTransparency(TransparencyAttrib.MAlpha)
+                    self.grid_text_objects.append((text, (x, y)))
+
+        def grid_text_change():
+            while True:
+                if hasattr(self, "destroy_grid_text_loop"):
+                    for obj in self.grid_text_objects:
+                        obj[0].destroy()
+                    self.grid_text_objects.clear()
+                    self.doMethodLater(
+                        2,
+                        lambda task: [
+                            self.gridNode.removeNode(),
+                            self.taskMgr.remove("move_background_task"),
+                            task.done,
+                        ][-1],
+                        "destroy_grid_node",
+                    )
+                    break
+                lst = self.grid_text_objects[:]
+                random.shuffle(lst)
+                lst = lst[
+                    : int(len(lst) * 0.5)
+                ]  # Randomly select half of the grid text objects
+                radius = 10
+                for obj in lst:
+                    if obj[1][0] ** 2 + obj[1][1] ** 2 > radius**2:
+                        continue
+                    if obj[0].getText() == "X":
+                        obj[0].setText("O")
+                    else:
+                        obj[0].setText("X")
+                    sleep(0.01)
+
+        Thread(target=grid_text_change, daemon=True).start()
+
         self.gridNode.setTransparency(TransparencyAttrib.MAlpha)
         return self.gridNode
 
