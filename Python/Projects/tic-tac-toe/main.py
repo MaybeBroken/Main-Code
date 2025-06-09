@@ -48,6 +48,7 @@ loadPrcFileData("", "window-title Slipstream Client")
 loadPrcFileData("", "undecorated true")
 loadPrcFileData("", "show-frame-rate-meter true")
 loadPrcFileData("", "frame-rate-meter-update-interval 0.1")
+loadPrcFileData("", f"win-origin {monitor.x} {monitor.y}")
 
 
 class shaderMgr:
@@ -134,6 +135,7 @@ class Window(ShowBase):
         self.sun.reparentTo(self.render)
         self.sun.setPos(0, 2000, 50)
         self.sun.setHpr(0, 90, 0)
+        self.sun.setTransparency(TransparencyAttrib.MAlpha)
 
         self.intro_grid = self.generateGrid(grid_size=100, spacing=1.5)
 
@@ -166,24 +168,28 @@ class Window(ShowBase):
 
     def update_tasks(self, task):
         MouseOverManager.update()
-        pos = Math.project_point_to_2d(
-            camera=self.camera,
-            lens=self.camLens,
-            node=self.sun,
-        )
-        if pos:
-            self.shaderMgr.interquad3.setShaderInput(
-                "pos", (pos[0] / aspect_ratio, pos[2])
+        if not hasattr(self, "sun_destroyed"):
+            pos = Math.project_point_to_2d(
+                camera=self.camera,
+                lens=self.camLens,
+                node=self.sun,
             )
+            if pos:
+                self.shaderMgr.interquad3.setShaderInput(
+                    "pos", (pos[0] / aspect_ratio, pos[2])
+                )
         return task.cont
 
     def move_background_task(self, task):
         """Task to move the background grid."""
-        if self.intro_grid.getY() <= 1.5:
-            self.intro_grid.setY(self.intro_grid.getY() + 0.005)
+        if not hasattr(self, "intro_grid_destroyed"):
+            if self.intro_grid.getY() <= 1.5:
+                self.intro_grid.setY(self.intro_grid.getY() + 0.005)
+            else:
+                self.intro_grid.setY(-1.5)
+            return task.cont
         else:
-            self.intro_grid.setY(-1.5)
-        return task.cont
+            return task.done
 
     def build_intro_UI(self):
         self.start_button = DirectButton(
@@ -383,6 +389,9 @@ class Window(ShowBase):
                     geom=None,
                     relief=DGG.FLAT,
                     pos=btn_def["pos"],
+                    command=lambda name=btn_def["name"]: self.menu_button_callback(
+                        name
+                    ),
                     text_font=self.mfont,
                 )
             else:
@@ -392,6 +401,9 @@ class Window(ShowBase):
                     geom=None,
                     relief=None,
                     pos=btn_def["pos"],
+                    command=lambda name=btn_def["name"]: self.menu_button_callback(
+                        name
+                    ),
                     text_font=self.mfont,
                 )
             button.setTransparency(TransparencyAttrib.MAlpha)
@@ -405,7 +417,7 @@ class Window(ShowBase):
         credit_button = buttons["credit_button"]
         multiplayer = buttons["multiplayer"]
 
-        center_text = OnscreenText(
+        self.center_text = OnscreenText(
             text="",
             scale=0.1,
             fg=(1, 1, 1, 1),
@@ -416,7 +428,7 @@ class Window(ShowBase):
             font=self.mfont,
             wordwrap=8,
         )
-        center_text.setTransparency(TransparencyAttrib.MAlpha)
+        self.center_text.setTransparency(TransparencyAttrib.MAlpha)
 
         def button_hover_effect(is_hovered, button):
             if is_hovered:
@@ -428,31 +440,31 @@ class Window(ShowBase):
                     blendType="easeInOut",
                 ).start()
                 LerpScaleInterval(
-                    nodePath=center_text,
+                    nodePath=self.center_text,
                     duration=0.15,
                     scale=(1.2, 1.2, 1.2),
                     startScale=(1, 1, 1),
                     blendType="easeInOut",
                 ).start()
                 LerpColorScaleInterval(
-                    nodePath=center_text,
+                    nodePath=self.center_text,
                     duration=0.2,
                     colorScale=Vec4(1, 1, 1, 1),
                     startColorScale=Vec4(0, 0, 0, 0),
                     blendType="easeInOut",
                 ).start()
                 if button == singleplayer_basic:
-                    center_text.setText("Singleplayer Basic")
+                    self.center_text.setText("Singleplayer Basic")
                 elif button == multiplayer:
-                    center_text.setText("Multiplayer")
+                    self.center_text.setText("Multiplayer")
                 elif button == singleplayer_advanced:
-                    center_text.setText("Singleplayer Advanced")
+                    self.center_text.setText("Singleplayer Advanced")
                 elif button == help_button:
-                    center_text.setText("Help")
+                    self.center_text.setText("Help")
                 elif button == credit_button:
-                    center_text.setText("Credits")
+                    self.center_text.setText("Credits")
                 elif button == settings_button:
-                    center_text.setText("Settings")
+                    self.center_text.setText("Settings")
             else:
                 LerpColorScaleInterval(
                     nodePath=button,
@@ -462,21 +474,21 @@ class Window(ShowBase):
                     blendType="easeInOut",
                 ).start()
                 LerpScaleInterval(
-                    nodePath=center_text,
+                    nodePath=self.center_text,
                     duration=0.15,
                     scale=(1, 1, 1),
                     startScale=(1.2, 1.2, 1.2),
                     blendType="easeInOut",
                 ).start()
                 LerpColorScaleInterval(
-                    nodePath=center_text,
+                    nodePath=self.center_text,
                     duration=0.25,
                     colorScale=Vec4(0, 0, 0, 0),
                     startColorScale=Vec4(1, 1, 1, 1),
                     blendType="easeInOut",
                 ).start()
 
-        lst = [
+        self.btn_list = [
             singleplayer_basic,
             singleplayer_advanced,
             help_button,
@@ -484,12 +496,12 @@ class Window(ShowBase):
             credit_button,
             multiplayer,
         ]
-        for button in lst:
+        for button in self.btn_list:
             button.setColorScale(1, 1, 1, 0)
             button.setScale(0.35)
-        for i, button in enumerate(lst):
+        for i, button in enumerate(self.btn_list):
             self.doMethodLater(
-                0.1 + i * 0.2,
+                0.1 + i * 0.15,
                 lambda task, b=button: [
                     LerpColorScaleInterval(
                         nodePath=b,
@@ -510,12 +522,99 @@ class Window(ShowBase):
                 "fade_in_button_" + button.getName(),
             )
             self.doMethodLater(
-                0.1 + i * 0.2 + 0.9,
+                0.1 + i * 0.15 + 0.9,
                 lambda task, b=button: MouseOverManager.registerElement(
                     b, (1, 1), button_hover_effect, b
                 ),
                 "register_button_hover_" + button.getName(),
             )
+
+    def menu_button_callback(self, button_name):
+        if button_name == "singleplayer_basic":
+            self.start_singleplayer_basic()
+        elif button_name == "singleplayer_advanced":
+            self.start_singleplayer_advanced()
+        elif button_name == "multiplayer":
+            self.start_multiplayer()
+        elif button_name == "help":
+            self.show_help()
+        elif button_name == "credits":
+            self.show_credits()
+        elif button_name == "settings":
+            self.show_settings()
+
+    def start_singleplayer_basic(self):
+        self.close_main_menu()
+
+    def start_singleplayer_advanced(self):
+        self.close_main_menu()
+
+    def start_multiplayer(self):
+        self.close_main_menu()
+
+    def show_help(self):
+        self.close_main_menu()
+
+    def show_credits(self):
+        self.close_main_menu()
+
+    def show_settings(self):
+        self.close_main_menu()
+
+    def close_main_menu(self):
+        LerpColorScaleInterval(
+            nodePath=self.sun,
+            duration=1,
+            colorScale=Vec4(0, 0, 0, 0),
+            startColorScale=Vec4(1, 1, 1, 1),
+            blendType="easeInOut",
+        ).start()
+        LerpScaleInterval(
+            nodePath=self.sun,
+            duration=1,
+            scale=(60, 60, 60),
+            startScale=(40, 40, 40),
+            blendType="easeInOut",
+        ).start()
+        LerpColorScaleInterval(
+            nodePath=self.center_text,
+            duration=1,
+            colorScale=Vec4(0, 0, 0, 0),
+            startColorScale=Vec4(1, 1, 1, 1),
+            blendType="easeInOut",
+        ).start()
+        for i, button in enumerate(self.btn_list):
+            self.doMethodLater(
+                i * 0.08,
+                lambda task, b=button: [
+                    LerpColorScaleInterval(
+                        nodePath=b,
+                        duration=0.5,
+                        colorScale=Vec4(1, 1, 1, 0),
+                        startColorScale=Vec4(1, 1, 1, 1),
+                        blendType="easeInOut",
+                    ).start(),
+                    LerpScaleInterval(
+                        nodePath=b,
+                        duration=0.7,
+                        scale=(0.15, 0.15, 0.15),
+                        startScale=(0.07, 0.07, 0.07),
+                        blendType="easeInOut",
+                    ).start(),
+                    task.done,
+                ][-1],
+                "fade_in_button_" + button.getName(),
+            )
+        self.doMethodLater(1, self.cleanup_main_menu, "cleanup_main_menu")
+
+    def cleanup_main_menu(self, t):
+        self.sun.removeNode()
+        self.intro_grid.removeNode()
+        setattr(self, "sun_destroyed", True)
+        setattr(self, "intro_grid_destroyed", True)
+        for button in self.btn_list:
+            MouseOverManager.removeElement(button)
+            button.destroy()
 
     def generateGrid(self, grid_size=100, spacing=10):
         """Generate a 2D grid around the player that fades into transparency and places 'O' in each cell."""
@@ -616,6 +715,15 @@ class MouseOverManager:
         :param callback: The function to call when the mouse is over the element.
         """
         self.elements.append((element, hitbox_scale, callback, args, kwargs))
+
+    def removeElement(self, element):
+        """
+        Removes an element from the manager.
+        :param element: The NodePath or DirectGUI element to remove.
+        """
+        self.elements = [e for e in self.elements if e[0] != element]
+        if element in self.activeElements:
+            self.activeElements.remove(element)
 
     def update(self):
         """
