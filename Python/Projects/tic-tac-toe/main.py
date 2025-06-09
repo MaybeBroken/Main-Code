@@ -17,6 +17,7 @@ from panda3d.core import (
     Shader,
     Vec3,
     TextNode,
+    GraphicsEngine,
 )
 from direct.interval.IntervalGlobal import *
 import complexpbr
@@ -106,7 +107,7 @@ class Window(ShowBase):
         )
         self.accept("q", self.userExit)
         self.filters = CommonFilters(self.win, self.cam)
-        self.filters.setBloom(intensity=0.2, size="large")
+        self.filters.setBloom(intensity=0.4, size="large")
         self.filters.setMSAA(32)
         fmanager = self.filters.manager
         self.shaderMgr = shaderMgr(fmanager)
@@ -350,23 +351,22 @@ class Window(ShowBase):
             },
             {
                 "name": "help_button",
-                "image": None,
-                "text": "H",
+                "image": "src/textures/help_button.png",
                 "pos": hex_positions[4],
             },
             {
                 "name": "settings_button",
-                "image": "src/textures/singleplayer_advanced.png",
+                "image": "src/textures/settings_button.png",
                 "pos": hex_positions[3],
             },
             {
                 "name": "credit_button",
-                "image": "src/textures/singleplayer_advanced.png",
+                "image": "src/textures/credit_button.png",
                 "pos": hex_positions[2],
             },
             {
                 "name": "multiplayer",
-                "image": "src/textures/singleplayer_advanced.png",
+                "image": "src/textures/multiplayer.png",
                 "pos": hex_positions[1],
             },
         ]
@@ -395,6 +395,7 @@ class Window(ShowBase):
                     text_font=self.mfont,
                 )
             button.setTransparency(TransparencyAttrib.MAlpha)
+            button.setColorScale(1, 1, 1, 0)
             buttons[btn_def["name"]] = button
 
         singleplayer_basic = buttons["singleplayer_basic"]
@@ -424,6 +425,21 @@ class Window(ShowBase):
                     duration=0.15,
                     colorScale=Vec4(0.1, 1, 0.2, 1),
                     startColorScale=Vec4(1, 1, 1, 1),
+                    blendType="easeInOut",
+                ).start()
+                LerpScaleInterval(
+                    nodePath=center_text,
+                    duration=0.15,
+                    scale=(1.2, 1.2, 1.2),
+                    startScale=(1, 1, 1),
+                    blendType="easeInOut",
+                ).start()
+                LerpColorScaleInterval(
+                    nodePath=center_text,
+                    duration=0.2,
+                    colorScale=Vec4(1, 1, 1, 1),
+                    startColorScale=Vec4(0, 0, 0, 0),
+                    blendType="easeInOut",
                 ).start()
                 if button == singleplayer_basic:
                     center_text.setText("Singleplayer Basic")
@@ -443,8 +459,22 @@ class Window(ShowBase):
                     duration=0.15,
                     colorScale=Vec4(1, 1, 1, 1),
                     startColorScale=Vec4(0.1, 1, 0.2, 1),
+                    blendType="easeInOut",
                 ).start()
-                center_text.setText("")
+                LerpScaleInterval(
+                    nodePath=center_text,
+                    duration=0.15,
+                    scale=(1, 1, 1),
+                    startScale=(1.2, 1.2, 1.2),
+                    blendType="easeInOut",
+                ).start()
+                LerpColorScaleInterval(
+                    nodePath=center_text,
+                    duration=0.25,
+                    colorScale=Vec4(0, 0, 0, 0),
+                    startColorScale=Vec4(1, 1, 1, 1),
+                    blendType="easeInOut",
+                ).start()
 
         lst = [
             singleplayer_basic,

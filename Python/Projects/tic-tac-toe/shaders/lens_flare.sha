@@ -57,6 +57,26 @@ void fshader(float2 l_texcoord0 : TEXCOORD0,
     float vignette_radius = 0.7;
     float vignette_strength = 1.0 - smoothstep(0.7, vignette_radius, length(l_texcoord0 - vignette_center));
     total.rgb *= vignette_strength;
+    float bloom_threshold = 0.7;
+    float bloom_strength = 1.0;
+    float bloom_radius = 0.01;
 
+    float3 bloom = float3(0.0, 0.0, 0.0);
+    float total_weight = 0.0;
+    // Only sample vertically for bloom
+    for (int y = -2; y <= 2; ++y) {
+        float2 offset = float2(0.0, y) * bloom_radius;
+        float3 sample = tex2D(k_tex1, l_texcoord0 + offset).rgb;
+        float brightness = max(max(sample.r, sample.g), sample.b);
+        float3 bloom_sample = max(sample - bloom_threshold, 0.0);
+        bloom += bloom_sample;
+        total_weight += 1.0;
+    }
+    if (total_weight > 0.0) {
+        bloom /= total_weight;
+    }
+    bloom *= bloom_strength;
+
+    total.rgb += bloom; // add bloom before tone mapping
     o_color = total/1.8;
 }
