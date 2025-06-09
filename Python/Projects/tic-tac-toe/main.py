@@ -18,6 +18,7 @@ from panda3d.core import (
     Vec3,
     TextNode,
     GraphicsEngine,
+    AntialiasAttrib,
 )
 from direct.interval.IntervalGlobal import *
 import complexpbr
@@ -102,6 +103,7 @@ class Window(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         self.disableMouse()
+        self.render.set_antialias(AntialiasAttrib.MAuto)
         self.setBackgroundColor(0, 0, 0, 1)
         self.mfont = self.loader.loadFont(
             "src/fonts/AquireLight-YzE0o.otf", pixelsPerUnit=280
@@ -562,6 +564,8 @@ class Window(ShowBase):
         self.close_main_menu()
 
     def close_main_menu(self):
+        for button in self.btn_list:
+            MouseOverManager.removeElement(button)
         LerpColorScaleInterval(
             nodePath=self.sun,
             duration=1,
@@ -613,7 +617,6 @@ class Window(ShowBase):
         setattr(self, "sun_destroyed", True)
         setattr(self, "intro_grid_destroyed", True)
         for button in self.btn_list:
-            MouseOverManager.removeElement(button)
             button.destroy()
 
     def generateGrid(self, grid_size=100, spacing=10):
