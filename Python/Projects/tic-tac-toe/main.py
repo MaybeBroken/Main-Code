@@ -26,6 +26,7 @@ import random
 from typing import Callable
 from direct.filter.CommonFilters import CommonFilters
 from src.scripts.utils import *
+from bin.screens import credits, settings, info
 import math
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -103,17 +104,19 @@ class Window(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         self.disableMouse()
-        self.render.set_antialias(AntialiasAttrib.MAuto)
         self.setBackgroundColor(0, 0, 0, 1)
+        self.render.set_antialias(AntialiasAttrib.MAuto)
+        self.creditsScreen = credits.Screen(self)
         self.mfont = self.loader.loadFont(
             "src/fonts/AquireLight-YzE0o.otf", pixelsPerUnit=280
         )
         self.accept("q", self.userExit)
         self.filters = CommonFilters(self.win, self.cam)
         self.filters.setBloom(intensity=0.4, size="large")
-        self.filters.setMSAA(32)
+        self.filters.setMSAA(4)
         fmanager = self.filters.manager
         self.shaderMgr = shaderMgr(fmanager)
+        self.ui_menu_lock = False
 
         self.background_intro = DirectFrame(
             parent=self.render2d,
@@ -143,6 +146,120 @@ class Window(ShowBase):
 
         self.camera.setPos(0, -8, 1)
         self.camLens.setFov(94)
+        # Parameters for hexagon layout
+        hex_radius = 0.61  # Distance from center to each button
+        center_offset = (0, 0)  # (x, z) offset for the center of the hexagon
+        rot_offset = -1
+
+        # Calculate positions for 6 buttons at the midpoints of the hexagon edges
+        hex_positions = []
+        for i in range(6):
+            # Find the midpoint between two adjacent corners
+            angle1 = ((i - rot_offset) / 6.0) * 2 * math.pi
+            angle2 = ((i + 1 - rot_offset) / 6.0) * 2 * math.pi
+            x = (
+                center_offset[0]
+                + hex_radius * (math.cos(angle1) + math.cos(angle2)) / 2
+            )
+            z = (
+                center_offset[1]
+                + hex_radius * (math.sin(angle1) + math.sin(angle2)) / 2
+            )
+            hex_positions.append((x, 0, z))
+        # Button definitions in the order of lst
+        button_defs = [
+            {
+                "name": "singleplayer_basic",
+                "image": "src/textures/singleplayer_basic.png",
+                "pos": hex_positions[0],
+            },
+            {
+                "name": "singleplayer_advanced",
+                "image": "src/textures/singleplayer_advanced.png",
+                "pos": hex_positions[5],
+            },
+            {
+                "name": "help_button",
+                "image": "src/textures/help_button.png",
+                "pos": hex_positions[4],
+            },
+            {
+                "name": "settings_button",
+                "image": "src/textures/settings_button.png",
+                "pos": hex_positions[3],
+            },
+            {
+                "name": "credit_button",
+                "image": "src/textures/credit_button.png",
+                "pos": hex_positions[2],
+            },
+            {
+                "name": "multiplayer",
+                "image": "src/textures/multiplayer.png",
+                "pos": hex_positions[1],
+            },
+        ]
+
+        # Create buttons and assign to variables
+        buttons = {}
+        for btn_def in button_defs:
+            if "text" in btn_def:
+                button = DirectButton(
+                    text=btn_def["text"],
+                    scale=0.1,
+                    text_fg=(1, 1, 1, 1),
+                    color=(0, 0, 0, 0),
+                    geom=None,
+                    relief=DGG.FLAT,
+                    pos=btn_def["pos"],
+                    command=lambda name=btn_def["name"]: self.menu_button_callback(
+                        name
+                    ),
+                    text_font=self.mfont,
+                )
+            else:
+                button = DirectButton(
+                    image=btn_def["image"],
+                    text_fg=(1, 1, 1, 1),
+                    geom=None,
+                    relief=None,
+                    pos=btn_def["pos"],
+                    command=lambda name=btn_def["name"]: self.menu_button_callback(
+                        name
+                    ),
+                    text_font=self.mfont,
+                )
+            button.setTransparency(TransparencyAttrib.MAlpha)
+            button.setColorScale(1, 1, 1, 0)
+            buttons[btn_def["name"]] = button
+
+        singleplayer_basic = buttons["singleplayer_basic"]
+        singleplayer_advanced = buttons["singleplayer_advanced"]
+        help_button = buttons["help_button"]
+        settings_button = buttons["settings_button"]
+        credit_button = buttons["credit_button"]
+        multiplayer = buttons["multiplayer"]
+
+        self.center_text = OnscreenText(
+            text="",
+            scale=0.1,
+            fg=(1, 1, 1, 1),
+            bg=(0, 0, 0, 0),
+            mayChange=True,
+            parent=self.aspect2d,
+            align=TextNode.ACenter,
+            font=self.mfont,
+            wordwrap=8,
+        )
+        self.center_text.setTransparency(TransparencyAttrib.MAlpha)
+        self.btn_list = [
+            singleplayer_basic,
+            singleplayer_advanced,
+            help_button,
+            settings_button,
+            credit_button,
+            multiplayer,
+        ]
 
         LerpColorScaleInterval(
             nodePath=self.root_intro,
@@ -325,112 +442,6 @@ class Window(ShowBase):
         )
 
     def generate_menu_buttons(self):
-        # Parameters for hexagon layout
-        hex_radius = 0.61  # Distance from center to each button
-        center_offset = (0, 0)  # (x, z) offset for the center of the hexagon
-        rot_offset = -1
-
-        # Calculate positions for 6 buttons at the midpoints of the hexagon edges
-        hex_positions = []
-        for i in range(6):
-            # Find the midpoint between two adjacent corners
-            angle1 = ((i - rot_offset) / 6.0) * 2 * math.pi
-            angle2 = ((i + 1 - rot_offset) / 6.0) * 2 * math.pi
-            x = (
-                center_offset[0]
-                + hex_radius * (math.cos(angle1) + math.cos(angle2)) / 2
-            )
-            z = (
-                center_offset[1]
-                + hex_radius * (math.sin(angle1) + math.sin(angle2)) / 2
-            )
-            hex_positions.append((x, 0, z))
-        # Button definitions in the order of lst
-        button_defs = [
-            {
-                "name": "singleplayer_basic",
-                "image": "src/textures/singleplayer_basic.png",
-                "pos": hex_positions[0],
-            },
-            {
-                "name": "singleplayer_advanced",
-                "image": "src/textures/singleplayer_advanced.png",
-                "pos": hex_positions[5],
-            },
-            {
-                "name": "help_button",
-                "image": "src/textures/help_button.png",
-                "pos": hex_positions[4],
-            },
-            {
-                "name": "settings_button",
-                "image": "src/textures/settings_button.png",
-                "pos": hex_positions[3],
-            },
-            {
-                "name": "credit_button",
-                "image": "src/textures/credit_button.png",
-                "pos": hex_positions[2],
-            },
-            {
-                "name": "multiplayer",
-                "image": "src/textures/multiplayer.png",
-                "pos": hex_positions[1],
-            },
-        ]
-
-        # Create buttons and assign to variables
-        buttons = {}
-        for btn_def in button_defs:
-            if "text" in btn_def:
-                button = DirectButton(
-                    text=btn_def["text"],
-                    scale=0.1,
-                    text_fg=(1, 1, 1, 1),
-                    color=(0, 0, 0, 0),
-                    geom=None,
-                    relief=DGG.FLAT,
-                    pos=btn_def["pos"],
-                    command=lambda name=btn_def["name"]: self.menu_button_callback(
-                        name
-                    ),
-                    text_font=self.mfont,
-                )
-            else:
-                button = DirectButton(
-                    image=btn_def["image"],
-                    text_fg=(1, 1, 1, 1),
-                    geom=None,
-                    relief=None,
-                    pos=btn_def["pos"],
-                    command=lambda name=btn_def["name"]: self.menu_button_callback(
-                        name
-                    ),
-                    text_font=self.mfont,
-                )
-            button.setTransparency(TransparencyAttrib.MAlpha)
-            button.setColorScale(1, 1, 1, 0)
-            buttons[btn_def["name"]] = button
-
-        singleplayer_basic = buttons["singleplayer_basic"]
-        singleplayer_advanced = buttons["singleplayer_advanced"]
-        help_button = buttons["help_button"]
-        settings_button = buttons["settings_button"]
-        credit_button = buttons["credit_button"]
-        multiplayer = buttons["multiplayer"]
-
-        self.center_text = OnscreenText(
-            text="",
-            scale=0.1,
-            fg=(1, 1, 1, 1),
-            bg=(0, 0, 0, 0),
-            mayChange=True,
-            parent=self.aspect2d,
-            align=TextNode.ACenter,
-            font=self.mfont,
-            wordwrap=8,
-        )
-        self.center_text.setTransparency(TransparencyAttrib.MAlpha)
 
         def button_hover_effect(is_hovered, button):
             if is_hovered:
@@ -455,18 +466,18 @@ class Window(ShowBase):
                     startColorScale=Vec4(0, 0, 0, 0),
                     blendType="easeInOut",
                 ).start()
-                if button == singleplayer_basic:
-                    self.center_text.setText("Singleplayer Basic")
-                elif button == multiplayer:
-                    self.center_text.setText("Multiplayer")
-                elif button == singleplayer_advanced:
-                    self.center_text.setText("Singleplayer Advanced")
-                elif button == help_button:
+                if button == self.btn_list[0]:
+                    self.center_text.setText("Basic Game")
+                elif button == self.btn_list[1]:
+                    self.center_text.setText("Advanced Game")
+                elif button == self.btn_list[2]:
                     self.center_text.setText("Help")
-                elif button == credit_button:
-                    self.center_text.setText("Credits")
-                elif button == settings_button:
+                elif button == self.btn_list[3]:
                     self.center_text.setText("Settings")
+                elif button == self.btn_list[4]:
+                    self.center_text.setText("Credits")
+                elif button == self.btn_list[5]:
+                    self.center_text.setText("Online Multiplayer")
             else:
                 LerpColorScaleInterval(
                     nodePath=button,
@@ -490,14 +501,6 @@ class Window(ShowBase):
                     blendType="easeInOut",
                 ).start()
 
-        self.btn_list = [
-            singleplayer_basic,
-            singleplayer_advanced,
-            help_button,
-            settings_button,
-            credit_button,
-            multiplayer,
-        ]
         for button in self.btn_list:
             button.setColorScale(1, 1, 1, 0)
             button.setScale(0.35)
@@ -532,18 +535,19 @@ class Window(ShowBase):
             )
 
     def menu_button_callback(self, button_name):
-        if button_name == "singleplayer_basic":
-            self.start_singleplayer_basic()
-        elif button_name == "singleplayer_advanced":
-            self.start_singleplayer_advanced()
-        elif button_name == "multiplayer":
-            self.start_multiplayer()
-        elif button_name == "help":
-            self.show_help()
-        elif button_name == "credits":
-            self.show_credits()
-        elif button_name == "settings":
-            self.show_settings()
+        if not self.ui_menu_lock:
+            if button_name == "singleplayer_basic":
+                self.start_singleplayer_basic()
+            elif button_name == "singleplayer_advanced":
+                self.start_singleplayer_advanced()
+            elif button_name == "multiplayer":
+                self.start_multiplayer()
+            elif button_name == "help_button":
+                self.show_help()
+            elif button_name == "credit_button":
+                self.show_credits()
+            elif button_name == "settings_button":
+                self.show_settings()
 
     def start_singleplayer_basic(self):
         self.close_main_menu()
@@ -558,10 +562,23 @@ class Window(ShowBase):
         self.close_main_menu()
 
     def show_credits(self):
-        self.close_main_menu()
+        self.creditsScreen.registerExitFunc(self.unlock_main_menu)
+        self.lock_main_menu()
+        self.creditsScreen.build()
+        print("Credits screen built")
 
     def show_settings(self):
         self.close_main_menu()
+    
+    def lock_main_menu(self):
+        self.ui_menu_lock = True
+        for button in self.btn_list:
+            MouseOverManager.pauseElement(button)
+    
+    def unlock_main_menu(self):
+        self.ui_menu_lock = False
+        for button in self.btn_list:
+            MouseOverManager.resumeElement(button)
 
     def close_main_menu(self):
         for button in self.btn_list:
@@ -708,6 +725,7 @@ class MouseOverManager:
     def __init__(self):
         self.elements = []
         self.activeElements = []
+        self.pausedElements = []
 
     def registerElement(
         self, element, hitbox_scale: tuple[2], callback: Callable, *args, **kwargs
@@ -727,6 +745,26 @@ class MouseOverManager:
         self.elements = [e for e in self.elements if e[0] != element]
         if element in self.activeElements:
             self.activeElements.remove(element)
+        
+    def pauseElement(self, element):
+        """
+        Pauses the element, preventing it from being checked for mouse over events.
+        :param element: The NodePath or DirectGUI element to pause.
+        """
+        for e in self.elements:
+            if e[0] == element:
+                self.pausedElements.append(e)
+                self.elements.remove(e)
+        
+    def resumeElement(self, element):
+        """
+        Resumes the element, allowing it to be checked for mouse over events again.
+        :param element: The NodePath or DirectGUI element to resume.
+        """
+        for e in self.pausedElements:
+            if e[0] == element:
+                self.elements.append(e)
+                self.pausedElements.remove(e)
 
     def update(self):
         """
