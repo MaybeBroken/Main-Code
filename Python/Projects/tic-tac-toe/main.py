@@ -232,6 +232,7 @@ class Window(ShowBase):
             button.setTransparency(TransparencyAttrib.MAlpha)
             button.setColorScale(1, 1, 1, 0)
             buttons[btn_def["name"]] = button
+            button.hide()
 
         singleplayer_basic = buttons["singleplayer_basic"]
         singleplayer_advanced = buttons["singleplayer_advanced"]
@@ -504,6 +505,7 @@ class Window(ShowBase):
         for button in self.btn_list:
             button.setColorScale(1, 1, 1, 0)
             button.setScale(0.35)
+            button.show()
         for i, button in enumerate(self.btn_list):
             self.doMethodLater(
                 0.1 + i * 0.15,
