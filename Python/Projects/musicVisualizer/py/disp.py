@@ -8,8 +8,9 @@ from vis import MusicVisualizer
 import threading
 import subprocess
 import os
-from panda3d.core import VBase4
+from panda3d.core import VBase4, NodePath, LineSegs
 from direct.interval.IntervalGlobal import LerpFunc
+import numpy as np
 
 vis = MusicVisualizer(show_windows=False)
 vis.start_stream()
@@ -81,7 +82,7 @@ def get_media_info_sync():
 print("Using Windows Media API for metadata:\n", get_media_info_sync())
 
 
-class TransparentApp(ShowBase):
+class Main(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
         if sys.platform == "win32":
@@ -134,6 +135,10 @@ class TransparentApp(ShowBase):
         self.prev_high = None
         self.lerp_intervals = [None, None, None, None]
         # --- End move ---
+
+        # Create audio waveform visualizer
+        self.audio_waveform_vis = self.audioWaveformVis(self, self.render2d)
+
         self.taskMgr.add(self.update, "update_music_visualizer")
 
     def update(self, task):
@@ -141,7 +146,10 @@ class TransparentApp(ShowBase):
         vis.update_plot()
         low, high = vis.get_beat_status()
         detected_mood, energy = vis.get_mood_energy()
-        freqs, spectrum = vis.get_spectrum()
+        freqs, spectrum_smooth, spectrum_raw = vis.get_spectrum()
+        self.audio_waveform_vis.setData(
+            abs(spectrum_smooth)
+        )  # Scale for better visibility
 
         # Helper to start a lerp interval for a card
         def start_lerp(card, idx, start_color, end_color, duration=0.05):
@@ -196,11 +204,55 @@ class TransparentApp(ShowBase):
             prev = self.cards[idx].getColor()
             # Only update alpha if it changed
             if abs(prev[3] - col[3]) > 1e-3:
-                self.cards[idx].setColor(prev[0], prev[1], prev[2], col[3])
+                self.cards[idx].setColor(prev[0], prev[1], prev[2], col[3] + 0.3)
 
         self.prev_low = low
         self.prev_high = high
         return task.cont
+
+    class audioWaveformVis:
+        def __init__(self, main: "Main.audioWaveformVis", parent):
+            self.parent = parent
+            self.main = main
+            self.graph = NodePath("waveformGraph")
+            self.graph.reparentTo(parent)
+            self.graph.setPos(0, 0, -0.78)
+            self.line_segs = LineSegs()
+            self.line_segs.setThickness(1)
+            self.line_segs.setColor(1, 1, 1, 1)
+            self.graph.attachNewNode(self.line_segs.create())
+            self.floating_lines = []
+
+        def setData(self, data):
+            if len(data) > 0:
+                # Resize floating_lines to match data length
+                if len(self.floating_lines) != len(data):
+                    self.floating_lines = [0] * len(data)
+
+                current_max = float(np.max(data))
+                num_points = len(data)
+                self.line_segs.reset()
+                for i, value in enumerate(data):
+                    value = float(np.max(value))
+                    x1 = -0.95 + (1.9 * (i / num_points))
+                    x2 = -0.95 + (1.9 * ((i + 1) / num_points))
+                    y = 0
+                    z = (value / current_max) * 0.5 if current_max > 0 else 0
+                    z *= 0.5
+                    if z > self.floating_lines[i]:
+                        self.floating_lines[i] = z
+                    else:
+                        self.floating_lines[i] -= 0.0008
+                    self.line_segs.moveTo(x1, y, 0)
+                    self.line_segs.drawTo(x1, y, z)
+                    self.line_segs.drawTo(x2, y, z)
+                    self.line_segs.drawTo(x2, y, 0)
+                    self.line_segs.drawTo(x1, y, 0)
+                    self.line_segs.moveTo(x1, y, self.floating_lines[i])
+                    self.line_segs.drawTo(x2, y, self.floating_lines[i])
+
+                self.graph.node().removeAllChildren()
+                self.graph.attachNewNode(self.line_segs.create())
 
     def make_window_transparent(self):
         # Get Panda3D window handle
@@ -253,5 +305,5 @@ class TransparentApp(ShowBase):
         threading.Thread(target=icon.run).start()
 
 
-app = TransparentApp()
+app = Main()
 app.run()

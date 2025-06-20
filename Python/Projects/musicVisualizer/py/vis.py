@@ -283,6 +283,7 @@ class MusicVisualizer:
         fft_plot = fft_vals[self.freq_mask]
         fft_plot = np.maximum(fft_plot, np.finfo(float).eps)
         fft_plot_db = 20 * np.log10(fft_plot)
+        self.spectrum_raw = fft_plot_db
 
         # Smoothing and noise removal
         fft_plot_db = median_filter(fft_plot_db, size=5)
@@ -358,10 +359,48 @@ class MusicVisualizer:
             except Exception:
                 pass
 
+    def log_to_linear_bins(self, log_data, f_min=20, f_max=2000, num_linear_bins=64):
+        """
+        Converts log-spaced FFT-like data into linearly spaced bins.
+
+        Parameters:
+            log_data: 1D array of values sampled in log-frequency space
+            f_min: minimum frequency represented in log_data
+            f_max: maximum frequency represented in log_data
+            num_linear_bins: number of bins for linear output
+
+        Returns:
+            linear_bins: 1D array of averaged values, length = num_linear_bins
+        """
+        num_log_bins = len(log_data)
+
+        # Step 1: Frequencies corresponding to log_data samples
+        log_freqs = np.logspace(np.log10(f_min), np.log10(f_max), num_log_bins)
+
+        # Step 2: Create linear frequency bins
+        linear_freq_edges = np.linspace(f_min, f_max, num_linear_bins + 1)
+        linear_bins = np.zeros(num_linear_bins)
+
+        for i in range(num_linear_bins):
+            # Find all log-freqs that fall within this linear bin
+            in_bin = (log_freqs >= linear_freq_edges[i]) & (
+                log_freqs < linear_freq_edges[i + 1]
+            )
+            if np.any(in_bin):
+                linear_bins[i] = np.mean(log_data[in_bin])
+            else:
+                linear_bins[i] = 0
+
+        return linear_bins
+
     # --- API methods for headless use ---
     def get_spectrum(self):
         # Returns the latest smoothed spectrum (dB)
-        return self.freqs_plot, self.spectrum_smooth.copy()
+        return (
+            self.freqs_plot,
+            self.log_to_linear_bins(self.spectrum_smooth),
+            self.log_to_linear_bins(self.spectrum_raw),
+        )
 
     def get_volume(self):
         return np.sqrt(np.mean(self.waveform_buffer**2))
