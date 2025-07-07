@@ -107,6 +107,29 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
     last_w, last_h = 0, 0  # Track previous dimensions
     mult_factor = 1
     start_time = time.time()
+    drag_start = None  # Track drag start position
+
+    def on_mouse_drag(event, x, y, flags, param):
+        nonlocal drag_start, hwnd_cv
+        if event == cv2.EVENT_LBUTTONDOWN:
+            drag_start = (x, y)
+        elif event == cv2.EVENT_MOUSEMOVE and drag_start:
+            dx, dy = x - drag_start[0], y - drag_start[1]
+            if hwnd_cv:
+                win_rect = win32gui.GetWindowRect(hwnd_cv)
+                new_x = win_rect[0] + dx
+                new_y = win_rect[1] + dy
+                win32gui.SetWindowPos(
+                    hwnd_cv,
+                    win32con.HWND_TOPMOST,
+                    new_x,
+                    new_y,
+                    win_rect[2] - win_rect[0],
+                    win_rect[3] - win_rect[1],
+                    win32con.SWP_FRAMECHANGED,
+                )
+        elif event == cv2.EVENT_LBUTTONUP:
+            drag_start = None
 
     while True:
         try:
@@ -155,6 +178,7 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
                     launch = 2
 
                     def adjust_mult_factor(event, _, __, flags, ___):
+                        on_mouse_drag(event, _, __, flags, ___)
                         nonlocal mult_factor
                         if event == cv2.EVENT_MOUSEWHEEL:
                             if flags > 0:  # Scroll up
@@ -180,6 +204,14 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
                                 cv2.resizeWindow("Live Snip", new_w, new_h)
 
                     cv2.setMouseCallback("Live Snip", adjust_mult_factor)
+                    # Hide the window from the taskbar and minimize to tray
+                    import win32com.client
+
+                    # Hide from taskbar
+                    ex_style = win32gui.GetWindowLong(hwnd_cv, win32con.GWL_EXSTYLE)
+                    ex_style |= win32con.WS_EX_TOOLWINDOW
+                    ex_style &= ~win32con.WS_EX_APPWINDOW
+                    win32gui.SetWindowLong(hwnd_cv, win32con.GWL_EXSTYLE, ex_style)
 
             bmpinfo, bmpstr, result = capture_window(hwnd, r - l, b - t)
             cvimg = process_image(bmpinfo, bmpstr, r - l, b - t)
