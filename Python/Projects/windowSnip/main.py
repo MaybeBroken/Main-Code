@@ -18,6 +18,12 @@ import winshell
 import pythoncom
 from win32com.client import Dispatch
 import threading
+import pystray
+from pystray import MenuItem, Menu
+from PIL import Image as PilImage
+import subprocess
+import uuid  # Import for generating unique IDs
+
 
 user32 = ctypes.windll.user32
 DEVMODE = False
@@ -185,222 +191,252 @@ def process_image(bmpinfo, bmpstr, w, h):
         return np.zeros((int(round(h)), int(round(w)), 3), np.uint8)
 
 
+# Global dictionary to track active snips
+active_snips = {}
+
+
 def grab_window(hwnd, bounds=[0, 0, 0, 0]):
-    cv2.namedWindow("Live Snip", cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-    launch = 0
-    hwnd_cv = None
-    last_w, last_h = 0, 0  # Track previous dimensions
-    mult_factor = 1
-    start_time = time.time()
-    drag_start = None  # Track drag start position
+    global active_snips
 
-    global_pos_x, global_pos_y = 0.0, 0.0
-    global_width, global_height = 10.0, 10.0
+    # Check if the window is already being snipped
+    if hwnd in active_snips:
+        print(f"Window {hwnd} is already being snipped. Skipping duplicate snip.")
+        raise HotkeyExit
 
-    def on_mouse_drag(event, x, y, flags, param):
-        nonlocal drag_start, hwnd_cv
-        if event == cv2.EVENT_LBUTTONDOWN:
-            drag_start = (x, y)
-        elif event == cv2.EVENT_MOUSEMOVE and drag_start:
-            dx, dy = x - drag_start[0], y - drag_start[1]
-            if hwnd_cv:
-                win_rect = win32gui.GetWindowRect(hwnd_cv)
-                new_x = win_rect[0] + dx
-                new_y = win_rect[1] + dy
-                win32gui.SetWindowPos(
-                    hwnd_cv,
-                    win32con.HWND_TOPMOST,
-                    new_x,
-                    new_y,
-                    win_rect[2] - win_rect[0],
-                    win_rect[3] - win_rect[1],
-                    win32con.SWP_FRAMECHANGED,
-                )
-        elif event == cv2.EVENT_LBUTTONUP:
-            drag_start = None
+    # Mark the window as being snipped
+    active_snips[hwnd] = True
 
-    while True:
-        try:
-            # Check if the window is minimized
-            if win32gui.IsIconic(hwnd):
-                print("Window is minimized, skipping frame.")
-                cv2.imshow(
-                    "Live Snip",
-                    np.zeros(
-                        (int(round(global_height)), int(round(global_width)), 3),
-                        np.uint8,
-                    ),
-                )
-                cv2.waitKey(30)  # Prevent blocking
-                continue
+    try:
+        window_title = win32gui.GetWindowText(hwnd)  # Get the window title
+        unique_id = str(uuid.uuid4())[:8]  # Generate a short unique ID
+        dynamic_window_name = f"{window_title} - {unique_id}"  # Combine title and ID
 
-            # Use bounds for all calculations
-            start_x, start_y, end_x, end_y = bounds
-            l, t, r, b = win32gui.GetClientRect(hwnd)
-            l, t = win32gui.ClientToScreen(hwnd, (l, t))
-            r, b = win32gui.ClientToScreen(hwnd, (r, b))
+        cv2.namedWindow(dynamic_window_name, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+        launch = 0
+        hwnd_cv = None
+        last_w, last_h = 0, 0  # Track previous dimensions
+        mult_factor = 1
+        start_time = time.time()
+        drag_start = None  # Track drag start position
 
-            # Ensure bounds are within the window's dimensions
-            start_x = max(l, l + start_x)
-            start_y = max(t, t + start_y)
-            end_x = min(r, l + end_x)
-            end_y = min(b, t + end_y)
+        global_pos_x, global_pos_y = 0.0, 0.0
+        global_width, global_height = bounds[2] - bounds[0], bounds[3] - bounds[1]
+        global_width, global_height = clamp_aspect_ratio(
+            global_width, global_height, mult_factor=mult_factor
+        )
 
-            w = end_x - start_x
-            h = end_y - start_y
-
-            if w <= 0 or h <= 0:
-                print("Invalid bounds, skipping frame.")
-                cv2.imshow(
-                    "Live Snip",
-                    np.zeros(
-                        (int(round(global_height)), int(round(global_width)), 3),
-                        np.uint8,
-                    ),
-                )
-                cv2.waitKey(30)  # Prevent blocking
-                continue
-
-            if launch == 1:
-                for _ in range(10):
-                    hwnd_cv = win32gui.FindWindow(None, "Live Snip")
-                    if hwnd_cv:
-                        break
-                    cv2.waitKey(10)
+        def on_mouse_drag(event, x, y, flags, param):
+            nonlocal drag_start, hwnd_cv
+            if event == cv2.EVENT_LBUTTONDOWN:
+                drag_start = (x, y)
+            elif event == cv2.EVENT_MOUSEMOVE and drag_start:
+                dx, dy = x - drag_start[0], y - drag_start[1]
                 if hwnd_cv:
-                    style = win32gui.GetWindowLong(hwnd_cv, win32con.GWL_STYLE)
-                    style &= ~win32con.WS_CAPTION  # Hide the topbar (title bar)
-                    style |= win32con.WS_BORDER  # Add a thin border
-                    style &= ~win32con.WS_MAXIMIZEBOX
-                    win32gui.SetWindowLong(hwnd_cv, win32con.GWL_STYLE, style)
+                    win_rect = win32gui.GetWindowRect(hwnd_cv)
+                    new_x = win_rect[0] + dx
+                    new_y = win_rect[1] + dy
                     win32gui.SetWindowPos(
                         hwnd_cv,
                         win32con.HWND_TOPMOST,
-                        start_x,
-                        start_y,
-                        w,
-                        h,
+                        new_x,
+                        new_y,
+                        win_rect[2] - win_rect[0],
+                        win_rect[3] - win_rect[1],
                         win32con.SWP_FRAMECHANGED,
                     )
-                    cv2.resizeWindow("Live Snip", int(round(w)), int(round(h)))
-                    launch = 2
+            elif event == cv2.EVENT_LBUTTONUP:
+                drag_start = None
 
-                    def adjust_mult_factor(event, x, y, flags, param):
-                        on_mouse_drag(event, x, y, flags, param)
-                        nonlocal mult_factor, last_w, last_h, global_pos_x, global_pos_y, global_width, global_height
-                        if event == cv2.EVENT_MOUSEWHEEL:
-                            if flags > 0:  # Scroll up
-                                mult_factor += 0.1 * mult_factor
-                            elif flags < 0:  # Scroll down
-                                mult_factor = max(
-                                    0.1, mult_factor - 0.1 * mult_factor
-                                )  # Prevent negative values
-
-                            # Apply the updated mult_factor instantly
-                            if hwnd_cv and last_w > 0 and last_h > 0:
-                                new_w, new_h = clamp_aspect_ratio(
-                                    last_w, last_h, mult_factor=mult_factor
-                                )
-
-                                # Calculate new top-left position to keep the center fixed
-                                win_rect = win32gui.GetWindowRect(hwnd_cv)
-                                cur_x, cur_y = win_rect[0], win_rect[1]
-                                center_x = cur_x + (win_rect[2] - win_rect[0]) / 2.0
-                                center_y = cur_y + (win_rect[3] - win_rect[1]) / 2.0
-                                global_pos_x = center_x - new_w / 2.0
-                                global_pos_y = center_y - new_h / 2.0
-
-                                # Apply new position and size (rounded for Windows API calls)
-                                global_width, global_height = new_w, new_h
-                                win32gui.SetWindowPos(
-                                    hwnd_cv,
-                                    win32con.HWND_TOPMOST,
-                                    int(round(global_pos_x)),
-                                    int(round(global_pos_y)),
-                                    int(round(global_width)),
-                                    int(round(global_height)),
-                                    win32con.SWP_FRAMECHANGED,
-                                )
-                                cv2.resizeWindow(
-                                    "Live Snip",
-                                    int(round(global_width)),
-                                    int(round(global_height)),
-                                )
-
-                    cv2.setMouseCallback("Live Snip", adjust_mult_factor)
-                    # Hide the window from the taskbar and minimize to tray
-                    import win32com.client
-
-                    # Hide from taskbar
-                    ex_style = win32gui.GetWindowLong(hwnd_cv, win32con.GWL_EXSTYLE)
-                    ex_style |= win32con.WS_EX_TOOLWINDOW
-                    ex_style &= ~win32con.WS_EX_APPWINDOW
-                    win32gui.SetWindowLong(hwnd_cv, win32con.GWL_EXSTYLE, ex_style)
-
-            bmpinfo, bmpstr, result = capture_window(hwnd, r - l, b - t)
-            cvimg = process_image(bmpinfo, bmpstr, r - l, b - t)
-
+        while True:
             try:
-                cropped_img = cvimg[start_y - t : end_y - t, start_x - l : end_x - l]
-                win_rect = cv2.getWindowImageRect("Live Snip")
-                win_w, win_h = win_rect[2], win_rect[3]
-                if win_w > 0 and win_h > 0:
-                    cropped_img = cv2.resize(
-                        cropped_img,
-                        (int(round(win_w)), int(round(win_h))),
-                        interpolation=cv2.INTER_AREA,
+                # Check if the window is minimized
+                if win32gui.IsIconic(hwnd):
+                    cv2.imshow(
+                        dynamic_window_name,
+                        np.zeros(
+                            (int(round(global_height)), int(round(global_width)), 3),
+                            np.uint8,
+                        ),
                     )
-                cv2.imshow("Live Snip", cropped_img)
+                    cv2.waitKey(30)  # Prevent blocking
+                    continue
+
+                # Use bounds for all calculations
+                start_x, start_y, end_x, end_y = bounds
+                l, t, r, b = win32gui.GetClientRect(hwnd)
+                l, t = win32gui.ClientToScreen(hwnd, (l, t))
+                r, b = win32gui.ClientToScreen(hwnd, (r, b))
+
+                # Ensure bounds are within the window's dimensions
+                start_x = max(l, l + start_x)
+                start_y = max(t, t + start_y)
+                end_x = min(r, l + end_x)
+                end_y = min(b, t + end_y)
+
+                w = end_x - start_x
+                h = end_y - start_y
+
+                if w <= 0 or h <= 0:
+                    cv2.imshow(
+                        dynamic_window_name,
+                        np.zeros(
+                            (int(round(global_height)), int(round(global_width)), 3),
+                            np.uint8,
+                        ),
+                    )
+                    cv2.waitKey(30)  # Prevent blocking
+                    continue
+
+                if launch == 1:
+                    for _ in range(10):
+                        hwnd_cv = win32gui.FindWindow(None, dynamic_window_name)
+                        if hwnd_cv:
+                            break
+                        cv2.waitKey(10)
+                    if hwnd_cv:
+                        style = win32gui.GetWindowLong(hwnd_cv, win32con.GWL_STYLE)
+                        style &= ~win32con.WS_CAPTION  # Hide the topbar (title bar)
+                        style |= win32con.WS_BORDER  # Add a thin border
+                        style &= ~win32con.WS_MAXIMIZEBOX
+                        win32gui.SetWindowLong(hwnd_cv, win32con.GWL_STYLE, style)
+                        win32gui.SetWindowPos(
+                            hwnd_cv,
+                            win32con.HWND_TOPMOST,
+                            start_x,
+                            start_y,
+                            w,
+                            h,
+                            win32con.SWP_FRAMECHANGED,
+                        )
+                        cv2.resizeWindow(
+                            dynamic_window_name, int(round(w)), int(round(h))
+                        )
+                        launch = 2
+
+                        def adjust_mult_factor(event, x, y, flags, param):
+                            on_mouse_drag(event, x, y, flags, param)
+                            nonlocal mult_factor, last_w, last_h, global_pos_x, global_pos_y, global_width, global_height
+                            if event == cv2.EVENT_MOUSEWHEEL:
+                                if flags > 0:  # Scroll up
+                                    mult_factor += 0.1 * mult_factor
+                                elif flags < 0:  # Scroll down
+                                    mult_factor = max(
+                                        0.1, mult_factor - 0.1 * mult_factor
+                                    )  # Prevent negative values
+
+                                # Apply the updated mult_factor instantly
+                                if hwnd_cv and last_w > 0 and last_h > 0:
+                                    new_w, new_h = clamp_aspect_ratio(
+                                        last_w, last_h, mult_factor=mult_factor
+                                    )
+
+                                    # Calculate new top-left position to keep the center fixed
+                                    win_rect = win32gui.GetWindowRect(hwnd_cv)
+                                    cur_x, cur_y = win_rect[0], win_rect[1]
+                                    center_x = cur_x + (win_rect[2] - win_rect[0]) / 2.0
+                                    center_y = cur_y + (win_rect[3] - win_rect[1]) / 2.0
+                                    global_pos_x = center_x - new_w / 2.0
+                                    global_pos_y = center_y - new_h / 2.0
+
+                                    # Apply new position and size (rounded for Windows API calls)
+                                    global_width, global_height = new_w, new_h
+                                    win32gui.SetWindowPos(
+                                        hwnd_cv,
+                                        win32con.HWND_TOPMOST,
+                                        int(round(global_pos_x)),
+                                        int(round(global_pos_y)),
+                                        int(round(global_width)),
+                                        int(round(global_height)),
+                                        win32con.SWP_FRAMECHANGED,
+                                    )
+                                    cv2.resizeWindow(
+                                        dynamic_window_name,
+                                        int(round(global_width)),
+                                        int(round(global_height)),
+                                    )
+
+                        cv2.setMouseCallback(dynamic_window_name, adjust_mult_factor)
+                        # Hide the window from the taskbar and minimize to tray
+                        import win32com.client
+
+                        # Hide from taskbar
+                        ex_style = win32gui.GetWindowLong(hwnd_cv, win32con.GWL_EXSTYLE)
+                        ex_style |= win32con.WS_EX_TOOLWINDOW
+                        ex_style &= ~win32con.WS_EX_APPWINDOW
+                        win32gui.SetWindowLong(hwnd_cv, win32con.GWL_EXSTYLE, ex_style)
+
+                bmpinfo, bmpstr, result = capture_window(hwnd, r - l, b - t)
+                cvimg = process_image(bmpinfo, bmpstr, r - l, b - t)
+
+                try:
+                    cropped_img = cvimg[
+                        start_y - t : end_y - t, start_x - l : end_x - l
+                    ]
+                    win_rect = cv2.getWindowImageRect(dynamic_window_name)
+                    win_w, win_h = win_rect[2], win_rect[3]
+                    if win_w > 0 and win_h > 0:
+                        cropped_img = cv2.resize(
+                            cropped_img,
+                            (int(round(win_w)), int(round(win_h))),
+                            interpolation=cv2.INTER_AREA,
+                        )
+                    cv2.imshow(dynamic_window_name, cropped_img)
+                except Exception as e:
+                    cv2.imshow(
+                        dynamic_window_name,
+                        np.zeros(
+                            (int(round(global_height)), int(round(global_width)), 3),
+                            np.uint8,
+                        ),
+                    )
+
+                if launch >= 2 and hwnd_cv:
+                    if w != last_w or h != last_h:  # Only resize if dimensions change
+                        new_w, new_h = clamp_aspect_ratio(w, h, mult_factor=mult_factor)
+                        global_width, global_height = new_w, new_h
+                        global_pos_x, global_pos_y = start_x, start_y
+                        win32gui.SetWindowPos(
+                            hwnd_cv,
+                            win32con.HWND_TOPMOST,
+                            int(round(global_pos_x)),
+                            int(round(global_pos_y)),
+                            int(round(global_width)),
+                            int(round(global_height)),
+                            win32con.SWP_FRAMECHANGED,
+                        )
+                        cv2.resizeWindow(
+                            dynamic_window_name,
+                            int(round(global_width)),
+                            int(round(global_height)),
+                        )
+                        last_w, last_h = w, h  # Update tracked dimensions
+
+                if cv2.getWindowProperty(dynamic_window_name, cv2.WND_PROP_VISIBLE) < 0:
+                    break
+                if cv2.waitKey(30) & 0xFF == 27:
+                    break
+                if launch == 0:
+                    hwnd_cv = win32gui.FindWindow(None, dynamic_window_name)
+                    if hwnd_cv:
+                        win32gui.DestroyWindow(hwnd_cv)
+                    launch = 1
+                if (
+                    cv2.getWindowProperty(dynamic_window_name, cv2.WND_PROP_VISIBLE) < 1
+                    and launch == 2
+                    and time.time() - start_time > 1
+                ):
+                    break
+
             except Exception as e:
-                cv2.imshow(
-                    "Live Snip",
-                    np.zeros(
-                        (int(round(global_height)), int(round(global_width)), 3),
-                        np.uint8,
-                    ),
-                )
-
-            if launch >= 2 and hwnd_cv:
-                if w != last_w or h != last_h:  # Only resize if dimensions change
-                    new_w, new_h = clamp_aspect_ratio(w, h, mult_factor=mult_factor)
-                    global_width, global_height = new_w, new_h
-                    global_pos_x, global_pos_y = start_x, start_y
-                    win32gui.SetWindowPos(
-                        hwnd_cv,
-                        win32con.HWND_TOPMOST,
-                        int(round(global_pos_x)),
-                        int(round(global_pos_y)),
-                        int(round(global_width)),
-                        int(round(global_height)),
-                        win32con.SWP_FRAMECHANGED,
-                    )
-                    cv2.resizeWindow(
-                        "Live Snip", int(round(global_width)), int(round(global_height))
-                    )
-                    last_w, last_h = w, h  # Update tracked dimensions
-
-            if cv2.getWindowProperty("Live Snip", cv2.WND_PROP_VISIBLE) < 0:
-                break
-            if cv2.waitKey(30) & 0xFF == 27:
-                break
-            if launch == 0:
-                hwnd_cv = win32gui.FindWindow(None, "Live Snip")
-                if hwnd_cv:
-                    win32gui.DestroyWindow(hwnd_cv)
-                launch = 1
-            if (
-                cv2.getWindowProperty("Live Snip", cv2.WND_PROP_VISIBLE) < 1
-                and launch == 2
-                and time.time() - start_time > 1
-            ):
+                print(f"error: {e}")
                 break
 
-        except Exception as e:
-            print(f"error: {e}")
-            break
-
-    cv2.destroyAllWindows()
-    raise HotkeyExit
+    finally:
+        # Ensure the window is removed from the active snips dictionary
+        if hwnd in active_snips:
+            del active_snips[hwnd]
+        cv2.destroyWindow(dynamic_window_name)
+        raise HotkeyExit
 
 
 def bring_window_to_front(hwnd):
@@ -455,6 +491,13 @@ def bring_window_to_front(hwnd):
         print(f"Failed to bring window to front: {e}")
 
 
+def get_tk_hwnd(root):
+    """Get the HWND of the Tkinter root window (Windows only)."""
+    hwnd = root.winfo_id()
+    # Ensure we get the real HWND (sometimes winfo_id returns a child widget id)
+    return ctypes.windll.user32.GetParent(hwnd) or hwnd
+
+
 def create_selection_window(hwnd):
     """Create a transparent window for selecting an area."""
     # Get the working area of the desktop (excluding the taskbar)
@@ -503,14 +546,16 @@ def create_selection_window(hwnd):
         selection_root.destroy()
 
     def on_esc(event):
-        raise HotkeyExit
+        print("Selection cancelled.")
+        selection_root.destroy()
+        return HotkeyExit
 
     selection_canvas.bind("<ButtonPress-1>", on_mouse_press)
     selection_canvas.bind("<B1-Motion>", on_mouse_drag)
     selection_canvas.bind("<ButtonRelease-1>", on_mouse_release)
     selection_root.bind("<Escape>", on_esc)
-    selection_root.lift()  # Bring the selection window to the front
     selection_root.focus_force()  # Ensure it has focus
+    bring_window_to_front(get_tk_hwnd(selection_root))
     selection_root.mainloop()
     # Translate screen coordinates to local window space
     window_rect = win32gui.GetWindowRect(hwnd)
@@ -589,6 +634,8 @@ def pick_window():
         bring_window_to_front(hwnd)
         print("Creating selection window...")
         coords = create_selection_window(hwnd)
+        if coords == HotkeyExit:
+            return HotkeyExit
         print(f"Selected area: {coords}")
         return hwnd, coords
     return None, None
@@ -601,16 +648,22 @@ def get_active_window():
         return None, None
     bring_window_to_front(hwnd)
     coords = create_selection_window(hwnd)
+    if coords == HotkeyExit:
+        return HotkeyExit
     return hwnd, coords
 
 
 def main():
+    if not os.path.exists(os.path.join(user_data_dir, "keybind.txt")):
+        return
     if DEVMODE:
         hwnd_pick, coords = pick_window()
     else:
         hwnd_pick, coords = get_active_window()
     if not hwnd_pick:
         return
+    if hwnd_pick == HotkeyExit:
+        raise HotkeyExit
     print(f"Showing live preview of hwnd {hwnd_pick}... press ESC to quit.")
     print(f"Recording area: {coords}")
     grab_window(
@@ -625,31 +678,130 @@ class HotkeyExit(BaseException):
     pass
 
 
+def _th():
+    try:
+        main()
+    except HotkeyExit:
+        pass
+    except Exception as e:
+        print(f"Error in hotkey listener: {e}")
+        time.sleep(1)
+
+
 def wait_for_hotkey_and_run():
     while True:
-        try:
-            keybind_file = os.path.join(user_data_dir, "keybind.txt")
-            if not os.path.exists(keybind_file):
-                print("No keybind file found.")
-                return
-            with open(keybind_file, "r") as f:
-                combo = f.read().strip()
-            print(f"Waiting for hotkey: {combo}\nenter 'set_hotkey' to change it")
-            keyboard.wait(combo)
-            main()
-        except HotkeyExit:
-            pass
-        except Exception as e:
-            print(f"Error in hotkey listener: {e}")
-            time.sleep(1)
+        keybind_file = os.path.join(user_data_dir, "keybind.txt")
+        if not os.path.exists(keybind_file):
+            print("No keybind file found.")
+            return
+        with open(keybind_file, "r") as f:
+            combo = f.read().strip()
+        print(f"Waiting for hotkey: {combo}")
+        keyboard.wait(combo)
+        threading.Thread(target=_th).start()
 
 
 hotkey_changed = False
 
+
+def clear_keybind(icon, item: MenuItem):
+    """Clear the saved keybind."""
+    keybind_file = os.path.join(user_data_dir, "keybind.txt")
+    if os.path.exists(keybind_file):
+        os.remove(keybind_file)
+        print("Keybind cleared.")
+        item._text = item._wrap("Set Keybind")
+        item._action = lambda icon, item=item: [
+            set_keybind(),
+            setattr(item, "_text", item._wrap("Clear Keybind")),
+            icon._update_menu(),
+        ]
+        icon._update_menu()
+
+
+def toggle_launch_at_startup(icon, item: MenuItem):
+    """Toggle the launch at Windows startup."""
+    if os.path.exists(shortcut_path):
+        os.remove(shortcut_path)
+        print("Launch at startup disabled.")
+        item._checked = item._wrap(False)
+    else:
+        shortcut = shell.CreateShortCut(shortcut_path)
+        shortcut.TargetPath = sys.executable
+        shortcut.Arguments = f'"{os.path.abspath(__file__)}"'
+        shortcut.WorkingDirectory = os.path.dirname(os.path.abspath(__file__))
+        shortcut.save()
+        print("Launch at startup enabled.")
+        item._checked = item._wrap(True)
+        icon._update_menu()
+
+
+def exit_program(icon):
+    """Exit the program."""
+    icon.stop()
+
+
+def restart_program(icon):
+    """Restart the program."""
+    icon.stop()
+    subprocess.Popen([sys.executable] + sys.argv)
+
+
+def create_tray_icon():
+    """Create and run the tray icon."""
+
+    def setup(icon):
+        icon.visible = True
+        if not os.path.exists(os.path.join(user_data_dir, "keybind.txt")):
+            icon.notify(
+                "open taskbar menu to configure",
+                "WindowSnip is not configured",
+            )
+            return
+        else:
+            with open(os.path.join(user_data_dir, "keybind.txt"), "r") as f:
+                keybind = f.read().strip()
+            if not keybind:
+                icon.notify(
+                    "open taskbar menu to configure",
+                    "WindowSnip is not configured",
+                )
+                return
+        icon.notify(
+            "press " + keybind + " to capture a window",
+            "WindowSnip is running",
+        )
+
+    tray_icon_path = "./tray.png"
+    if os.path.exists(tray_icon_path):
+        tray_image = PilImage.open(tray_icon_path)
+    else:
+        tray_image = PilImage.new("RGB", (64, 64), (0, 0, 0))  # Fallback: black square
+    clear_keybind_item = MenuItem(
+        "Clear Keybind",
+        lambda icon: clear_keybind(icon, clear_keybind_item),
+    )
+    toggle_launch_item = MenuItem(
+        "Launch at Windows Startup",
+        lambda icon: toggle_launch_at_startup(icon, toggle_launch_item),
+        radio=False,
+        checked=clear_keybind_item._wrap(os.path.exists(shortcut_path)),
+    )
+    menu = Menu(
+        clear_keybind_item,
+        toggle_launch_item,
+        MenuItem("Restart", lambda icon: restart_program(icon)),
+        MenuItem("Exit", lambda icon: exit_program(icon)),
+    )
+    icon = pystray.Icon("WindowSnip", tray_image, "WindowSnip", menu)
+    try:
+        icon.run(setup)
+    except SystemExit:
+        pass
+
+
+# Modify the main program to start the tray icon
 if __name__ == "__main__":
     t = threading.Thread(target=wait_for_hotkey_and_run, daemon=True)
     t.start()
-    while True:
-        result = input("")
-        if result == "set_hotkey":
-            set_keybind()
+    create_tray_icon()
