@@ -9,30 +9,115 @@ from PIL import Image
 import tkinter as tk
 from PIL import ImageTk
 import ctypes
-import ctypes.wintypes  # Explicitly import wintypes
+import ctypes.wintypes
 import time
 import sys
 import os
+import keyboard
+import winshell
+import pythoncom
+from win32com.client import Dispatch
+import threading
 
 user32 = ctypes.windll.user32
+DEVMODE = False
 
-
-def is_admin():
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
-
-
-if not is_admin():
-    # Relaunch the script with admin rights and hide the terminal window
-    script = sys.argv[0]
-    params = " ".join([f'"{arg}"' for arg in sys.argv[1:]])
-    SW_HIDE = 0  # 0 = hidden, 1 = normal, 2 = minimized, 3 = maximized
-    ctypes.windll.shell32.ShellExecuteW(
-        None, "runas", sys.executable, f'"{script}" {params}', None, SW_HIDE
+pythoncom.CoInitialize()
+shell = Dispatch("WScript.Shell")
+startup_folder = winshell.startup()
+shortcut_path = os.path.join(startup_folder, "WindowGrabHook.lnk")
+user_data_dir = os.path.join(os.path.expanduser("~"), ".windowSnip")
+if not os.path.exists(user_data_dir):
+    os.makedirs(user_data_dir)
+if DEVMODE:
+    deleteShortcutRequest = input(
+        "| DEVMODE: delete shortcut and hotkey association? (RETURN to skip):\n|->"
     )
-    sys.exit()
+    if not deleteShortcutRequest == "":
+        os.remove(shortcut_path)
+        os.remove(os.path.join(user_data_dir, "keybind.txt"))
+
+
+def set_keybind():
+    def on_set_keybind():
+        set_button.config(state=tk.DISABLED)
+        keybind_result["combo"] = None
+
+        recorded = keyboard.record("enter")
+        combo = []
+        for event in recorded:
+            if (
+                event.event_type == "down"
+                and event.name not in combo
+                and event.name != "enter"
+                and event.name != "left"
+                and event.name != "right"
+            ):
+                combo.append(event.name)
+        if combo:
+            if "left windows" in combo:
+                combo[combo.index("left windows")] = "windows"
+            keybind_result["combo"] = "+".join(combo).lower()
+        keybind_label.config(text=f"Keybind set: {keybind_result['combo']}")
+        confirm_button.config(state=tk.NORMAL)
+        set_button.config(state=tk.NORMAL)
+
+    def on_confirm():
+        combo = keybind_result["combo"]
+        if combo:
+            os.makedirs(user_data_dir, exist_ok=True)
+            keybind_file = os.path.join(user_data_dir, "keybind.txt")
+            with open(keybind_file, "w") as f:
+                f.write(combo)
+            prompt_label.config(text=f"Keybind '{combo}' saved!")
+        else:
+            prompt_label.config(text="No keybind selected.")
+        confirm_button.config(state=tk.DISABLED)
+        set_button.config(state=tk.NORMAL)
+        time.sleep(1)
+        window.destroy()
+
+    def run_gui():
+        nonlocal prompt_label, set_button, confirm_button, keybind_label, window
+        window = tk.Tk()
+        window.title("Set Launch Keybind")
+        prompt_label = tk.Label(
+            window,
+            text="Press your desired launch key combination\nthen press enter when finished",
+        )
+        prompt_label.pack(padx=10, pady=10)
+        keybind_label = tk.Label(window, text="No keybind set")
+        keybind_label.pack(padx=10, pady=10)
+        set_button = tk.Button(window, text="Set Keybind", command=on_set_keybind)
+        set_button.pack(pady=5)
+        confirm_button = tk.Button(
+            window, text="Confirm", state=tk.DISABLED, command=on_confirm
+        )
+        confirm_button.pack(pady=10)
+        window.protocol("WM_DELETE_WINDOW", lambda: sys.exit(0))
+        window.bind("<Escape>", lambda e: sys.exit(0))
+        window.lift()
+        window.focus_force()
+        window.mainloop()
+
+    keybind_result = {"combo": None}
+    prompt_label = None
+    set_button = None
+    confirm_button = None
+    keybind_label = None
+    window = None
+    run_gui()
+
+
+if not os.path.exists(shortcut_path) or not os.path.exists(
+    os.path.join(user_data_dir, "keybind.txt")
+):
+    shortcut = shell.CreateShortCut(shortcut_path)
+    shortcut.TargetPath = sys.executable
+    shortcut.Arguments = f'"{os.path.abspath(__file__)}"'
+    shortcut.WorkingDirectory = os.path.dirname(os.path.abspath(__file__))
+    shortcut.save()
+    set_keybind()
 
 
 def list_windows():
@@ -97,7 +182,7 @@ def process_image(bmpinfo, bmpstr, w, h):
         )
         return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
     except:
-        return np.zeros((h, w, 3), np.uint8)
+        return np.zeros((int(round(h)), int(round(w)), 3), np.uint8)
 
 
 def grab_window(hwnd, bounds=[0, 0, 0, 0]):
@@ -108,6 +193,9 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
     mult_factor = 1
     start_time = time.time()
     drag_start = None  # Track drag start position
+
+    global_pos_x, global_pos_y = 0.0, 0.0
+    global_width, global_height = 10.0, 10.0
 
     def on_mouse_drag(event, x, y, flags, param):
         nonlocal drag_start, hwnd_cv
@@ -133,6 +221,19 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
 
     while True:
         try:
+            # Check if the window is minimized
+            if win32gui.IsIconic(hwnd):
+                print("Window is minimized, skipping frame.")
+                cv2.imshow(
+                    "Live Snip",
+                    np.zeros(
+                        (int(round(global_height)), int(round(global_width)), 3),
+                        np.uint8,
+                    ),
+                )
+                cv2.waitKey(30)  # Prevent blocking
+                continue
+
             # Use bounds for all calculations
             start_x, start_y, end_x, end_y = bounds
             l, t, r, b = win32gui.GetClientRect(hwnd)
@@ -150,7 +251,14 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
 
             if w <= 0 or h <= 0:
                 print("Invalid bounds, skipping frame.")
-                cv2.imshow("Live Snip", np.zeros((10, 10, 3), np.uint8))
+                cv2.imshow(
+                    "Live Snip",
+                    np.zeros(
+                        (int(round(global_height)), int(round(global_width)), 3),
+                        np.uint8,
+                    ),
+                )
+                cv2.waitKey(30)  # Prevent blocking
                 continue
 
             if launch == 1:
@@ -174,12 +282,12 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
                         h,
                         win32con.SWP_FRAMECHANGED,
                     )
-                    cv2.resizeWindow("Live Snip", w, h)
+                    cv2.resizeWindow("Live Snip", int(round(w)), int(round(h)))
                     launch = 2
 
-                    def adjust_mult_factor(event, _, __, flags, ___):
-                        on_mouse_drag(event, _, __, flags, ___)
-                        nonlocal mult_factor
+                    def adjust_mult_factor(event, x, y, flags, param):
+                        on_mouse_drag(event, x, y, flags, param)
+                        nonlocal mult_factor, last_w, last_h, global_pos_x, global_pos_y, global_width, global_height
                         if event == cv2.EVENT_MOUSEWHEEL:
                             if flags > 0:  # Scroll up
                                 mult_factor += 0.1 * mult_factor
@@ -187,21 +295,37 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
                                 mult_factor = max(
                                     0.1, mult_factor - 0.1 * mult_factor
                                 )  # Prevent negative values
+
                             # Apply the updated mult_factor instantly
                             if hwnd_cv and last_w > 0 and last_h > 0:
                                 new_w, new_h = clamp_aspect_ratio(
                                     last_w, last_h, mult_factor=mult_factor
                                 )
+
+                                # Calculate new top-left position to keep the center fixed
+                                win_rect = win32gui.GetWindowRect(hwnd_cv)
+                                cur_x, cur_y = win_rect[0], win_rect[1]
+                                center_x = cur_x + (win_rect[2] - win_rect[0]) / 2.0
+                                center_y = cur_y + (win_rect[3] - win_rect[1]) / 2.0
+                                global_pos_x = center_x - new_w / 2.0
+                                global_pos_y = center_y - new_h / 2.0
+
+                                # Apply new position and size (rounded for Windows API calls)
+                                global_width, global_height = new_w, new_h
                                 win32gui.SetWindowPos(
                                     hwnd_cv,
                                     win32con.HWND_TOPMOST,
-                                    0,
-                                    0,
-                                    new_w,
-                                    new_h,
-                                    win32con.SWP_NOMOVE | win32con.SWP_FRAMECHANGED,
+                                    int(round(global_pos_x)),
+                                    int(round(global_pos_y)),
+                                    int(round(global_width)),
+                                    int(round(global_height)),
+                                    win32con.SWP_FRAMECHANGED,
                                 )
-                                cv2.resizeWindow("Live Snip", new_w, new_h)
+                                cv2.resizeWindow(
+                                    "Live Snip",
+                                    int(round(global_width)),
+                                    int(round(global_height)),
+                                )
 
                     cv2.setMouseCallback("Live Snip", adjust_mult_factor)
                     # Hide the window from the taskbar and minimize to tray
@@ -222,26 +346,37 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
                 win_w, win_h = win_rect[2], win_rect[3]
                 if win_w > 0 and win_h > 0:
                     cropped_img = cv2.resize(
-                        cropped_img, (win_w, win_h), interpolation=cv2.INTER_AREA
+                        cropped_img,
+                        (int(round(win_w)), int(round(win_h))),
+                        interpolation=cv2.INTER_AREA,
                     )
                 cv2.imshow("Live Snip", cropped_img)
             except Exception as e:
-                print(f"Error cropping or resizing image: {e}")
-                cv2.imshow("Live Snip", np.zeros((10, 10, 3), np.uint8))
+                cv2.imshow(
+                    "Live Snip",
+                    np.zeros(
+                        (int(round(global_height)), int(round(global_width)), 3),
+                        np.uint8,
+                    ),
+                )
 
             if launch >= 2 and hwnd_cv:
                 if w != last_w or h != last_h:  # Only resize if dimensions change
                     new_w, new_h = clamp_aspect_ratio(w, h, mult_factor=mult_factor)
+                    global_width, global_height = new_w, new_h
+                    global_pos_x, global_pos_y = start_x, start_y
                     win32gui.SetWindowPos(
                         hwnd_cv,
                         win32con.HWND_TOPMOST,
-                        start_x,
-                        start_y,
-                        new_w,
-                        new_h,
+                        int(round(global_pos_x)),
+                        int(round(global_pos_y)),
+                        int(round(global_width)),
+                        int(round(global_height)),
                         win32con.SWP_FRAMECHANGED,
                     )
-                    cv2.resizeWindow("Live Snip", new_w, new_h)
+                    cv2.resizeWindow(
+                        "Live Snip", int(round(global_width)), int(round(global_height))
+                    )
                     last_w, last_h = w, h  # Update tracked dimensions
 
             if cv2.getWindowProperty("Live Snip", cv2.WND_PROP_VISIBLE) < 0:
@@ -265,7 +400,7 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
             break
 
     cv2.destroyAllWindows()
-    sys.exit(0)
+    raise HotkeyExit
 
 
 def bring_window_to_front(hwnd):
@@ -333,7 +468,7 @@ def create_selection_window(hwnd):
     screen_working_area = (rect.left, rect.top, rect.right, rect.bottom)
 
     selection_root = tk.Tk()
-    selection_root.attributes("-alpha", 0.2)  # Transparent background
+    selection_root.attributes("-alpha", 0.35)  # Transparent background
     selection_root.attributes("-topmost", True)  # Always on top
     selection_root.overrideredirect(True)  # Remove window decorations
     selection_root.geometry(
@@ -341,7 +476,7 @@ def create_selection_window(hwnd):
     )  # Fullscreen size
     selection_root.title("Select Area")
 
-    selection_canvas = tk.Canvas(selection_root, bg="gray", highlightthickness=0)
+    selection_canvas = tk.Canvas(selection_root, bg="black", highlightthickness=0)
     selection_canvas.pack(fill=tk.BOTH, expand=True)
 
     coords = {"start_x": None, "start_y": None, "end_x": None, "end_y": None}
@@ -358,7 +493,7 @@ def create_selection_window(hwnd):
             coords["start_y"],
             coords["end_x"],
             coords["end_y"],
-            outline="red",
+            outline="white",
             width=2,
             tags="selection_rect",
         )
@@ -368,7 +503,7 @@ def create_selection_window(hwnd):
         selection_root.destroy()
 
     def on_esc(event):
-        sys.exit()
+        raise HotkeyExit
 
     selection_canvas.bind("<ButtonPress-1>", on_mouse_press)
     selection_canvas.bind("<B1-Motion>", on_mouse_drag)
@@ -391,6 +526,8 @@ def pick_window():
     root.title("Window Picker")
     frame = tk.Frame(root)
     frame.pack()
+    root.lift()
+    root.focus_force()
 
     windows = list_windows()
     previews = {}
@@ -457,11 +594,22 @@ def pick_window():
     return None, None
 
 
+def get_active_window():
+    """Return the currently active window and its full area as a coords dict."""
+    hwnd = win32gui.GetForegroundWindow()
+    if not hwnd:
+        return None, None
+    bring_window_to_front(hwnd)
+    coords = create_selection_window(hwnd)
+    return hwnd, coords
+
+
 def main():
-    print("Opening window picker...")
-    hwnd_pick, coords = pick_window()
+    if DEVMODE:
+        hwnd_pick, coords = pick_window()
+    else:
+        hwnd_pick, coords = get_active_window()
     if not hwnd_pick:
-        print("No window selected.")
         return
     print(f"Showing live preview of hwnd {hwnd_pick}... press ESC to quit.")
     print(f"Recording area: {coords}")
@@ -471,5 +619,37 @@ def main():
     )
 
 
+class HotkeyExit(BaseException):
+    """Custom exception to exit the hotkey listener."""
+
+    pass
+
+
+def wait_for_hotkey_and_run():
+    while True:
+        try:
+            keybind_file = os.path.join(user_data_dir, "keybind.txt")
+            if not os.path.exists(keybind_file):
+                print("No keybind file found.")
+                return
+            with open(keybind_file, "r") as f:
+                combo = f.read().strip()
+            print(f"Waiting for hotkey: {combo}\nenter 'set_hotkey' to change it")
+            keyboard.wait(combo)
+            main()
+        except HotkeyExit:
+            pass
+        except Exception as e:
+            print(f"Error in hotkey listener: {e}")
+            time.sleep(1)
+
+
+hotkey_changed = False
+
 if __name__ == "__main__":
-    main()
+    t = threading.Thread(target=wait_for_hotkey_and_run, daemon=True)
+    t.start()
+    while True:
+        result = input("")
+        if result == "set_hotkey":
+            set_keybind()
