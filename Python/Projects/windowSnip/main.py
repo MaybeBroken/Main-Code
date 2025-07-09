@@ -191,8 +191,8 @@ def process_image(bmpinfo, bmpstr, w, h):
         return np.zeros((int(round(h)), int(round(w)), 3), np.uint8)
 
 
-# Global dictionary to track active snips
-active_snips = {}
+# Global list to track active snips
+active_snips = []
 
 
 def grab_window(hwnd, bounds=[0, 0, 0, 0]):
@@ -204,7 +204,7 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
         raise HotkeyExit
 
     # Mark the window as being snipped
-    active_snips[hwnd] = True
+    active_snips.append(hwnd)
 
     try:
         window_title = win32gui.GetWindowText(hwnd)  # Get the window title
@@ -432,9 +432,9 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
                 break
 
     finally:
-        # Ensure the window is removed from the active snips dictionary
+        # Ensure the window is removed from the active snips list
         if hwnd in active_snips:
-            del active_snips[hwnd]
+            active_snips.remove(hwnd)
         cv2.destroyWindow(dynamic_window_name)
         raise HotkeyExit
 
