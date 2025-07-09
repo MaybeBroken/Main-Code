@@ -1,0 +1,17 @@
+2025/07/09 13:35:59 [notice] 35844#28120: signal process started
+2025/07/09 13:35:59 [error] 35844#28120: OpenEvent("Global\ngx_stop_25640") failed (2: The system cannot find the file specified)
+2025/07/09 13:36:10 [notice] 13116#30396: signal process started
+2025/07/09 13:54:20 [emerg] 35016#26260: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 13:54:34 [emerg] 32956#26348: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 13:56:27 [emerg] 30036#30068: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 13:57:55 [emerg] 35420#1388: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 13:58:08 [emerg] 24296#30520: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 13:58:31 [emerg] 34456#16572: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 13:59:00 [emerg] 21828#34752: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 13:59:22 [emerg] 24752#28416: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 14:00:54 [emerg] 17724#25000: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 14:02:10 [emerg] 29708#36320: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 14:02:49 [emerg] 32292#30916: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 14:02:57 [emerg] 4048#13068: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 14:03:04 [emerg] 22428#33968: unknown directive "gop_cache" in C:\Users\david\git\Code\Python\Projects\windowSnip\nginx-rtmp/conf/nginx.conf:13
+2025/07/09 14:59:05 [error] 6160#27552: *33 live: already publishing, client: 127.0.0.1, server: 0.0.0.0:1935

@@ -23,6 +23,7 @@ from pystray import MenuItem, Menu
 from PIL import Image as PilImage
 import subprocess
 import uuid  # Import for generating unique IDs
+from obs_interface import OBSInterface
 
 
 user32 = ctypes.windll.user32
@@ -42,6 +43,28 @@ if DEVMODE:
     if not deleteShortcutRequest == "":
         os.remove(shortcut_path)
         os.remove(os.path.join(user_data_dir, "keybind.txt"))
+
+
+def get_shortcut_target_info():
+    """
+    Return the appropriate target path and arguments for creating shortcuts
+    based on whether the application is running as a script or executable.
+
+    Returns:
+        tuple: (target_path, arguments)
+    """
+    # Check if running as frozen executable (PyInstaller, cx_Freeze, etc.)
+    if getattr(sys, "frozen", False):
+        # Running as compiled executable - target the exe directly with no arguments
+        return sys.executable, ""
+    else:
+        # Running as script - use pythonw with script path as argument
+        python_path = sys.executable
+        pythonw_path = os.path.join(os.path.dirname(python_path), "pythonw.exe")
+        if not os.path.exists(pythonw_path):
+            pythonw_path = python_path  # Fall back to regular python
+
+        return pythonw_path, f'"{os.path.abspath(__file__)}"'
 
 
 def set_keybind():
@@ -102,7 +125,6 @@ def set_keybind():
         confirm_button.pack(pady=10)
         window.protocol("WM_DELETE_WINDOW", lambda: sys.exit(0))
         window.bind("<Escape>", lambda e: sys.exit(0))
-        window.lift()
         window.focus_force()
         window.mainloop()
 
@@ -113,17 +135,6 @@ def set_keybind():
     keybind_label = None
     window = None
     run_gui()
-
-
-if not os.path.exists(shortcut_path) or not os.path.exists(
-    os.path.join(user_data_dir, "keybind.txt")
-):
-    shortcut = shell.CreateShortCut(shortcut_path)
-    shortcut.TargetPath = sys.executable
-    shortcut.Arguments = f'"{os.path.abspath(__file__)}"'
-    shortcut.WorkingDirectory = os.path.dirname(os.path.abspath(__file__))
-    shortcut.save()
-    set_keybind()
 
 
 def list_windows():
@@ -726,9 +737,10 @@ def toggle_launch_at_startup(icon, item: MenuItem):
         print("Launch at startup disabled.")
         item._checked = item._wrap(False)
     else:
+        target_path, arguments = get_shortcut_target_info()
         shortcut = shell.CreateShortCut(shortcut_path)
-        shortcut.TargetPath = sys.executable
-        shortcut.Arguments = f'"{os.path.abspath(__file__)}"'
+        shortcut.TargetPath = target_path
+        shortcut.Arguments = arguments
         shortcut.WorkingDirectory = os.path.dirname(os.path.abspath(__file__))
         shortcut.save()
         print("Launch at startup enabled.")
@@ -802,6 +814,7 @@ def create_tray_icon():
 
 # Modify the main program to start the tray icon
 if __name__ == "__main__":
+    obs_interface = OBSInterface()
     t = threading.Thread(target=wait_for_hotkey_and_run, daemon=True)
     t.start()
     create_tray_icon()
