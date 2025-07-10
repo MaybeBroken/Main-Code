@@ -149,41 +149,34 @@ class OBSInterface:
             return None
 
     def get_screenshot(self, width=1280, height=720):
-        """Get a screenshot of the current scene from OBS WebSocket"""
+        """Get a screenshot of the current scene from OBS WebSocket (optimized for speed)"""
         if not self.ws:
             print("Cannot get screenshot: WebSocket not connected")
             return None
 
         try:
-            # Request a screenshot of the current scene
+            # Use JPEG for much faster encoding/decoding (smaller payload)
             response = self.safe_obs_call(
                 "GetSourceScreenshot",
                 requests.GetSourceScreenshot(
                     sourceName="Scene",
-                    imageFormat="png",
+                    imageFormat="jpeg",  # much faster than png
                     imageWidth=width,
                     imageHeight=height,
-                    imageCompressionQuality=70,
+                    imageCompressionQuality=2,  # lower = faster/smaller
                 ),
             )
 
             if not response:
                 return None
 
-            # The response contains a base64 encoded image with a data URI prefix
             img_data = response.getImageData()
-
-            # Remove the data URI prefix if present
             if "," in img_data:
                 img_data = img_data.split(",", 1)[1]
 
-            # Decode the base64 image data
             img_bytes = base64.b64decode(img_data)
-
-            # Convert to numpy array for OpenCV processing
             img_array = np.frombuffer(img_bytes, np.uint8)
             img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-
             return img
 
         except Exception as e:
@@ -577,7 +570,7 @@ class OBSInterface:
 
 # GUI Classes - only used when run as standalone
 class OBSSourceSelector:
-    def __init__(self, parent, obs_interface):
+    def __init__(self, parent, obs_interface: OBSInterface):
         self.parent = parent
         self.obs_interface = obs_interface
         self.top = tk.Toplevel(parent)
@@ -785,7 +778,7 @@ class OBSSourceSelector:
 
 
 class RTMPViewer:
-    def __init__(self, root, obs_interface):
+    def __init__(self, root, obs_interface: OBSInterface):
         self.root = root
         self.obs_interface = obs_interface
         self.root.title("OBS Scene Viewer")

@@ -24,6 +24,7 @@ from PIL import Image as PilImage
 import subprocess
 import uuid  # Import for generating unique IDs
 from obs_interface import OBSInterface
+import json  # Add json import for preferences
 
 
 user32 = ctypes.windll.user32
@@ -36,13 +37,61 @@ shortcut_path = os.path.join(startup_folder, "WindowGrabHook.lnk")
 user_data_dir = os.path.join(os.path.expanduser("~"), ".windowSnip")
 if not os.path.exists(user_data_dir):
     os.makedirs(user_data_dir)
+
+# Default preferences
+DEFAULT_PREFERENCES = {
+    "keybind": "",
+    "launch_at_startup": False,
+    "extraction_mode": "OBS",  # Default mode: OBS or WIN
+}
+
+# Path to preferences file
+preferences_file = os.path.join(user_data_dir, "preferences.json")
+
+
+def load_preferences():
+    """Load preferences from JSON file or create default if it doesn't exist"""
+    if os.path.exists(preferences_file):
+        try:
+            with open(preferences_file, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading preferences: {e}")
+
+    # Check for legacy keybind.txt file
+    keybind_file = os.path.join(user_data_dir, "keybind.txt")
+    if os.path.exists(keybind_file):
+        try:
+            with open(keybind_file, "r") as f:
+                keybind = f.read().strip()
+                prefs = DEFAULT_PREFERENCES.copy()
+                prefs["keybind"] = keybind
+                prefs["launch_at_startup"] = os.path.exists(shortcut_path)
+                return prefs
+        except Exception:
+            pass
+
+    return DEFAULT_PREFERENCES.copy()
+
+
+def save_preferences(preferences):
+    """Save preferences to JSON file"""
+    with open(preferences_file, "w") as f:
+        json.dump(preferences, f, indent=4)
+
+
+# Load preferences at startup
+preferences = load_preferences()
+
 if DEVMODE:
     deleteShortcutRequest = input(
         "| DEVMODE: delete shortcut and hotkey association? (RETURN to skip):\n|->"
     )
     if not deleteShortcutRequest == "":
-        os.remove(shortcut_path)
-        os.remove(os.path.join(user_data_dir, "keybind.txt"))
+        if os.path.exists(shortcut_path):
+            os.remove(shortcut_path)
+        preferences["keybind"] = ""
+        save_preferences(preferences)
 
 
 def get_shortcut_target_info():
@@ -94,16 +143,13 @@ def set_keybind():
     def on_confirm():
         combo = keybind_result["combo"]
         if combo:
-            os.makedirs(user_data_dir, exist_ok=True)
-            keybind_file = os.path.join(user_data_dir, "keybind.txt")
-            with open(keybind_file, "w") as f:
-                f.write(combo)
+            preferences["keybind"] = combo
+            save_preferences(preferences)
             prompt_label.config(text=f"Keybind '{combo}' saved!")
         else:
             prompt_label.config(text="No keybind selected.")
         confirm_button.config(state=tk.DISABLED)
         set_button.config(state=tk.NORMAL)
-        time.sleep(1)
         window.destroy()
 
     def run_gui():
@@ -206,7 +252,13 @@ def process_image(bmpinfo, bmpstr, w, h):
 active_snips = []
 
 
-def grab_window(hwnd, bounds=[0, 0, 0, 0]):
+def grab_window(
+    hwnd,
+    bounds=[0, 0, 0, 0],
+    obs_interface: OBSInterface = None,
+    obs_initalize_sucess: bool | None = None,
+    wm_info: dict | None = None,
+):
     global active_snips
 
     # Check if the window is already being snipped
@@ -298,6 +350,7 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
                     cv2.waitKey(30)  # Prevent blocking
                     continue
 
+                # Handle window initialization
                 if launch == 1:
                     for _ in range(10):
                         hwnd_cv = win32gui.FindWindow(None, dynamic_window_name)
@@ -376,30 +429,242 @@ def grab_window(hwnd, bounds=[0, 0, 0, 0]):
                         ex_style &= ~win32con.WS_EX_APPWINDOW
                         win32gui.SetWindowLong(hwnd_cv, win32con.GWL_EXSTYLE, ex_style)
 
-                bmpinfo, bmpstr, result = capture_window(hwnd, r - l, b - t)
-                cvimg = process_image(bmpinfo, bmpstr, r - l, b - t)
+                # Cache for OBS processing parameters
+                obs_cache = getattr(
+                    grab_window,
+                    "_obs_cache",
+                    {
+                        "screen_rect": None,
+                        "taskbar_height": None,
+                        "last_window_dims": None,
+                        "scaling_factors": None,
+                    },
+                )
 
-                try:
-                    cropped_img = cvimg[
-                        start_y - t : end_y - t, start_x - l : end_x - l
-                    ]
-                    win_rect = cv2.getWindowImageRect(dynamic_window_name)
-                    win_w, win_h = win_rect[2], win_rect[3]
-                    if win_w > 0 and win_h > 0:
-                        cropped_img = cv2.resize(
-                            cropped_img,
-                            (int(round(win_w)), int(round(win_h))),
-                            interpolation=cv2.INTER_AREA,
+                # Capture frame using OBS or Windows API based on mode
+                if (
+                    obs_interface
+                    and obs_initalize_sucess
+                    and preferences.get("extraction_mode") == "OBS"
+                ):
+                    # OBS mode: Get screenshot from OBS
+                    try:
+                        # Prepare screen dimensions cache (calculate only once)
+                        if obs_cache["screen_rect"] is None:
+                            obs_cache["screen_rect"] = (
+                                0,
+                                0,
+                                user32.GetSystemMetrics(0),
+                                user32.GetSystemMetrics(1),
+                            )
+                            work_rect = ctypes.wintypes.RECT()
+                            ctypes.windll.user32.SystemParametersInfoW(
+                                0x0030, 0, ctypes.byref(work_rect), 0
+                            )
+                            obs_cache["taskbar_height"] = (
+                                obs_cache["screen_rect"][3] - work_rect.bottom
+                            )
+
+                        # Get the actual window dimensions
+                        window_w, window_h = r - l, b - t
+                        current_dims = (
+                            window_w,
+                            window_h,
+                            start_x - l,
+                            start_y - t,
+                            end_x - start_x,
+                            end_y - start_y,
                         )
-                    cv2.imshow(dynamic_window_name, cropped_img)
-                except Exception as e:
-                    cv2.imshow(
-                        dynamic_window_name,
-                        np.zeros(
-                            (int(round(global_height)), int(round(global_width)), 3),
-                            np.uint8,
-                        ),
-                    )
+
+                        # Only recalculate scaling factors if window dimensions changed
+                        if obs_cache["last_window_dims"] != current_dims:
+                            obs_cache["last_window_dims"] = current_dims
+                            # Get the screenshot once to determine dimensions
+                            obs_screenshot = obs_interface.get_screenshot(1920, 1080)
+                            if obs_screenshot is not None:
+                                # Pre-calculate all scaling factors
+                                obs_h, obs_w = obs_screenshot.shape[:2]
+
+                                # Apply taskbar adjustment to OBS height
+                                if obs_cache["taskbar_height"] > 0:
+                                    crop_pixels = int(
+                                        (
+                                            obs_cache["taskbar_height"]
+                                            / obs_cache["screen_rect"][3]
+                                        )
+                                        * obs_h
+                                    )
+                                    obs_h_adjusted = obs_h - crop_pixels
+                                else:
+                                    obs_h_adjusted = obs_h
+                                    crop_pixels = 0
+
+                                # Store all scaling parameters
+                                obs_cache["scaling_factors"] = {
+                                    "obs_w": obs_w,
+                                    "obs_h": obs_h,
+                                    "obs_h_adjusted": obs_h_adjusted,
+                                    "crop_pixels": crop_pixels,
+                                    "scale_x": obs_w / window_w if window_w > 0 else 1,
+                                    "scale_y": (
+                                        obs_h_adjusted / window_h if window_h > 0 else 1
+                                    ),
+                                    "window_aspect": (
+                                        window_w / window_h if window_h > 0 else 1
+                                    ),
+                                    "obs_aspect": (
+                                        obs_w / obs_h_adjusted
+                                        if obs_h_adjusted > 0
+                                        else 1
+                                    ),
+                                }
+
+                                # Determine which scaling to use based on aspect ratios
+                                sf = obs_cache["scaling_factors"]
+                                if abs(sf["window_aspect"] - sf["obs_aspect"]) < 0.01:
+                                    sf["scale"] = sf[
+                                        "scale_x"
+                                    ]  # Nearly identical aspect ratios
+                                elif sf["window_aspect"] > sf["obs_aspect"]:
+                                    sf["scale"] = sf["scale_x"]  # Window is wider
+                                else:
+                                    sf["scale"] = sf["scale_y"]  # Window is taller
+
+                        # Fast path for actual screenshot processing with cached parameters
+                        obs_screenshot = obs_interface.get_screenshot(1920, 1080)
+                        if (
+                            obs_screenshot is not None
+                            and obs_cache["scaling_factors"] is not None
+                        ):
+                            sf = obs_cache["scaling_factors"]
+
+                            # Fast crop of taskbar area using direct slicing
+                            if sf["crop_pixels"] > 0:
+                                obs_screenshot = obs_screenshot[: -sf["crop_pixels"]]
+
+                            # Direct calculation of crop coordinates using cached scaling factors
+                            rel_x, rel_y = start_x - l, start_y - t
+                            rel_w, rel_h = end_x - start_x, end_y - start_y
+
+                            # Use numpy's efficient array operations for cropping
+                            crop_x = max(
+                                0, min(int(rel_x * sf["scale_x"]), sf["obs_w"] - 1)
+                            )
+                            crop_y = max(
+                                0,
+                                min(
+                                    int(rel_y * sf["scale_y"]), sf["obs_h_adjusted"] - 1
+                                ),
+                            )
+                            crop_w = max(
+                                1, min(int(rel_w * sf["scale_x"]), sf["obs_w"] - crop_x)
+                            )
+                            crop_h = max(
+                                1,
+                                min(
+                                    int(rel_h * sf["scale_y"]),
+                                    sf["obs_h_adjusted"] - crop_y,
+                                ),
+                            )
+
+                            # Extract region using direct numpy slicing (creates a view, not a copy)
+                            cropped_img = obs_screenshot[
+                                crop_y : crop_y + crop_h, crop_x : crop_x + crop_w
+                            ]
+
+                            # Only resize if necessary
+                            win_rect = cv2.getWindowImageRect(dynamic_window_name)
+                            win_w, win_h = win_rect[2], win_rect[3]
+                            if (
+                                win_w > 0
+                                and win_h > 0
+                                and (
+                                    abs(win_w - cropped_img.shape[1]) > 2
+                                    or abs(win_h - cropped_img.shape[0]) > 2
+                                )
+                            ):
+                                cropped_img = cv2.resize(
+                                    cropped_img,
+                                    (win_w, win_h),
+                                    interpolation=cv2.INTER_LINEAR,
+                                )
+
+                            cv2.imshow(dynamic_window_name, cropped_img)
+                    except Exception as e:
+                        print(
+                            f"OBS screenshot failed: {e}, falling back to Windows API"
+                        )
+                        # Fall back to Windows API capture if OBS fails
+                        bmpinfo, bmpstr, result = capture_window(hwnd, r - l, b - t)
+                        cvimg = process_image(bmpinfo, bmpstr, r - l, b - t)
+                        try:
+                            cropped_img = cvimg[
+                                start_y - t : end_y - t, start_x - l : end_x - l
+                            ]
+                            win_rect = cv2.getWindowImageRect(dynamic_window_name)
+                            win_w, win_h = win_rect[2], win_rect[3]
+                            if (
+                                win_w > 0
+                                and win_h > 0
+                                and (
+                                    win_w != cropped_img.shape[1]
+                                    or win_h != cropped_img.shape[0]
+                                )
+                            ):
+                                cropped_img = cv2.resize(
+                                    cropped_img,
+                                    (win_w, win_h),
+                                    interpolation=cv2.INTER_AREA,
+                                )
+                            cv2.imshow(dynamic_window_name, cropped_img)
+                        except Exception:
+                            cv2.imshow(
+                                dynamic_window_name,
+                                np.zeros(
+                                    (
+                                        int(round(global_height)),
+                                        int(round(global_width)),
+                                        3,
+                                    ),
+                                    np.uint8,
+                                ),
+                            )
+                else:
+                    # Windows API mode: Use direct window capture
+                    bmpinfo, bmpstr, result = capture_window(hwnd, r - l, b - t)
+                    cvimg = process_image(bmpinfo, bmpstr, r - l, b - t)
+                    try:
+                        cropped_img = cvimg[
+                            start_y - t : end_y - t, start_x - l : end_x - l
+                        ]
+                        win_rect = cv2.getWindowImageRect(dynamic_window_name)
+                        win_w, win_h = win_rect[2], win_rect[3]
+                        if (
+                            win_w > 0
+                            and win_h > 0
+                            and (
+                                win_w != cropped_img.shape[1]
+                                or win_h != cropped_img.shape[0]
+                            )
+                        ):
+                            cropped_img = cv2.resize(
+                                cropped_img,
+                                (win_w, win_h),
+                                interpolation=cv2.INTER_AREA,
+                            )
+                        cv2.imshow(dynamic_window_name, cropped_img)
+                    except Exception as e:
+                        cv2.imshow(
+                            dynamic_window_name,
+                            np.zeros(
+                                (
+                                    int(round(global_height)),
+                                    int(round(global_width)),
+                                    3,
+                                ),
+                                np.uint8,
+                            ),
+                        )
 
                 if launch >= 2 and hwnd_cv:
                     if w != last_w or h != last_h:  # Only resize if dimensions change
@@ -665,21 +930,44 @@ def get_active_window():
 
 
 def main():
-    if not os.path.exists(os.path.join(user_data_dir, "keybind.txt")):
+    if not preferences["keybind"]:
         return
+
     if DEVMODE:
         hwnd_pick, coords = pick_window()
     else:
         hwnd_pick, coords = get_active_window()
+
     if not hwnd_pick:
         return
     if hwnd_pick == HotkeyExit:
         raise HotkeyExit
-    print(f"Showing live preview of hwnd {hwnd_pick}... press ESC to quit.")
+
+    if preferences["extraction_mode"] == "OBS":
+        # OBS mode - use OBS interface
+        window_info = obs_interface.get_window_by_hwnd(hwnd_pick)
+        source_name = "WindowCapture"
+        success = obs_interface.set_window_capture(source_name, window_info)
+        print(
+            f"Showing live preview of hwnd {hwnd_pick} using OBS mode... press ESC to quit."
+        )
+    else:
+        # WIN mode - just use direct window capture without OBS
+        window_info = None
+        success = None
+        print(
+            f"Showing live preview of hwnd {hwnd_pick} using WIN mode... press ESC to quit."
+        )
+
     print(f"Recording area: {coords}")
     grab_window(
         hwnd_pick,
         bounds=[coords["start_x"], coords["start_y"], coords["end_x"], coords["end_y"]],
+        obs_interface=(
+            obs_interface if preferences["extraction_mode"] == "OBS" else None
+        ),
+        obs_initalize_sucess=success,
+        wm_info=window_info,
     )
 
 
@@ -701,39 +989,35 @@ def _th():
 
 def wait_for_hotkey_and_run():
     while True:
-        keybind_file = os.path.join(user_data_dir, "keybind.txt")
-        if not os.path.exists(keybind_file):
-            print("No keybind file found.")
-            return
-        with open(keybind_file, "r") as f:
-            combo = f.read().strip()
+        if not preferences["keybind"]:
+            time.sleep(0.1)
+            continue
+
+        combo = preferences["keybind"]
         print(f"Waiting for hotkey: {combo}")
         keyboard.wait(combo)
         threading.Thread(target=_th).start()
 
 
-hotkey_changed = False
-
-
 def clear_keybind(icon, item: MenuItem):
     """Clear the saved keybind."""
-    keybind_file = os.path.join(user_data_dir, "keybind.txt")
-    if os.path.exists(keybind_file):
-        os.remove(keybind_file)
-        print("Keybind cleared.")
-        item._text = item._wrap("Set Keybind")
-        item._action = lambda icon, item=item: [
-            set_keybind(),
-            setattr(item, "_text", item._wrap("Clear Keybind")),
-            icon._update_menu(),
-        ]
-        icon._update_menu()
+    preferences["keybind"] = ""
+    save_preferences(preferences)
+    print("Keybind cleared.")
+    item._text = item._wrap("Set Keybind")
+    item._action = lambda icon, item=item: [
+        set_keybind(),
+        setattr(item, "_text", item._wrap("Clear Keybind")),
+        icon._update_menu(),
+    ]
+    icon._update_menu()
 
 
 def toggle_launch_at_startup(icon, item: MenuItem):
     """Toggle the launch at Windows startup."""
     if os.path.exists(shortcut_path):
         os.remove(shortcut_path)
+        preferences["launch_at_startup"] = False
         print("Launch at startup disabled.")
         item._checked = item._wrap(False)
     else:
@@ -743,9 +1027,23 @@ def toggle_launch_at_startup(icon, item: MenuItem):
         shortcut.Arguments = arguments
         shortcut.WorkingDirectory = os.path.dirname(os.path.abspath(__file__))
         shortcut.save()
+        preferences["launch_at_startup"] = True
         print("Launch at startup enabled.")
         item._checked = item._wrap(True)
-        icon._update_menu()
+    save_preferences(preferences)
+    icon._update_menu()
+
+
+def toggle_extraction_mode(icon, item: MenuItem):
+    """Toggle between OBS and WIN extraction modes."""
+    if preferences["extraction_mode"] == "OBS":
+        preferences["extraction_mode"] = "WIN"
+        item._text = item._wrap("Mode: WIN (Switch to OBS)")
+    else:
+        preferences["extraction_mode"] = "OBS"
+        item._text = item._wrap("Mode: OBS (Switch to WIN)")
+    save_preferences(preferences)
+    icon._update_menu()
 
 
 def exit_program(icon):
@@ -764,18 +1062,17 @@ def create_tray_icon():
 
     def setup(icon):
         icon.visible = True
-        if not os.path.exists(os.path.join(user_data_dir, "keybind.txt")):
+        if not preferences["keybind"]:
             icon.notify(
                 "open taskbar menu to configure",
                 "WindowSnip is not configured",
             )
             return
         else:
-            with open(os.path.join(user_data_dir, "keybind.txt"), "r") as f:
-                keybind = f.read().strip()
+            keybind = preferences["keybind"]
             if not keybind:
                 icon.notify(
-                    "open taskbar menu to configure",
+                    "open taskbar menu to configure",  # Fixed typo from "openF" to "open"
                     "WindowSnip is not configured",
                 )
                 return
@@ -789,22 +1086,41 @@ def create_tray_icon():
         tray_image = PilImage.open(tray_icon_path)
     else:
         tray_image = PilImage.new("RGB", (64, 64), (0, 0, 0))  # Fallback: black square
-    clear_keybind_item = MenuItem(
-        "Clear Keybind",
-        lambda icon: clear_keybind(icon, clear_keybind_item),
+
+    # Set up menu items based on current preferences
+    keybind_action_text = "Clear Keybind" if preferences["keybind"] else "Set Keybind"
+    keybind_action = lambda icon, item=None: (
+        clear_keybind(icon, clear_keybind_item)
+        if preferences["keybind"]
+        else threading.Thread(target=set_keybind, daemon=True).start()
     )
+
+    clear_keybind_item = MenuItem(
+        keybind_action_text,
+        keybind_action,
+    )
+
     toggle_launch_item = MenuItem(
         "Launch at Windows Startup",
         lambda icon: toggle_launch_at_startup(icon, toggle_launch_item),
         radio=False,
-        checked=clear_keybind_item._wrap(os.path.exists(shortcut_path)),
+        checked=clear_keybind_item._wrap(preferences["launch_at_startup"]),
     )
+
+    mode_text = f"Mode: {preferences['extraction_mode']} (Switch to {'WIN' if preferences['extraction_mode'] == 'OBS' else 'OBS'})"
+    mode_toggle_item = MenuItem(
+        mode_text,
+        lambda icon: toggle_extraction_mode(icon, mode_toggle_item),
+    )
+
     menu = Menu(
         clear_keybind_item,
         toggle_launch_item,
+        mode_toggle_item,
         MenuItem("Restart", lambda icon: restart_program(icon)),
         MenuItem("Exit", lambda icon: exit_program(icon)),
     )
+
     icon = pystray.Icon("WindowSnip", tray_image, "WindowSnip", menu)
     try:
         icon.run(setup)
@@ -815,6 +1131,7 @@ def create_tray_icon():
 # Modify the main program to start the tray icon
 if __name__ == "__main__":
     obs_interface = OBSInterface()
+    obs_interface.set_current_scene("Scene")
     t = threading.Thread(target=wait_for_hotkey_and_run, daemon=True)
     t.start()
     create_tray_icon()
