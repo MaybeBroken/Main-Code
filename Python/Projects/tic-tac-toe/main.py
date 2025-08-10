@@ -21,12 +21,12 @@ from panda3d.core import (
     AntialiasAttrib,
 )
 from direct.interval.IntervalGlobal import *
-import complexpbr
 import random
 from typing import Callable
 from direct.filter.CommonFilters import CommonFilters
 from src.scripts.utils import *
 from bin.screens import credits, settings, info
+from bin.games import basic, advanced, online
 import math
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -107,8 +107,13 @@ class Window(ShowBase):
         self.setBackgroundColor(0, 0, 0, 1)
         self.render.set_antialias(AntialiasAttrib.MAuto)
         self.creditsScreen = credits.Screen(self)
+        # self.settingsScreen = settings.Screen(self)
+        # self.helpScreen = info.Screen(self)
+        self.basicGame = basic.Game(self)
+        # self.advancedGame = advanced.Game(self)
+        # self.onlineGame = online.Game(self)
         self.mfont = self.loader.loadFont(
-            "src/fonts/AquireLight-YzE0o.otf", pixelsPerUnit=280
+            "src/fonts/AquireLight-YzE0o.otf", pixelsPerUnit=250
         )
         self.accept("q", self.userExit)
         self.filters = CommonFilters(self.win, self.cam)
@@ -136,11 +141,13 @@ class Window(ShowBase):
         )
         self.root_intro.setTransparency(TransparencyAttrib.MAlpha)
 
-        self.sun = create_circle(radius=15, resolution=6)
-        self.sun.reparentTo(self.render)
-        self.sun.setPos(0, 2000, 50)
+        self.sun = create_circle(radius=1, resolution=6)
+        self.sun.reparentTo(self.aspect2d)
+        self.sun.setPos(0, 0, 0)
         self.sun.setHpr(0, 90, 0)
+        self.sun.setScale(0.005, 0.005, 0.005)
         self.sun.setTransparency(TransparencyAttrib.MAlpha)
+        self.sun.setColorScale(1, 1, 1, 0)
 
         self.intro_grid = self.generateGrid(grid_size=100, spacing=1.5)
 
@@ -289,11 +296,7 @@ class Window(ShowBase):
     def update_tasks(self, task):
         MouseOverManager.update()
         if not hasattr(self, "sun_destroyed"):
-            pos = Math.project_point_to_2d(
-                camera=self.camera,
-                lens=self.camLens,
-                node=self.sun,
-            )
+            pos = self.sun.getPos()
             if pos:
                 self.shaderMgr.interquad3.setShaderInput(
                     "pos", (pos[0] / aspect_ratio, pos[2])
@@ -358,6 +361,12 @@ class Window(ShowBase):
             colorScale=Vec4(1, 1, 1, 0),
             startColorScale=Vec4(1, 1, 1, 1),
         ).start()
+        LerpColorScaleInterval(
+            nodePath=self.sun,
+            duration=1.5,
+            colorScale=Vec4(1, 1, 1, 1),
+            startColorScale=Vec4(1, 1, 1, 0),
+        ).start()
         self.doMethodLater(
             1.5,
             lambda task: self.background_intro.destroy(),
@@ -380,11 +389,11 @@ class Window(ShowBase):
             lambda task: self.start_button.destroy(),
             "destroy_start_button",
         )
-        LerpPosInterval(
+        LerpScaleInterval(
             nodePath=self.sun,
-            duration=1,
-            pos=(0, 2000, 0),
-            startPos=(0, 2000, 50),
+            duration=2,
+            startScale=(0.005, 0.005, 0.005),
+            scale=(0.5, 0.5, 0.5),
             blendType="easeInOut",
         ).start()
         LerpColorScaleInterval(
@@ -403,20 +412,6 @@ class Window(ShowBase):
         self.doMethodLater(
             0.75,
             lambda task: [
-                LerpScaleInterval(
-                    nodePath=self.sun,
-                    duration=1.5,
-                    scale=(40, 40, 40),
-                    startScale=(1, 1, 1),
-                    blendType="easeInOut",
-                ).start(),
-                LerpHprInterval(
-                    nodePath=self.sun,
-                    duration=1.5,
-                    hpr=(0, 90, 0),
-                    startHpr=(0, 90, 0),
-                    blendType="easeInOut",
-                ).start(),
                 LerpPosInterval(
                     nodePath=self.camera,
                     duration=0.6,
@@ -561,22 +556,23 @@ class Window(ShowBase):
         self.close_main_menu()
 
     def show_help(self):
-        self.close_main_menu()
+        self.lock_main_menu()
+        self.accept("escape", self.unlock_main_menu)
 
     def show_credits(self):
         self.creditsScreen.registerExitFunc(self.unlock_main_menu)
         self.lock_main_menu()
         self.creditsScreen.build()
-        print("Credits screen built")
 
     def show_settings(self):
-        self.close_main_menu()
-    
+        self.lock_main_menu()
+        self.accept("escape", self.unlock_main_menu)
+
     def lock_main_menu(self):
         self.ui_menu_lock = True
         for button in self.btn_list:
             MouseOverManager.pauseElement(button)
-    
+
     def unlock_main_menu(self):
         self.ui_menu_lock = False
         for button in self.btn_list:
@@ -747,7 +743,7 @@ class MouseOverManager:
         self.elements = [e for e in self.elements if e[0] != element]
         if element in self.activeElements:
             self.activeElements.remove(element)
-        
+
     def pauseElement(self, element):
         """
         Pauses the element, preventing it from being checked for mouse over events.
@@ -757,7 +753,7 @@ class MouseOverManager:
             if e[0] == element:
                 self.pausedElements.append(e)
                 self.elements.remove(e)
-        
+
     def resumeElement(self, element):
         """
         Resumes the element, allowing it to be checked for mouse over events again.

@@ -105,7 +105,7 @@ if __name__ == "__main__":
     base = ShowBase()
     base.setBackgroundColor(0, 0, 0, 1)
     base.mfont = base.loader.loadFont(
-        "../../src/fonts/AquireLight-YzE0o.otf", pixelsPerUnit=150
+        "../../src/fonts/AquireLight-YzE0o.otf", pixelsPerUnit=250
     )
     base.accept("q", base.userExit)
     screen = Screen(base)

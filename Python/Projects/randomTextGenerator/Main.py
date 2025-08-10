@@ -7,6 +7,7 @@ import random
 from time import sleep
 from direct.stdpy.threading import Thread
 from clipboard import copy
+
 loadPrcFileData("", "window-title Random Text Generator\nnotify-level-text fatal\n")
 
 
