@@ -33,9 +33,9 @@ def load_subclass():
 
 
 class mainGame(ShowBase):
-    load_subclass()
 
     def __init__(self):
+        load_subclass()
         start_time = int(time.monotonic())
         ShowBase.__init__(self)
         with open("xnaFramework.dll", "+rt") as xna:
